@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "./providers/ReactQueryProvider";
-import { cn } from "@/lib/utils";
+
 import AuthProvider from "./providers/AuthProvider";
+import { cn } from "./lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -40,7 +41,8 @@ export default function RootLayout({
     >
       <body>
         <ReactQueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          {/* <AuthProvider>{children}</AuthProvider> */}
+          {children}
         </ReactQueryProvider>
       </body>
     </html>

@@ -4,8 +4,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/store";
-import { moduleLandingRoutes } from "@/rbac/routePermissions";
+import { useAuth } from "./store";
+import { moduleLandingRoutes } from "./rbac/routePermissions";
 
 export default function HomePage() {
   const router = useRouter();
