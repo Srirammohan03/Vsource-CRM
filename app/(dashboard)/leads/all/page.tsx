@@ -193,7 +193,9 @@ export default function AllLeadsPage() {
         cache: "no-store",
         credentials: "include",
       });
-      const data = await response.json();
+      const res = await response.json();
+      const data = res?.data ?? [];
+      console.log("first", data);
       setLeads(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);

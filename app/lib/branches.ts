@@ -45,17 +45,17 @@ export interface CreateBranchDto {
 }
 
 export const getBranches = async () => {
-  const { data } = await axios.get<Branch[]>(`${API_URL}/branches`, {
+  const { data } = await axios.get(`${API_URL}/branches`, {
     withCredentials: true,
   });
-  return data;
+  return data?.data || [];
 };
 
 export const createBranch = async (payload: CreateBranchDto) => {
   const { data } = await axios.post(`${API_URL}/branches`, payload, {
     withCredentials: true,
   });
-  return data;
+  return data?.data || [];
 };
 
 export const updateBranch = async (id: string, payload: CreateBranchDto) => {
@@ -63,7 +63,7 @@ export const updateBranch = async (id: string, payload: CreateBranchDto) => {
     withCredentials: true,
   });
 
-  return data;
+  return data?.data || [];
 };
 
 export const deleteBranch = async (id: string) => {
@@ -71,5 +71,5 @@ export const deleteBranch = async (id: string) => {
     withCredentials: true,
   });
 
-  return data;
+  return data?.data || [];
 };

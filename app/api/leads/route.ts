@@ -14,7 +14,7 @@ import {
   buildMeta,
 } from "@/lib/api-helpers";
 import { LeadCreateSchema } from "@/lib/schemas";
-import type { LeadStatus, LeadType } from "@/generated/prisma";
+import { LeadStatus, LeadType } from "@/generated/prisma/enums";
 
 export async function GET(req: NextRequest) {
   try {
