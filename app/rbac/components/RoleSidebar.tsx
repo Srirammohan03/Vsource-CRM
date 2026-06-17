@@ -12,10 +12,10 @@ interface Props {
   onSelect: (role: Role) => void;
 }
 
-export default function RoleSidebar({ roles, selectedRole, onSelect }: Props) {
+export default function RoleSidebar({ roles = [], selectedRole, onSelect }: Props) {
   return (
     <div className="rounded-lg border">
-      {roles.map((role) => (
+      {roles?.map((role) => (
         <button
           key={role.id}
           onClick={() => onSelect(role)}

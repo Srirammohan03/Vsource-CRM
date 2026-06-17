@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/accordion";
 import { Branch, getBranches } from "@/lib/branches";
 
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = "NEXT_PUBLIC_API_URL";
 
 type DynamicOption = {
   id: string;

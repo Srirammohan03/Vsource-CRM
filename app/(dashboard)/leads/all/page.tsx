@@ -25,7 +25,7 @@ import { useRouter } from "next/navigation";
 import PageActions from "./pageactions";
 
 // Production API URL fallback configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "NEXT_PUBLIC_API_URL";
 
 const statusStyle: Record<LeadStatus, string> = {
   draft:
@@ -631,9 +631,8 @@ export default function AllLeadsPage() {
                           <td className="px-4 py-3.5 align-middle">
                             <Badge
                               variant="outline"
-                              className={`capitalize tracking-wide font-semibold whitespace-nowrap ${
-                                statusStyle[lead.status || "draft"]
-                              }`}
+                              className={`capitalize tracking-wide font-semibold whitespace-nowrap ${statusStyle[lead.status || "draft"]
+                                }`}
                             >
                               {lead.status}
                             </Badge>

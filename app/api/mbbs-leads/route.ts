@@ -14,7 +14,8 @@ import {
   buildMeta,
 } from "@/lib/api-helpers";
 import { MbbsLeadCreateSchema } from "@/lib/schemas";
-import type { MbbsLeadStatus } from "@/generated/prisma";
+import { MbbsLeadStatus } from "@/generated/prisma/enums";
+// import type { MbbsLeadStatus } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -74,8 +75,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = MbbsLeadCreateSchema.parse(await req.json());
+    const lastLead = await db.mbbsLead.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { leadNumber: true },
+    });
+    let nextNumber = 1;
+
+    if (lastLead?.leadNumber) {
+      const currentNumber = parseInt(lastLead.leadNumber.replace('MLD', ''), 10);
+      if (!isNaN(currentNumber)) {
+        nextNumber = currentNumber + 1;
+      }
+    }
+
+    body.leadNumber = `MLD${String(nextNumber).padStart(4, '0')}`;
     const lead = await db.mbbsLead.create({
-      data: body,
+      data: body as any,
       include: {
         branch: { select: { id: true, name: true } },
         assignedCounselor: { select: { id: true, name: true } },

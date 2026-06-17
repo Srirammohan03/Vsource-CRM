@@ -52,7 +52,7 @@ export default function PermissionMatrix({ role, modules }: Props) {
     }
 
     const mapped = modules.map((module) => {
-      const existing = role.modulePermissions.find(
+      const existing = (role.modulePermissions || []).find(
         (p) => p.moduleId === module.id,
       );
 
@@ -93,7 +93,7 @@ export default function PermissionMatrix({ role, modules }: Props) {
     if (!role) return false;
 
     const original = modules.map((module) => {
-      const existing = role.modulePermissions.find(
+      const existing = (role.modulePermissions || []).find(
         (permission) => permission.moduleId === module.id,
       );
 

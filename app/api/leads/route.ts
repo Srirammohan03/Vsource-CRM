@@ -83,9 +83,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = LeadCreateSchema.parse(await req.json());
+    const lastLead = await db.lead.findFirst({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        leadNumber: true,
+      },
+    });
     console.log(body);
+    let nextNumber = 1;
+
+    if (lastLead?.leadNumber) {
+      const currentNumber = parseInt(lastLead.leadNumber.replace('LD', ''), 10);
+      if (!isNaN(currentNumber)) {
+        nextNumber = currentNumber + 1;
+      }
+    }
+
+    body.leadNumber = `LD${String(nextNumber).padStart(4, '0')}`;
     const lead = await db.lead.create({
-      data: body,
+      data: body as any,
       include: {
         branch: { select: { id: true, name: true } },
         assignedCounselor: { select: { id: true, name: true } },
