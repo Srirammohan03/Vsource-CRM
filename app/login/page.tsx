@@ -32,28 +32,20 @@ export default function LoginPage() {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
     const res = await login(email, password);
     setLoading(false);
     if (res.ok) {
-      const permissions = res.user?.role?.modulePermissions ?? [];
-
-      const firstModule = permissions
-        .sort(
-          (a, b) => (a.module?.sortOrder ?? 999) - (b.module?.sortOrder ?? 999),
-        )
-        .find((p) => p.canRead);
-
-      if (firstModule) {
-        router.push(moduleLandingRoutes[firstModule.module.code]);
-      } else {
-        router.push("/unauthorized");
-      }
-    } else {
-      toast.error(res.error ?? "Login failed");
+      return;
+    }
+    if (!res.ok) {
+      setError(res.error || "Invalid email or password");
+      return;
     }
   };
 
@@ -199,6 +191,7 @@ export default function LoginPage() {
                       <Eye className="size-4" />
                     )}
                   </button>
+                  {error && <p className="text-sm text-red-500">{error}</p>}
                 </div>
               </div>
               {/* <div className="flex items-center gap-2">

@@ -127,7 +127,7 @@ export default function PageActions(props: PageActionsProps) {
 
   const [branches, setBranches] = useState<Branch[]>([]);
 
-  const { data: intakes, isLoading: intakeLoad } = useQuery({
+  const { data: intakes = [], isLoading: intakeLoad } = useQuery({
     queryKey: ["intake"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -136,10 +136,10 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
-  const { data: countries, isLoading: countryLoad } = useQuery({
+  const { data: countries = [], isLoading: countryLoad } = useQuery({
     queryKey: ["countries"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -148,10 +148,10 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
-  const { data: lead_sources, isLoading: lead_sourcesLoad } = useQuery({
+  const { data: lead_sources = [], isLoading: lead_sourcesLoad } = useQuery({
     queryKey: ["lead-sources"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -160,7 +160,7 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
 
@@ -874,7 +874,7 @@ export default function PageActions(props: PageActionsProps) {
                             Loading countries...
                           </SelectItem>
                         ) : (
-                          (countries || []).map(
+                          (countries || [])?.map(
                             (
                               country: { id: string; name: string },
                               idx: number,
@@ -921,7 +921,7 @@ export default function PageActions(props: PageActionsProps) {
                             Loading intakes...
                           </SelectItem>
                         ) : (
-                          (intakes || []).map(
+                          (intakes || [])?.map(
                             (intake: { id: string; name: string }) => (
                               <SelectItem key={intake.id} value={intake.name}>
                                 {intake.name}
@@ -1004,7 +1004,7 @@ export default function PageActions(props: PageActionsProps) {
                             Loading lead sources...
                           </SelectItem>
                         ) : (
-                          (lead_sources || []).map(
+                          (lead_sources || [])?.map(
                             (
                               lead_source: { id: string; name: string },
                               idx: number,

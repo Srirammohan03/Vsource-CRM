@@ -37,6 +37,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { useCounselors } from "@/lib/lead";
 
 interface LeadRecord {
   id: string;
@@ -61,8 +62,11 @@ interface LeadRecord {
     name: string;
   };
 
-  assignedCounselor?: string;
-  assignedCounselorId?: string;
+  counselors?: {
+    id: string;
+    name: string;
+    isPrimary?: boolean;
+  }[];
 
   preferredCountry?: string;
   preferredIntake?: string;
@@ -132,13 +136,14 @@ export default function PageActions(props: PageActionsProps) {
     setLeadIdToDelete,
     handleUpdateLead,
     executeDeleteLead,
-    branchOptions,
-    statusStyle,
   } = props;
 
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedCounselors, setSelectedCounselors] = useState<string[]>([]);
 
-  const { data: intakes, isLoading: intakeLoad } = useQuery({
+  const { data: counselors } = useCounselors();
+
+  const { data: intakes = [], isLoading: intakeLoad } = useQuery({
     queryKey: ["intake"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -147,10 +152,10 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
-  const { data: countries, isLoading: countryLoad } = useQuery({
+  const { data: countries = [], isLoading: countryLoad } = useQuery({
     queryKey: ["countries"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -159,10 +164,10 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
-  const { data: lead_sources, isLoading: lead_sourcesLoad } = useQuery({
+  const { data: lead_sources = [], isLoading: lead_sourcesLoad } = useQuery({
     queryKey: ["lead-sources"],
     queryFn: async () => {
       const { data } = await axios.get(
@@ -171,7 +176,7 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
 
@@ -190,8 +195,9 @@ export default function PageActions(props: PageActionsProps) {
   }, []);
 
   useEffect(() => {
-    console.log("editingLead", editingLead?.preferredCountry);
-    console.log("editingLead", editingLead?.preferredIntake);
+    if (editingLead?.counselors) {
+      setSelectedCounselors(editingLead.counselors.map((c) => c.id));
+    }
   }, [editingLead]);
 
   function DetailItem({
@@ -279,6 +285,26 @@ export default function PageActions(props: PageActionsProps) {
                     />
                     <DetailItem label="Lead Source" value={selected.source} />
                     <DetailItem label="Branch" value={selected.branch?.name} />
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Assigned Counselors
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {selected.counselors?.length ? (
+                          selected.counselors.map((counselor) => (
+                            <Badge key={counselor.id}>
+                              {counselor.name}
+                              {counselor.isPrimary && " (Primary)"}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            No counselors assigned
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -665,26 +691,42 @@ export default function PageActions(props: PageActionsProps) {
                   </div>
 
                   {/* Assigned Counselor */}
-                  <div className="grid gap-1.5 sm:col-span-2">
-                    <Label
-                      htmlFor="edit-counselor"
-                      className="text-sm font-medium"
-                    >
-                      Assigned Counselor
+                  <div className="grid gap-2 sm:col-span-2">
+                    <Label className="text-sm font-medium">
+                      Assigned Counselors
                     </Label>
-                    <Input
-                      id="edit-counselor"
-                      type="text"
-                      placeholder="Counselor Name"
-                      className="w-full bg-white h-11 border-slate-200 rounded-xl placeholder:text-slate-400"
-                      value={editingLead.assignedCounselor || ""}
-                      onChange={(e) =>
-                        setEditingLead({
-                          ...editingLead,
-                          assignedCounselor: e.target.value,
-                        })
-                      }
-                    />
+
+                    <div className="border rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
+                      {counselors.map(
+                        (counselor: { id: string; name: string }) => (
+                          <label
+                            key={counselor.id}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCounselors.includes(
+                                counselor.id,
+                              )}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCounselors((prev) => [
+                                    ...prev,
+                                    counselor.id,
+                                  ]);
+                                } else {
+                                  setSelectedCounselors((prev) =>
+                                    prev.filter((id) => id !== counselor.id),
+                                  );
+                                }
+                              }}
+                            />
+
+                            <span>{counselor.name}</span>
+                          </label>
+                        ),
+                      )}
+                    </div>
                   </div>
 
                   {/* Preferred Country */}
@@ -716,7 +758,7 @@ export default function PageActions(props: PageActionsProps) {
                             Loading countries...
                           </SelectItem>
                         ) : (
-                          (countries || []).map(
+                          (countries || [])?.map(
                             (
                               country: { id: string; name: string },
                               idx: number,
