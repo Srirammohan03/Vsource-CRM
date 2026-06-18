@@ -27,9 +27,6 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  hasHydrated: boolean;
-  setHasHydrated: (value: boolean) => void;
-
   login: (
     email: string,
     password: string,
@@ -45,114 +42,105 @@ interface AuthState {
   canDelete: (moduleCode: string) => boolean;
 }
 
-export const useAuth = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuth = create<AuthState>()((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+
+  login: async (email, password) => {
+    try {
+      set({ isLoading: true });
+
+      const data = await authService.login(email, password);
+
+      set({
+        user: data.user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      return { ok: true, user: data.user };
+    } catch (error: any) {
+      set({ isLoading: false });
+
+      return {
+        ok: false,
+        error: error?.message ?? "Login failed",
+        user: null,
+      };
+    }
+  },
+
+  logout: async () => {
+    try {
+      set({ isLoading: true });
+
+      await authService.logout();
+    } catch (error) {
+      console.error(error);
+    }
+
+    set({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+    });
+  },
 
-      hasHydrated: false,
+  canRead: (moduleCode) => {
+    const permissions = get().user?.role?.modulePermissions ?? [];
 
-      setHasHydrated: (value) =>
-        set({
-          hasHydrated: value,
-        }),
+    return hasPermission(permissions, moduleCode, "canRead");
+  },
 
-      login: async (email, password) => {
-        try {
-          set({ isLoading: true });
+  canCreate: (moduleCode) => {
+    const permissions = get().user?.role?.modulePermissions ?? [];
 
-          const data = await authService.login(email, password);
+    return hasPermission(permissions, moduleCode, "canCreate");
+  },
 
-          set({
-            user: data.user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+  canUpdate: (moduleCode) => {
+    const permissions = get().user?.role?.modulePermissions ?? [];
 
-          return { ok: true, user: data.user };
-        } catch (error: any) {
-          set({ isLoading: false });
+    return hasPermission(permissions, moduleCode, "canUpdate");
+  },
 
-          return {
-            ok: false,
-            error: error?.response?.data?.message ?? "Login failed",
-            user: null,
-          };
-        }
-      },
+  canDelete: (moduleCode) => {
+    const permissions = get().user?.role?.modulePermissions ?? [];
 
-      logout: async () => {
-        try {
-          set({ isLoading: true });
+    return hasPermission(permissions, moduleCode, "canDelete");
+  },
 
-          await authService.logout();
-        } catch (error) {
-          console.error(error);
-        }
+  hydrateUser: async () => {
+    set({ isLoading: true });
 
+    try {
+      const user = await authService.me();
+
+      if (!user) {
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
-      },
 
-      canRead: (moduleCode) => {
-        const permissions = get().user?.role?.modulePermissions ?? [];
+        return;
+      }
 
-        return hasPermission(permissions, moduleCode, "canRead");
-      },
-
-      canCreate: (moduleCode) => {
-        const permissions = get().user?.role?.modulePermissions ?? [];
-
-        return hasPermission(permissions, moduleCode, "canCreate");
-      },
-
-      canUpdate: (moduleCode) => {
-        const permissions = get().user?.role?.modulePermissions ?? [];
-
-        return hasPermission(permissions, moduleCode, "canUpdate");
-      },
-
-      canDelete: (moduleCode) => {
-        const permissions = get().user?.role?.modulePermissions ?? [];
-
-        return hasPermission(permissions, moduleCode, "canDelete");
-      },
-
-      hydrateUser: async () => {
-        set({
-          isLoading: true,
-        });
-
-        try {
-          const user = await authService.me();
-
-          set({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        } catch {
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-        }
-      },
-    }),
-    {
-      name: "vsource-auth",
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-    },
-  ),
-);
+      set({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    }
+  },
+}));
 
 interface UiState {
   sidebarCollapsed: boolean;

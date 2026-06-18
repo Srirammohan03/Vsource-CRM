@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: Ctx) {
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
     const body = LeadUpdateSchema.parse(await req.json());

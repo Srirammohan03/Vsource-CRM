@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 const getBranches = async () => {
   const { data } = await api.get("/branches");
 
-  return data;
+  return data?.data || [];
 };
 
 export const useBranches = () => {

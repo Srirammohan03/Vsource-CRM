@@ -67,7 +67,6 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         include: {
           branch: { select: { id: true, name: true, code: true } },
-          assignedCounselor: { select: { id: true, name: true, email: true } },
           _count: { select: { timelines: true } },
         },
       }),
@@ -85,7 +84,7 @@ export async function POST(req: NextRequest) {
     const body = LeadCreateSchema.parse(await req.json());
     const lastLead = await db.lead.findFirst({
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       select: {
         leadNumber: true,
@@ -95,13 +94,13 @@ export async function POST(req: NextRequest) {
     let nextNumber = 1;
 
     if (lastLead?.leadNumber) {
-      const currentNumber = parseInt(lastLead.leadNumber.replace('LD', ''), 10);
+      const currentNumber = parseInt(lastLead.leadNumber.replace("LD", ""), 10);
       if (!isNaN(currentNumber)) {
         nextNumber = currentNumber + 1;
       }
     }
 
-    body.leadNumber = `LD${String(nextNumber).padStart(4, '0')}`;
+    body.leadNumber = `LD${String(nextNumber).padStart(4, "0")}`;
     const lead = await db.lead.create({
       data: body as any,
       include: {

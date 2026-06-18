@@ -8,15 +8,11 @@ export default function AuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const hasHydrated = useAuth((s) => s.hasHydrated);
-
   const hydrateUser = useAuth((s) => s.hydrateUser);
 
   useEffect(() => {
-    if (hasHydrated) {
-      hydrateUser();
-    }
-  }, [hasHydrated]);
+    hydrateUser();
+  }, [hydrateUser]);
 
   return <>{children}</>;
 }

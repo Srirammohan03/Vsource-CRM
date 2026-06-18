@@ -28,7 +28,6 @@ export default function GuestGuard({
       )[0];
 
     if (!firstModule) {
-      router.replace("/unauthorized");
       return;
     }
 

@@ -3,9 +3,9 @@ import { roleKeys } from "@/rbac/query-keys";
 import { useQuery } from "@tanstack/react-query";
 
 const getRoles = async () => {
-  const { data } = await api.get("/roles/getAll");
+  const { data } = await api.get("/roles");
 
-  return data;
+  return data?.data || [];
 };
 
 export const useRoles = () => {

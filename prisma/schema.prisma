@@ -21,8 +21,9 @@ model User {
 
   branches Branch[]
 
-  assignedLeads     Lead[]     @relation("CounselorLeads")
-  assignedMbbsLeads MbbsLead[] @relation("MbbsCounselorLeads")
+  leadAssignments        LeadCounselor[]
+  leadCounselorsAssigned LeadCounselor[] @relation("LeadAssignedBy")
+  assignedMbbsLeads      MbbsLead[]      @relation("MbbsCounselorLeads")
 
   students Student[] @relation("CounselorStudents")
 
@@ -153,9 +154,7 @@ model Lead {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id])
 
-  assignedCounselorId String?
-
-  assignedCounselor User? @relation("CounselorLeads", fields: [assignedCounselorId], references: [id])
+  counselors LeadCounselor[]
 
   isConverted Boolean @default(false)
 
@@ -207,9 +206,29 @@ model Lead {
   timelines LeadTimeline[]
 
   @@index([branchId])
-  @@index([assignedCounselorId])
   @@index([branchId, status])
   @@index([branchId, isConverted])
+}
+
+model LeadCounselor {
+  id String @id @default(uuid())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  counselorId String
+  counselor   User   @relation(fields: [counselorId], references: [id])
+
+  assignedAt DateTime @default(now())
+
+  assignedById String?
+  assignedBy   User?   @relation("LeadAssignedBy", fields: [assignedById], references: [id])
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([leadId, counselorId])
 }
 
 model LeadTimeline {

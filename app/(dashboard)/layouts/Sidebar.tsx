@@ -120,12 +120,7 @@ export function Sidebar() {
     // leads: false, // default open
   });
   const canRead = useAuth((s) => s.canRead);
-  console.log(
-    items.map((item) => ({
-      module: item.moduleCode,
-      canRead: canRead(item.moduleCode),
-    })),
-  );
+
   const filteredItems = items.filter((item) => canRead(item.moduleCode));
 
   const toggleMenu = (key: string) => {

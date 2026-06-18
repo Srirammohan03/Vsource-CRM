@@ -11,14 +11,14 @@ export const api = axios.create({
   },
 });
 
-if (typeof window !== "undefined") {
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("accessToken");
+// if (typeof window !== "undefined") {
+//   api.interceptors.request.use((config) => {
+//     const token = localStorage.getItem("accessToken");
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+//     if (token) {
+//       config.headers.Authorization = `Bearer ${token}`;
+//     }
 
-    return config;
-  });
-}
+//     return config;
+//   });
+// }
