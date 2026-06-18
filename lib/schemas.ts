@@ -17,7 +17,13 @@ const optStr = z.string().optional();
 const optFloat = z.number().optional();
 const optInt = z.number().int().optional();
 const optBool = z.boolean().optional();
-const optDate = z.coerce.date().optional();
+const optDate = z.preprocess(
+  (arg) => {
+    if (arg === "" || arg === null || arg === undefined) return undefined;
+    return new Date(arg as string | number);
+  },
+  z.date().optional()
+);
 
 // ---------------------------------------------------------------------------
 // Branch
@@ -110,7 +116,7 @@ const LeadStatusEnum = z.enum([
 const LeadTypeEnum = z.enum(["study_abroad", "mbbs"]);
 
 export const LeadCreateSchema = z.object({
-  leadNumber: z.string().min(1),
+  leadNumber: optStr,
   leadType: LeadTypeEnum.default("study_abroad"),
   counsellingDate: optDate,
   studentName: optStr,
@@ -174,7 +180,7 @@ const MbbsLeadStatusEnum = z.enum([
 ]);
 
 export const MbbsLeadCreateSchema = z.object({
-  leadNumber: z.string().min(1),
+  leadNumber: optStr,
   counsellingDate: optDate,
   studentName: optStr,
   fatherName: optStr,
@@ -311,3 +317,21 @@ export const IntakeCreateSchema = z.object({
 });
 
 export const IntakeUpdateSchema = IntakeCreateSchema.partial();
+
+// ---------------------------------------------------------------------------
+// Lead Sources, Degrees, Universities
+// ---------------------------------------------------------------------------
+export const LeadSourceCreateSchema = z.object({
+  name: z.string().min(1),
+  status: optBool,
+});
+
+export const LeadDegreeCreateSchema = z.object({
+  name: z.string().min(1),
+  status: optBool,
+});
+
+export const LeadUniversityCreateSchema = z.object({
+  name: z.string().min(1),
+  status: optBool,
+});

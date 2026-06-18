@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
         take,
         orderBy: { name: "asc" },
         include: {
+          modulePermissions: true,
           _count: { select: { users: true, modulePermissions: true } },
         },
       }),

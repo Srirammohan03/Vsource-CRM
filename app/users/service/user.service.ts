@@ -1,31 +1,31 @@
 import { api } from "@/lib/api";
 
 export const getUsers = async () => {
-  const { data } = await api.get("/user/getAll");
+  const { data } = await api.get("/users");
 
-  return data;
+  return data?.data || [];
 };
 
 export const getUserById = async (id: string) => {
-  const { data } = await api.get(`/user/${id}`);
+  const { data } = await api.get(`/users/${id}`);
 
-  return data;
+  return data?.data;
 };
 
 export const createUser = async (payload: any) => {
-  const { data } = await api.post("/user/add", payload);
+  const { data } = await api.post("/users", payload);
 
-  return data;
+  return data?.data;
 };
 
 export const updateUser = async (id: string, payload: any) => {
-  const { data } = await api.put(`/user/${id}`, payload);
+  const { data } = await api.put(`/users/${id}`, payload);
 
-  return data;
+  return data?.data;
 };
 
 export const deleteUser = async (id: string) => {
-  const { data } = await api.delete(`/user/${id}`);
+  const { data } = await api.delete(`/users/${id}`);
 
-  return data;
+  return data?.data;
 };

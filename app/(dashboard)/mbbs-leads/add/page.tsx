@@ -42,7 +42,7 @@ import {
   LeadSource,
 } from "@/lib/master-settings";
 
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = "NEXT_PUBLIC_API_URL";
 
 type DynamicOption = {
   id: string;
@@ -304,8 +304,8 @@ const fetchDynamicOptions = async (endpoint: string) => {
   if (!response.ok) {
     throw new Error(`Failed to load ${endpoint}`);
   }
-
-  return response.json();
+  const data = await response.json();
+  return data?.data || [];
 };
 
 function RequiredLabel({

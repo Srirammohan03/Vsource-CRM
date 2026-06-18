@@ -135,7 +135,7 @@ export default function AddLeadPage() {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
   const createUniversity = async (name: string) => {
@@ -164,7 +164,7 @@ export default function AddLeadPage() {
           withCredentials: true,
         },
       );
-      return data || [];
+      return data?.data || [];
     },
   });
 
