@@ -9,14 +9,37 @@ import { NextRequest } from "next/server";
 import db from "@/lib/prisma";
 import { ok, notFound, noContent, handleError } from "@/lib/api-helpers";
 import { LeadUpdateSchema } from "@/lib/schemas";
+import { getAuthorizedUser } from "@/lib/rbac";
+import { MODULES, PERMISSIONS } from "@/lib/module-codes";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
+    const currentUser = await getAuthorizedUser(
+      _req,
+      MODULES.MASTER_LEADS,
+      PERMISSIONS.READ,
+    );
+
     const { id } = await params;
     const lead = await db.lead.findUnique({
-      where: { id },
+      where: {
+        id,
+
+        OR: [
+          {
+            createdById: currentUser.id,
+          },
+          {
+            counselors: {
+              some: {
+                counselorId: currentUser.id,
+              },
+            },
+          },
+        ],
+      },
       include: {
         branch: true,
         counselors: {

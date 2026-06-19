@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/store";
 import { moduleLandingRoutes } from "@/rbac/routePermissions";
+import { getLandingRoute } from "@/rbac/getLandingRoute";
 
 export default function GuestGuard({
   children,
@@ -14,10 +15,10 @@ export default function GuestGuard({
 }) {
   const router = useRouter();
 
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isHydrating } = useAuth();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isHydrating) return;
 
     if (!isAuthenticated) return;
 
@@ -31,10 +32,12 @@ export default function GuestGuard({
       return;
     }
 
-    router.replace(moduleLandingRoutes[firstModule.module.code]);
-  }, [user, isAuthenticated, isLoading, router]);
+    const redirectPath = getLandingRoute(user?.role?.modulePermissions ?? []);
 
-  if (isLoading) {
+    router.replace(redirectPath);
+  }, [user, isAuthenticated, isHydrating, router]);
+
+  if (isHydrating) {
     return (
       <div className="h-screen flex items-center justify-center">
         Loading...

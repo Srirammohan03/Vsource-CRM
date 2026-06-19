@@ -11,6 +11,14 @@ export const routePermissions: Record<string, string> = {
   "/mbbs-leads/add": "MBBS_LEADS",
   "/mbbs-leads/all": "MBBS_LEADS",
 
+  "/student-profiles": "STUDENT_PROFILES",
+
+  "/applications": "APPLICATIONS",
+
+  "/performances": "PERFORMANCES",
+
+  "/universities": "UNIVERSITIES",
+
   "/branches": "BRANCHES",
 
   "/master-settings": "MASTER_SETTINGS",

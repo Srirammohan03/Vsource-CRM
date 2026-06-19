@@ -33,6 +33,8 @@ import {
   LeadSource,
 } from "@/lib/master-settings";
 import { Branch, getBranches } from "@/lib/branches";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 // Production API URL fallback configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "NEXT_PUBLIC_API_URL";
@@ -131,6 +133,7 @@ export default function AllLeadsPage() {
   const [branch, setBranch] = useState("all");
   const [source, setSource] = useState("all");
   const [page, setPage] = useState(1);
+  const { canCreate, canUpdate, canDelete } = useAuth();
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -318,13 +321,15 @@ export default function AllLeadsPage() {
             >
               <Download className="size-4 mr-2" /> Export
             </Button> */}
-            <Button
-              size="sm"
-              onClick={() => router.push("/mbbs-leads/add")}
-              className="whitespace-nowrap"
-            >
-              <Plus className="size-4 mr-2" /> Add Lead
-            </Button>
+            {canCreate(MODULES.MBBS_LEADS) && (
+              <Button
+                size="sm"
+                onClick={() => router.push("/mbbs-leads/add")}
+                className="whitespace-nowrap"
+              >
+                <Plus className="size-4 mr-2" /> Add Lead
+              </Button>
+            )}
           </div>
         }
       />
@@ -571,22 +576,26 @@ export default function AllLeadsPage() {
                         >
                           <Eye className="size-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
-                          onClick={() => setEditingLead({ ...lead })}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setLeadIdToDelete(lead.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        {canUpdate(MODULES.MBBS_LEADS) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
+                            onClick={() => setEditingLead({ ...lead })}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        )}
+                        {canDelete(MODULES.MBBS_LEADS) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setLeadIdToDelete(lead.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -718,22 +727,26 @@ export default function AllLeadsPage() {
                             >
                               <Eye className="size-4" />
                             </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-8"
-                              onClick={() => setEditingLead({ ...lead })}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => setLeadIdToDelete(lead.id)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                            {canUpdate(MODULES.MBBS_LEADS) && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8"
+                                onClick={() => setEditingLead({ ...lead })}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                            )}
+                            {canDelete(MODULES.MBBS_LEADS) && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setLeadIdToDelete(lead.id)}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))

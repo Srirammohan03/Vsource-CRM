@@ -27,7 +27,13 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
     const body = ModuleUpdateSchema.parse(await req.json());
-    const mod = await db.module.update({ where: { id }, data: body });
+    const mod = await db.module.update({
+      where: { id },
+      data: {
+        ...body,
+        sortOrder: body.sortOrder ?? undefined,
+      },
+    });
     return ok(mod, "Module updated successfully");
   } catch (err) {
     return handleError(err);

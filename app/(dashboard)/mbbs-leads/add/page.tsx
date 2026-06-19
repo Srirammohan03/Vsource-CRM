@@ -47,6 +47,9 @@ import {
   useLeadSources,
 } from "@/lib/master-settings";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
+import { RoutePermission } from "@/components/guards/RoutePermission";
 
 type DynamicOption = {
   id: string;
@@ -243,6 +246,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function MbbsForm() {
   const router = useRouter();
+  const { user } = useAuth();
+  const branches = user?.branches ?? [];
 
   const {
     register,
@@ -255,7 +260,6 @@ export default function MbbsForm() {
     defaultValues: getDefaultValues(),
   });
 
-  const { data: branches = [] } = useBranches();
   const { data: countries = [], isLoading: isCountriesLoading } =
     useCountries();
   const { data: intakes = [] } = useIntakes();
@@ -315,551 +319,556 @@ export default function MbbsForm() {
 
   return (
     <PageTransition>
-      <div className="mx-auto max-w-6xl space-y-6 pb-12">
-        <PageHeader
-          title="Add MBBS Lead"
-          description="Register MBBS student details, academic information, passport details, and study preferences."
-        />
+      <RoutePermission action="create" moduleCode={MODULES.MBBS_LEADS}>
+        <div className="mx-auto max-w-6xl space-y-6 pb-12">
+          <PageHeader
+            title="Add MBBS Lead"
+            description="Register MBBS student details, academic information, passport details, and study preferences."
+          />
 
-        <form
-          className="space-y-8"
-          onSubmit={handleSubmit((values) => onSubmit(values, true))}
-        >
-          <Accordion
-            type="multiple"
-            defaultValue={["basic", "education", "ept", "preferences"]}
-            className="space-y-4"
+          <form
+            className="space-y-8"
+            onSubmit={handleSubmit((values) => onSubmit(values, true))}
           >
-            <AccordionItem value="basic" className="rounded-2xl border bg-card">
-              <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
-                <div className="px-4 py-4 sm:px-6">
-                  <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
-                    <MapPin className="mr-2 h-5 w-5 text-primary" />
-                    Basic Information
-                  </h3>
-                </div>
-              </AccordionTrigger>
-
-              <AccordionContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <RequiredLabel>Branch</RequiredLabel>
-
-                    <Controller
-                      control={control}
-                      name="branchId"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Branch" />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            {branches?.map((branch: Branch, idx: number) => (
-                              <SelectItem
-                                key={branch.id || idx}
-                                value={branch.id}
-                              >
-                                {branch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-
-                    <FormError message={errors.branchId?.message} />
+            <Accordion
+              type="multiple"
+              defaultValue={["basic", "education", "ept", "preferences"]}
+              className="space-y-4"
+            >
+              <AccordionItem
+                value="basic"
+                className="rounded-2xl border bg-card"
+              >
+                <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
+                  <div className="px-4 py-4 sm:px-6">
+                    <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
+                      <MapPin className="mr-2 h-5 w-5 text-primary" />
+                      Basic Information
+                    </h3>
                   </div>
+                </AccordionTrigger>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="counsellingDate">
-                      Date
-                    </RequiredLabel>
-                    <Input
-                      id="counsellingDate"
-                      type="date"
-                      {...register("counsellingDate")}
-                    />
-                    <FormError message={errors.counsellingDate?.message} />
-                  </div>
+                <AccordionContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <RequiredLabel>Branch</RequiredLabel>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="studentName">
-                      Student Name
-                    </RequiredLabel>
-                    <Input
-                      id="studentName"
-                      placeholder="ex: Rahul Sharma"
-                      {...register("studentName")}
-                    />
-                    <FormError message={errors.studentName?.message} />
-                  </div>
+                      <Controller
+                        control={control}
+                        name="branchId"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Branch" />
+                            </SelectTrigger>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="fatherName">Father&apos;s Name</Label>
-                    <Input
-                      id="fatherName"
-                      placeholder="ex: Rajesh Sharma"
-                      {...register("fatherName")}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="mobileNumber">
-                      Mobile Number
-                    </RequiredLabel>
-                    <Input
-                      id="mobileNumber"
-                      type="tel"
-                      placeholder="9876543210"
-                      maxLength={10}
-                      inputMode="numeric"
-                      {...register("mobileNumber")}
-                      onInput={(event) => {
-                        event.currentTarget.value =
-                          event.currentTarget.value.replace(/[^0-9]/g, "");
-                      }}
-                    />
-                    <FormError message={errors.mobileNumber?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="emailId">Email ID</RequiredLabel>
-                    <Input
-                      id="emailId"
-                      type="email"
-                      placeholder="student@example.com"
-                      {...register("emailId")}
-                    />
-                    <FormError message={errors.emailId?.message} />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                    <RequiredLabel htmlFor="address">Address</RequiredLabel>
-                    <Textarea
-                      id="address"
-                      placeholder="Enter full address"
-                      rows={3}
-                      {...register("address")}
-                    />
-                    <FormError message={errors.address?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="passportNumber">Passport Number</Label>
-                    <Input
-                      id="passportNumber"
-                      placeholder="ex: U12345678"
-                      {...register("passportNumber")}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="passportExpiryDate">
-                      Passport Expiry Date
-                    </Label>
-                    <Input
-                      id="passportExpiryDate"
-                      type="date"
-                      {...register("passportExpiryDate")}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Lead Source</Label>
-                    <Controller
-                      control={control}
-                      name="source"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value ?? ""}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Source" />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            {leadSources?.map(
-                              (item: LeadSource, idx: number) => (
+                            <SelectContent>
+                              {branches?.map((branch: Branch, idx: number) => (
                                 <SelectItem
-                                  key={item.id || idx}
-                                  value={item.name}
+                                  key={branch.id || idx}
+                                  value={branch.id}
                                 >
-                                  {item.name}
+                                  {branch.name}
                                 </SelectItem>
-                              ),
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
 
-            <AccordionItem
-              value="education"
-              className="rounded-2xl border bg-card"
-            >
-              <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
-                <div className="px-4 py-4 sm:px-6">
-                  <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
-                    <GraduationCap className="mr-2 h-5 w-5 text-blue-500" />
-                    Educational Information
-                  </h3>
-                </div>
-              </AccordionTrigger>
+                      <FormError message={errors.branchId?.message} />
+                    </div>
 
-              <AccordionContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2 md:col-span-2">
-                    <RequiredLabel htmlFor="twelfthCollegeName">
-                      12th College Name
-                    </RequiredLabel>
-                    <Input
-                      id="twelfthCollegeName"
-                      placeholder="Enter 12th college name"
-                      {...register("twelfthCollegeName")}
-                    />
-                    <FormError message={errors.twelfthCollegeName?.message} />
-                  </div>
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="counsellingDate">
+                        Date
+                      </RequiredLabel>
+                      <Input
+                        id="counsellingDate"
+                        type="date"
+                        {...register("counsellingDate")}
+                      />
+                      <FormError message={errors.counsellingDate?.message} />
+                    </div>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="twelfthMarks">
-                      12th Marks
-                    </RequiredLabel>
-                    <Input
-                      id="twelfthMarks"
-                      type="number"
-                      min="0"
-                      placeholder="ex: 875 or 92"
-                      {...register("twelfthMarks")}
-                    />
-                    <FormError message={errors.twelfthMarks?.message} />
-                  </div>
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="studentName">
+                        Student Name
+                      </RequiredLabel>
+                      <Input
+                        id="studentName"
+                        placeholder="ex: Rahul Sharma"
+                        {...register("studentName")}
+                      />
+                      <FormError message={errors.studentName?.message} />
+                    </div>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="neetMarks">
-                      NEET Marks
-                    </RequiredLabel>
-                    <Input
-                      id="neetMarks"
-                      type="number"
-                      min="0"
-                      max="720"
-                      placeholder="ex: 450"
-                      {...register("neetMarks")}
-                    />
-                    <FormError message={errors.neetMarks?.message} />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fatherName">Father&apos;s Name</Label>
+                      <Input
+                        id="fatherName"
+                        placeholder="ex: Rajesh Sharma"
+                        {...register("fatherName")}
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="state">State</RequiredLabel>
-                    <Input
-                      id="state"
-                      placeholder="ex: Telangana"
-                      {...register("state")}
-                    />
-                    <FormError message={errors.state?.message} />
-                  </div>
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="mobileNumber">
+                        Mobile Number
+                      </RequiredLabel>
+                      <Input
+                        id="mobileNumber"
+                        type="tel"
+                        placeholder="9876543210"
+                        maxLength={10}
+                        inputMode="numeric"
+                        {...register("mobileNumber")}
+                        onInput={(event) => {
+                          event.currentTarget.value =
+                            event.currentTarget.value.replace(/[^0-9]/g, "");
+                        }}
+                      />
+                      <FormError message={errors.mobileNumber?.message} />
+                    </div>
 
-                  <div className="space-y-2">
-                    <RequiredLabel htmlFor="city">City</RequiredLabel>
-                    <Input
-                      id="city"
-                      placeholder="ex: Hyderabad"
-                      {...register("city")}
-                    />
-                    <FormError message={errors.city?.message} />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="emailId">Email ID</RequiredLabel>
+                      <Input
+                        id="emailId"
+                        type="email"
+                        placeholder="student@example.com"
+                        {...register("emailId")}
+                      />
+                      <FormError message={errors.emailId?.message} />
+                    </div>
 
-            <AccordionItem value="ept" className="rounded-2xl border bg-card">
-              <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
-                <div className="px-4 py-4 sm:px-6">
-                  <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
-                    <BookOpen className="mr-2 h-5 w-5 text-purple-500" />
-                    EPT Details
-                  </h3>
-                </div>
-              </AccordionTrigger>
+                    <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                      <RequiredLabel htmlFor="address">Address</RequiredLabel>
+                      <Textarea
+                        id="address"
+                        placeholder="Enter full address"
+                        rows={3}
+                        {...register("address")}
+                      />
+                      <FormError message={errors.address?.message} />
+                    </div>
 
-              <AccordionContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <RequiredLabel>EPT</RequiredLabel>
+                    <div className="space-y-2">
+                      <Label htmlFor="passportNumber">Passport Number</Label>
+                      <Input
+                        id="passportNumber"
+                        placeholder="ex: U12345678"
+                        {...register("passportNumber")}
+                      />
+                    </div>
 
-                    <Controller
-                      control={control}
-                      name="ept"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select EPT" />
-                          </SelectTrigger>
+                    <div className="space-y-2">
+                      <Label htmlFor="passportExpiryDate">
+                        Passport Expiry Date
+                      </Label>
+                      <Input
+                        id="passportExpiryDate"
+                        type="date"
+                        {...register("passportExpiryDate")}
+                      />
+                    </div>
 
-                          <SelectContent>
-                            {eptOptions.map((item) => (
-                              <SelectItem key={item} value={item}>
-                                {item}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label>Lead Source</Label>
+                      <Controller
+                        control={control}
+                        name="source"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Source" />
+                            </SelectTrigger>
 
-                    <FormError message={errors.ept?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="listeningScore" className="text-xs">
-                      Listening
-                    </Label>
-                    <Input
-                      id="listeningScore"
-                      placeholder="L Score"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      {...register("listeningScore")}
-                    />
-                    <FormError message={errors.listeningScore?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="readingScore" className="text-xs">
-                      Reading
-                    </Label>
-                    <Input
-                      id="readingScore"
-                      placeholder="R Score"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      {...register("readingScore")}
-                    />
-                    <FormError message={errors.readingScore?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="writingScore" className="text-xs">
-                      Writing
-                    </Label>
-                    <Input
-                      id="writingScore"
-                      placeholder="W Score"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      {...register("writingScore")}
-                    />
-                    <FormError message={errors.writingScore?.message} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="speakingScore" className="text-xs">
-                      Speaking
-                    </Label>
-                    <Input
-                      id="speakingScore"
-                      placeholder="S Score"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      {...register("speakingScore")}
-                    />
-                    <FormError message={errors.speakingScore?.message} />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="preferences"
-              className="rounded-2xl border bg-card"
-            >
-              <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
-                <div className="px-4 py-4 sm:px-6">
-                  <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
-                    <Globe className="mr-2 h-5 w-5 text-emerald-500" />
-                    Study Preferences
-                  </h3>
-                </div>
-              </AccordionTrigger>
-
-              <AccordionContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <RequiredLabel>Preferred Country</RequiredLabel>
-                    <Controller
-                      control={control}
-                      name="preferredCountry"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Country" />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            {isCountriesLoading ? (
-                              <SelectItem value="loading-countries" disabled>
-                                Loading countries...
-                              </SelectItem>
-                            ) : countries?.length > 0 ? (
-                              countries?.map(
-                                (country: Country, idx: number) => (
+                            <SelectContent>
+                              {leadSources?.map(
+                                (item: LeadSource, idx: number) => (
                                   <SelectItem
-                                    key={country.id || idx}
-                                    value={country.name}
+                                    key={item.id || idx}
+                                    value={item.name}
                                   >
-                                    {country.name}
+                                    {item.name}
                                   </SelectItem>
                                 ),
-                              )
-                            ) : (
-                              <SelectItem value="no-countries" disabled>
-                                No countries found
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    <FormError message={errors.preferredCountry?.message} />
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
                   </div>
+                </AccordionContent>
+              </AccordionItem>
 
-                  <div className="space-y-2">
-                    <Label>Preferred Intake</Label>
-                    <Controller
-                      control={control}
-                      name="preferredIntake"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value ?? ""}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Intake" />
-                          </SelectTrigger>
+              <AccordionItem
+                value="education"
+                className="rounded-2xl border bg-card"
+              >
+                <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
+                  <div className="px-4 py-4 sm:px-6">
+                    <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
+                      <GraduationCap className="mr-2 h-5 w-5 text-blue-500" />
+                      Educational Information
+                    </h3>
+                  </div>
+                </AccordionTrigger>
 
-                          <SelectContent>
-                            {isIntakesLoading ? (
-                              <SelectItem value="loading-intakes" disabled>
-                                Loading intakes...
-                              </SelectItem>
-                            ) : intakes?.length > 0 ? (
-                              intakes?.map((intake: Intake, idx: number) => (
-                                <SelectItem
-                                  key={intake.id || idx}
-                                  value={intake.name}
-                                >
-                                  {intake.name}
+                <AccordionContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2 md:col-span-2">
+                      <RequiredLabel htmlFor="twelfthCollegeName">
+                        12th College Name
+                      </RequiredLabel>
+                      <Input
+                        id="twelfthCollegeName"
+                        placeholder="Enter 12th college name"
+                        {...register("twelfthCollegeName")}
+                      />
+                      <FormError message={errors.twelfthCollegeName?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="twelfthMarks">
+                        12th Marks
+                      </RequiredLabel>
+                      <Input
+                        id="twelfthMarks"
+                        type="number"
+                        min="0"
+                        placeholder="ex: 875 or 92"
+                        {...register("twelfthMarks")}
+                      />
+                      <FormError message={errors.twelfthMarks?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="neetMarks">
+                        NEET Marks
+                      </RequiredLabel>
+                      <Input
+                        id="neetMarks"
+                        type="number"
+                        min="0"
+                        max="720"
+                        placeholder="ex: 450"
+                        {...register("neetMarks")}
+                      />
+                      <FormError message={errors.neetMarks?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="state">State</RequiredLabel>
+                      <Input
+                        id="state"
+                        placeholder="ex: Telangana"
+                        {...register("state")}
+                      />
+                      <FormError message={errors.state?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RequiredLabel htmlFor="city">City</RequiredLabel>
+                      <Input
+                        id="city"
+                        placeholder="ex: Hyderabad"
+                        {...register("city")}
+                      />
+                      <FormError message={errors.city?.message} />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="ept" className="rounded-2xl border bg-card">
+                <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
+                  <div className="px-4 py-4 sm:px-6">
+                    <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
+                      <BookOpen className="mr-2 h-5 w-5 text-purple-500" />
+                      EPT Details
+                    </h3>
+                  </div>
+                </AccordionTrigger>
+
+                <AccordionContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <RequiredLabel>EPT</RequiredLabel>
+
+                      <Controller
+                        control={control}
+                        name="ept"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select EPT" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {eptOptions.map((item) => (
+                                <SelectItem key={item} value={item}>
+                                  {item}
                                 </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-intakes" disabled>
-                                No intakes found
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
 
+                      <FormError message={errors.ept?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="listeningScore" className="text-xs">
+                        Listening
+                      </Label>
+                      <Input
+                        id="listeningScore"
+                        placeholder="L Score"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        {...register("listeningScore")}
+                      />
+                      <FormError message={errors.listeningScore?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="readingScore" className="text-xs">
+                        Reading
+                      </Label>
+                      <Input
+                        id="readingScore"
+                        placeholder="R Score"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        {...register("readingScore")}
+                      />
+                      <FormError message={errors.readingScore?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="writingScore" className="text-xs">
+                        Writing
+                      </Label>
+                      <Input
+                        id="writingScore"
+                        placeholder="W Score"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        {...register("writingScore")}
+                      />
+                      <FormError message={errors.writingScore?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="speakingScore" className="text-xs">
+                        Speaking
+                      </Label>
+                      <Input
+                        id="speakingScore"
+                        placeholder="S Score"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        {...register("speakingScore")}
+                      />
+                      <FormError message={errors.speakingScore?.message} />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="preferences"
+                className="rounded-2xl border bg-card"
+              >
+                <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
+                  <div className="px-4 py-4 sm:px-6">
+                    <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
+                      <Globe className="mr-2 h-5 w-5 text-emerald-500" />
+                      Study Preferences
+                    </h3>
+                  </div>
+                </AccordionTrigger>
+
+                <AccordionContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <RequiredLabel>Preferred Country</RequiredLabel>
+                      <Controller
+                        control={control}
+                        name="preferredCountry"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Country" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {isCountriesLoading ? (
+                                <SelectItem value="loading-countries" disabled>
+                                  Loading countries...
+                                </SelectItem>
+                              ) : countries?.length > 0 ? (
+                                countries?.map(
+                                  (country: Country, idx: number) => (
+                                    <SelectItem
+                                      key={country.id || idx}
+                                      value={country.name}
+                                    >
+                                      {country.name}
+                                    </SelectItem>
+                                  ),
+                                )
+                              ) : (
+                                <SelectItem value="no-countries" disabled>
+                                  No countries found
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <FormError message={errors.preferredCountry?.message} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Preferred Intake</Label>
+                      <Controller
+                        control={control}
+                        name="preferredIntake"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Intake" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {isIntakesLoading ? (
+                                <SelectItem value="loading-intakes" disabled>
+                                  Loading intakes...
+                                </SelectItem>
+                              ) : intakes?.length > 0 ? (
+                                intakes?.map((intake: Intake, idx: number) => (
+                                  <SelectItem
+                                    key={intake.id || idx}
+                                    value={intake.name}
+                                  >
+                                    {intake.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-intakes" disabled>
+                                  No intakes found
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <RequiredLabel>Preferred Course</RequiredLabel>
+
+                      <Controller
+                        control={control}
+                        name="preferredCourse"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Course" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {courseOptions.map((item) => (
+                                <SelectItem key={item} value={item}>
+                                  {item}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+
+                      <FormError message={errors.preferredCourse?.message} />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="remarks"
+                className="rounded-2xl border bg-card"
+              >
+                <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
+                  <div className="px-4 py-4 sm:px-6">
+                    <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
+                      <NotebookPen className="mr-2 h-5 w-5 text-slate-500" />
+                      Remarks
+                    </h3>
+                  </div>
+                </AccordionTrigger>
+
+                <AccordionContent className="p-4 sm:p-6">
                   <div className="space-y-2">
-                    <RequiredLabel>Preferred Course</RequiredLabel>
-
-                    <Controller
-                      control={control}
-                      name="preferredCourse"
-                      render={({ field }) => (
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Course" />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            {courseOptions.map((item) => (
-                              <SelectItem key={item} value={item}>
-                                {item}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                    <Label htmlFor="remarks">Remarks</Label>
+                    <Textarea
+                      id="remarks"
+                      placeholder="Enter counselling notes, student interest, follow-up points, or any additional details..."
+                      rows={4}
+                      {...register("remarks")}
                     />
-
-                    <FormError message={errors.preferredCourse?.message} />
                   </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+                </AccordionContent>
+              </AccordionItem>
 
-            <AccordionItem
-              value="remarks"
-              className="rounded-2xl border bg-card"
-            >
-              <AccordionTrigger className="overflow-hidden rounded-2xl border-t-4 border-t-primary shadow-sm">
-                <div className="px-4 py-4 sm:px-6">
-                  <h3 className="flex items-center text-base font-semibold text-foreground sm:text-lg">
-                    <NotebookPen className="mr-2 h-5 w-5 text-slate-500" />
-                    Remarks
-                  </h3>
-                </div>
-              </AccordionTrigger>
+              <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border bg-background/90 p-3 shadow-lg backdrop-blur-md sm:bottom-4 sm:flex-row sm:justify-end sm:p-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => reset(getDefaultValues())}
+                >
+                  Reset Form
+                </Button>
 
-              <AccordionContent className="p-4 sm:p-6">
-                <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea
-                    id="remarks"
-                    placeholder="Enter counselling notes, student interest, follow-up points, or any additional details..."
-                    rows={4}
-                    {...register("remarks")}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border bg-background/90 p-3 shadow-lg backdrop-blur-md sm:bottom-4 sm:flex-row sm:justify-end sm:p-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => reset(getDefaultValues())}
-              >
-                Reset Form
-              </Button>
-
-              <Button
-                type="submit"
-                className="w-full sm:w-auto"
-                disabled={isSubmitting}
-              >
-                Save MBBS Lead & Continue
-              </Button>
-            </div>
-          </Accordion>
-        </form>
-      </div>
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={isSubmitting}
+                >
+                  Save MBBS Lead & Continue
+                </Button>
+              </div>
+            </Accordion>
+          </form>
+        </div>
+      </RoutePermission>
     </PageTransition>
   );
 }

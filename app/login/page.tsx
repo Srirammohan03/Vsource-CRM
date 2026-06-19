@@ -7,7 +7,6 @@ import { useAuth } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Eye,
   EyeOff,
@@ -17,11 +16,9 @@ import {
   GraduationCap,
   Loader2,
 } from "lucide-react";
-import { toast } from "sonner";
 import logo from "@/assets/vsourcess.png";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { moduleLandingRoutes } from "@/rbac/routePermissions";
 import GuestGuard from "@/components/guards/GuestGuard";
 
 export default function LoginPage() {

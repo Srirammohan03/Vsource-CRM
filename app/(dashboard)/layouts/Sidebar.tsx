@@ -46,11 +46,8 @@ const items = [
     label: "MASTER Walkins",
     icon: Users,
     children: [
-      { to: "/leads/add", label: "Add Walk-In" },
-      { to: "/leads/all", label: "All Walk-In's" },
-      // { to: "/leads/allocated", label: "Allocated" },
-      // { to: "/leads/today-followup", label: "Today Follow-up" },
-      // { to: "/leads/all-followup", label: "All Follow-ups" },
+      { to: "/leads/add", label: "Add Walk-In", requiredPermission: "create" },
+      { to: "/leads/all", label: "All Walk-In's", requiredPermission: "read" },
     ],
   },
   {
@@ -59,15 +56,18 @@ const items = [
     label: "MBBS Walkins",
     icon: Users,
     children: [
-      { to: "/mbbs-leads/add", label: "Add Walk-In" },
-      { to: "/mbbs-leads/all", label: "All Walk-In's" },
-      // { to: "/mbbs-leads/allocated", label: "Allocated" },
-      // { to: "/mbbs-leads/today-followup", label: "Today Follow-up" },
-      // { to: "/mbbs-leads/all-followup", label: "All Follow-ups" },
+      {
+        to: "/mbbs-leads/add",
+        label: "Add Walk-In",
+        requiredPermission: "create",
+      },
+      {
+        to: "/mbbs-leads/all",
+        label: "All Walk-In's",
+        requiredPermission: "read",
+      },
     ],
   },
-  // { to: "/course-finder", label: "Course Finder", icon: GraduationCap },
-  // { to: "/students", label: "Students", icon: GraduationCap },
   {
     moduleCode: "STUDENT_PROFILES",
     to: "/student-profiles",
@@ -80,7 +80,12 @@ const items = [
     label: "Applications Tracker",
     icon: FileText,
   },
-  { moduleCode: "PERFORMANCES", to: "/performances", label: "Performances", icon: GraduationCap },
+  {
+    moduleCode: "PERFORMANCES",
+    to: "/performances",
+    label: "Performances",
+    icon: GraduationCap,
+  },
   { moduleCode: "BRANCHES", to: "/branches", label: "Branches", icon: MapPin },
   {
     moduleCode: "UNIVERSITIES",
@@ -88,10 +93,6 @@ const items = [
     label: "Universities",
     icon: Building2,
   },
-  // // { to: "/coaching", label: "Coaching", icon: BookOpen },
-  // { to: "/loans", label: "Education Loans", icon: Banknote },
-  // { to: "/reports", label: "Reports", icon: BarChart3 },
-  // { to: "/promotional", label: "Promotional", icon: Megaphone },
   {
     moduleCode: "MASTER_SETTINGS",
     to: "/master-settings",
@@ -110,7 +111,6 @@ const items = [
     label: "User Management",
     icon: UserCog,
   },
-  // { to: "/profile", label: "Profile", icon: User },
 ] as const;
 
 export function Sidebar() {
@@ -118,9 +118,29 @@ export function Sidebar() {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     leads: pathname.startsWith("/leads"),
-    // leads: false, // default open
   });
   const canRead = useAuth((s) => s.canRead);
+
+  const { canCreate, canDelete, canUpdate } = useAuth();
+
+  const hasModulePermission = (
+    moduleCode: string,
+    permission: "read" | "create" | "update" | "delete",
+  ) => {
+    switch (permission) {
+      case "create":
+        return canCreate(moduleCode);
+
+      case "update":
+        return canUpdate(moduleCode);
+
+      case "delete":
+        return canDelete(moduleCode);
+
+      default:
+        return canRead(moduleCode);
+    }
+  };
 
   const filteredItems = items.filter((item) => canRead(item.moduleCode));
 
@@ -272,32 +292,39 @@ export function Sidebar() {
                       className="overflow-hidden"
                     >
                       <div className="ml-5 border-l border-sidebar-border pl-3 space-y-1">
-                        {it.children.map((child) => {
-                          const childActive = pathname === child.to;
+                        {it.children
+                          ?.filter((child) =>
+                            hasModulePermission(
+                              it.moduleCode,
+                              child.requiredPermission,
+                            ),
+                          )
+                          .map((child) => {
+                            const childActive = pathname === child.to;
 
-                          return (
-                            <Link
-                              key={child.to}
-                              href={child.to}
-                              className={cn(
-                                "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors",
-                                childActive
-                                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                              )}
-                            >
-                              <span
+                            return (
+                              <Link
+                                key={child.to}
+                                href={child.to}
                                 className={cn(
-                                  "h-1.5 w-1.5 rounded-full",
+                                  "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors",
                                   childActive
-                                    ? "bg-primary"
-                                    : "bg-sidebar-foreground/40",
+                                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                                 )}
-                              />
-                              {child.label}
-                            </Link>
-                          );
-                        })}
+                              >
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    childActive
+                                      ? "bg-primary"
+                                      : "bg-sidebar-foreground/40",
+                                  )}
+                                />
+                                {child.label}
+                              </Link>
+                            );
+                          })}
                       </div>
                     </motion.div>
                   )}

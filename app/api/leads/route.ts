@@ -17,10 +17,15 @@ import { LeadCreateSchema } from "@/lib/schemas";
 import { LeadStatus, LeadType } from "@/generated/prisma/enums";
 import { getAuthorizedUser } from "@/lib/rbac";
 import { MODULES, PERMISSIONS } from "@/lib/module-codes";
+import { Prisma } from "@/generated/prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
-    await getAuthorizedUser(req, MODULES.MASTER_LEADS, PERMISSIONS.READ);
+    const currentUser = await getAuthorizedUser(
+      req,
+      MODULES.MASTER_LEADS,
+      PERMISSIONS.READ,
+    );
 
     const sp = req.nextUrl.searchParams;
     const { skip, take, page, limit } = parsePagination(sp);
@@ -29,7 +34,6 @@ export async function GET(req: NextRequest) {
     const branchId = sp.get("branchId") ?? undefined;
     const status = sp.get("status") as LeadStatus | null;
     const leadType = sp.get("leadType") as LeadType | null;
-    const assignedCounselorId = sp.get("assignedCounselorId") ?? undefined;
     const isConverted =
       sp.get("isConverted") !== null
         ? sp.get("isConverted") === "true"
@@ -39,11 +43,10 @@ export async function GET(req: NextRequest) {
     const from = sp.get("from") ? new Date(sp.get("from")!) : undefined;
     const to = sp.get("to") ? new Date(sp.get("to")!) : undefined;
 
-    const where = {
+    const where: Prisma.LeadWhereInput = {
       ...(branchId && { branchId }),
       ...(status && { status }),
       ...(leadType && { leadType }),
-      ...(assignedCounselorId && { assignedCounselorId }),
       ...(isConverted !== undefined && { isConverted }),
       ...(source && { source }),
       ...(preferredCountry && { preferredCountry }),
@@ -62,6 +65,17 @@ export async function GET(req: NextRequest) {
         ],
       }),
     };
+
+    if (currentUser.role.name === "Counsellor") {
+      where.AND = [
+        {
+          OR: [
+            { createdById: currentUser.id },
+            { counselors: { some: { counselorId: currentUser.id } } },
+          ],
+        },
+      ];
+    }
 
     const [leads, total] = await Promise.all([
       db.lead.findMany({

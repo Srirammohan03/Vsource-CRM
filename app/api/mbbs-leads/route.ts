@@ -15,25 +15,32 @@ import {
 } from "@/lib/api-helpers";
 import { MbbsLeadCreateSchema } from "@/lib/schemas";
 import { MbbsLeadStatus } from "@/generated/prisma/enums";
+import { getAuthorizedUser } from "@/lib/rbac";
+import { MODULES, PERMISSIONS } from "@/lib/module-codes";
+import { Prisma } from "@/generated/prisma/client";
 // import type { MbbsLeadStatus } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
   try {
+    const currentUser = await getAuthorizedUser(
+      req,
+      MODULES.MBBS_LEADS,
+      PERMISSIONS.READ,
+    );
+
     const sp = req.nextUrl.searchParams;
     const { skip, take, page, limit } = parsePagination(sp);
 
     const search = sp.get("search") ?? undefined;
     const branchId = sp.get("branchId") ?? undefined;
     const status = sp.get("status") as MbbsLeadStatus | null;
-    const assignedCounselorId = sp.get("assignedCounselorId") ?? undefined;
     const preferredCountry = sp.get("preferredCountry") ?? undefined;
     const from = sp.get("from") ? new Date(sp.get("from")!) : undefined;
     const to = sp.get("to") ? new Date(sp.get("to")!) : undefined;
 
-    const where = {
+    const where: Prisma.MbbsLeadWhereInput = {
       ...(branchId && { branchId }),
       ...(status && { status }),
-      ...(assignedCounselorId && { assignedCounselorId }),
       ...(preferredCountry && { preferredCountry }),
       ...((from || to) && {
         createdAt: {
@@ -50,6 +57,17 @@ export async function GET(req: NextRequest) {
         ],
       }),
     };
+
+    if (currentUser.role.name === "Counsellor") {
+      where.AND = [
+        {
+          OR: [
+            { createdById: currentUser.id },
+            { counselors: { some: { counselorId: currentUser.id } } },
+          ],
+        },
+      ];
+    }
 
     const [leads, total] = await Promise.all([
       db.mbbsLead.findMany({

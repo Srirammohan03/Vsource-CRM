@@ -79,3 +79,123 @@ export const navigationItems = [
     icon: UserCog,
   },
 ] as const;
+
+export const routeConfig = [
+  {
+    moduleCode: "DASHBOARD",
+    routes: [
+      {
+        path: "/dashboard",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "MASTER_LEADS",
+    routes: [
+      {
+        path: "/leads/add",
+        permission: "canCreate",
+      },
+      {
+        path: "/leads/all",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "MBBS_LEADS",
+    routes: [
+      {
+        path: "/mbbs-leads/add",
+        permission: "canCreate",
+      },
+      {
+        path: "/mbbs-leads/all",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "STUDENT_PROFILES",
+    routes: [
+      {
+        path: "/student-profiles",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "APPLICATIONS",
+    routes: [
+      {
+        path: "/applications",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "PERFORMANCES",
+    routes: [
+      {
+        path: "/performances",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "BRANCHES",
+    routes: [
+      {
+        path: "/branches",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "UNIVERSITIES",
+    routes: [
+      {
+        path: "/universities",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "MASTER_SETTINGS",
+    routes: [
+      {
+        path: "/master-settings",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "ROLES",
+    routes: [
+      {
+        path: "/roles",
+        permission: "canRead",
+      },
+    ],
+  },
+
+  {
+    moduleCode: "USERS",
+    routes: [
+      {
+        path: "/users",
+        permission: "canRead",
+      },
+    ],
+  },
+] as const;
