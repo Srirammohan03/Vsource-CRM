@@ -59,7 +59,7 @@ export const createBranch = async (payload: CreateBranchDto) => {
 };
 
 export const updateBranch = async (id: string, payload: CreateBranchDto) => {
-  const { data } = await axios.patch(`${API_URL}/branches/${id}`, payload, {
+  const { data } = await axios.put(`${API_URL}/branches/${id}`, payload, {
     withCredentials: true,
   });
 

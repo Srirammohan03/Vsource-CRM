@@ -41,12 +41,20 @@ export async function GET(req: NextRequest) {
         skip,
         take,
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { users: true, leads: true } } },
+        include: { _count: { select: { users: true, leads: true, students: true, mbbsLeads: true } } },
       }),
       db.branch.count({ where }),
     ]);
 
-    return ok(branches, undefined, buildMeta(total, page, limit));
+    const formattedBranches = branches.map(b => ({
+      ...b,
+      usersCount: b._count?.users || 0,
+      leadsCount: (b._count?.leads || 0) + (b._count?.mbbsLeads || 0),
+      studentsCount: b._count?.students || 0,
+      _count: undefined,
+    }));
+
+    return ok(formattedBranches, undefined, buildMeta(total, page, limit));
   } catch (err) {
     return handleError(err);
   }
