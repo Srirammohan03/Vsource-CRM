@@ -383,7 +383,7 @@ export default function BranchesPage() {
                     <Building2 className="h-5 w-5" />
                   </div>
 
-                  <h3 className="text-lg font-bold">{branch.name}</h3>
+                  <h3 className="ml-2 text-lg font-bold">{branch.name}</h3>
                 </div>
 
                 <CardContent className="p-5">
