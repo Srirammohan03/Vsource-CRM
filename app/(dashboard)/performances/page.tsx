@@ -1,4 +1,4 @@
-
+"use client"
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

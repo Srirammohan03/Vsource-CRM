@@ -1,9 +1,11 @@
+// app\(dashboard)\applications-tracker\page.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { GripVertical, ArrowRight, UserCheck, Inbox, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { LocalStudent } from '../student-profiles/StudentTable';
 import { AnimatePresence, motion } from 'framer-motion';
+import { initialStudents } from "./mockData";
 
 interface KanbanBoardProps {
   students: LocalStudent[];
@@ -56,17 +58,19 @@ const KANBAN_COLUMNS = [
   }
 ] as const;
 
-export function KanbanBoard({
-  students,
-  setStudents,
-  isDarkMode,
-  onSelectStudent,
-  filterIntake,
-  filterCountry,
-  filterCounsellor,
-  filterVisaStatus,
-  filterLoanStatus
-}: KanbanBoardProps) {
+export default function ApplicationsTrackerPage() {
+  const [students, setStudents] = useState(initialStudents);
+  const isDarkMode = false;
+
+  const onSelectStudent = (id: string) => {
+    console.log(id);
+  };
+
+  const filterIntake = "All";
+  const filterCountry = "All";
+  const filterCounsellor = "All";
+  const filterVisaStatus = "All";
+  const filterLoanStatus = "All";
 
   // State for interactive popups in simple English
   const [moveConfirm, setMoveConfirm] = useState<{

@@ -75,8 +75,8 @@ const items = [
     icon: GraduationCap,
   },
   {
-    moduleCode: "Applications",
-    to: "/applications",
+    moduleCode: "APPLICATIONS",
+    to: "/applications-tracker",
     label: "Applications Tracker",
     icon: FileText,
   },
