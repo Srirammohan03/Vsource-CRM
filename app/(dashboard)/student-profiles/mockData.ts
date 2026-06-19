@@ -45,7 +45,7 @@ export interface Student {
   applications: Application[];
   loan: LoanDetail;
   visaDetails: VisaDetail;
-  remarks: Remark[];
+  remarks: Remark[]; 
 }
 
 export const initialStudents: Student[] = [

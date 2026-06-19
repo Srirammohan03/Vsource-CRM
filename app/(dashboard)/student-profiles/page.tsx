@@ -1,7 +1,7 @@
 // crm-frontend-next\app\(dashboard)\studentProfiles\page.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -61,16 +61,38 @@ interface Application {
   | "Unconditional Offer"
   | "Rejected";
 }
+interface LoanDetail {
+  assignee: string;
+  nbfc: "Poonawalla" | "Credila" | "Avanse" | "ICICI" | "Self Funding";
+  status: "Pending" | "Approved" | "Sanctioned" | "Rejected";
+  pfStatus: "Paid" | "Pending" | "Waived" | "Not Applicable";
+  sanctionedAmount: string;
+  disbursedAmount: string;
+}
+
+interface VisaDetail {
+  depositStatus: "Paid" | "Pending" | "Waived";
+  ihsPayment: "Paid" | "Pending" | "Not Required";
+  interviewStatus: "Completed" | "Pending" | "Waived";
+  casStatus: "Received" | "Pending" | "Not Required";
+  visaStatus: "Approved" | "Applied" | "Decision Pending" | "Draft Pending";
+}
+
+interface Remark {
+  date: string;
+  note: string;
+}
+
 interface Student {
   id: string;
   name: string;
   counsellor: string;
   country:
-  | "United Kingdom"
-  | "United States"
-  | "Canada"
-  | "Australia"
-  | "Germany";
+    | "United Kingdom"
+    | "United States"
+    | "Canada"
+    | "Australia"
+    | "Germany";
   intake: "Sep 2026" | "Jan 2026" | "May 2026";
   admissionDate: string;
   applicationType: string;
@@ -79,15 +101,18 @@ interface Student {
   email: string;
   englishRequirement: string;
   currentStage:
-  | "Lead Created"
-  | "Application Submitted"
-  | "Offer Received"
-  | "Deposit Paid"
-  | "Interview Completed"
-  | "CAS Received"
-  | "Visa Applied"
-  | "Visa Approved";
+    | "Lead Created"
+    | "Application Submitted"
+    | "Offer Received"
+    | "Deposit Paid"
+    | "Interview Completed"
+    | "CAS Received"
+    | "Visa Applied"
+    | "Visa Approved";
   applications: Application[];
+  loan: LoanDetail;
+  visaDetails: VisaDetail;
+  remarks: Remark[];
 }
 const initialStudents: Student[] = [
   {
@@ -966,8 +991,29 @@ export default function Home() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   );
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  // Keep this page synchronized with the application-level dark class.
+  // The previous code used true as light mode in the page but dark mode in
+  // StudentTable, which caused opposite card/text colours.
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const syncTheme = () => {
+      setIsDarkMode(root.classList.contains("dark"));
+    };
+
+    syncTheme();
+
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Detail page state variables
   const [detailTab, setDetailTab] = useState<
@@ -1809,7 +1855,7 @@ export default function Home() {
 
   return (
     <div
-      className={`flex min-h-screen ${isDarkMode ? "bg-slate-50 text-slate-900" : "bg-slate-950 text-slate-100"} transition-all duration-250`}
+      className={`${isDarkMode ? "dark" : ""} flex min-h-screen bg-background text-foreground transition-colors duration-200`}
     >
       {/* 1. COMPACT FIXED SIDEBAR NAVIGATION */}
 
