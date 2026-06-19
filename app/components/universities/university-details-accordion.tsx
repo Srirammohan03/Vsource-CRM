@@ -53,7 +53,7 @@ export function UniversityDetailsAccordion({ university }: Props) {
             <InfoCard
               icon={<Globe className="size-4" />}
               label="Country"
-              value={university.country}
+              value={typeof university.country === 'object' ? university.country?.name ?? '-' : String(university.country ?? '-')}
             />
 
             <InfoCard
@@ -79,7 +79,7 @@ export function UniversityDetailsAccordion({ university }: Props) {
               label="Application Fee"
               value={
                 university.applicationFee
-                  ? `${university.currency} ${university.applicationFee.toLocaleString()}`
+                  ? `${university.currency} ${Number(university.applicationFee).toLocaleString()}`
                   : "-"
               }
             />
@@ -122,12 +122,12 @@ export function UniversityDetailsAccordion({ university }: Props) {
           <div className="flex items-center gap-2">
             <GraduationCap className="size-4" />
 
-            <span>Courses ({university.courses.length})</span>
+            <span>Courses ({university.courses?.length ?? 0})</span>
           </div>
         </AccordionTrigger>
 
         <AccordionContent>
-          {university.courses.length === 0 ? (
+          {!university.courses || university.courses.length === 0 ? (
             <EmptyState title="No courses available" />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -160,7 +160,7 @@ export function UniversityDetailsAccordion({ university }: Props) {
                         label="Annual Fee"
                         value={
                           course.annualTuitionFee
-                            ? `${course.currency} ${course.annualTuitionFee.toLocaleString()}`
+                            ? `${course.currency} ${Number(course.annualTuitionFee).toLocaleString()}`
                             : "-"
                         }
                       />
@@ -205,12 +205,12 @@ export function UniversityDetailsAccordion({ university }: Props) {
           <div className="flex items-center gap-2">
             <Award className="size-4" />
 
-            <span>Scholarships ({university.scholarships.length})</span>
+            <span>Scholarships ({university.scholarships?.length ?? 0})</span>
           </div>
         </AccordionTrigger>
 
         <AccordionContent>
-          {university.scholarships.length === 0 ? (
+          {!university.scholarships || university.scholarships.length === 0 ? (
             <EmptyState title="No scholarships available" />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">

@@ -37,9 +37,21 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
     const body = UniversityUpdateSchema.parse(await req.json());
+    const { courses, scholarships, ...rest } = body;
+
     const university = await db.university.update({
       where: { id },
-      data: body,
+      data: {
+        ...rest,
+        courses: {
+          deleteMany: {},
+          ...(courses && courses.length > 0 && { create: courses }),
+        },
+        scholarships: {
+          deleteMany: {},
+          ...(scholarships && scholarships.length > 0 && { create: scholarships }),
+        },
+      },
       include: {
         country: { select: { id: true, name: true, code: true } },
       },

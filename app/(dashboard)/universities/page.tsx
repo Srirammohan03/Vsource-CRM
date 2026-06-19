@@ -28,7 +28,7 @@ import { useUniversities } from "@/hooks/use-universities";
 import { University, UniversityStatus } from "@/types/university";
 
 export default function UniversitiesPage() {
-  const { universities, addUniversity, updateUniversity, deleteUniversity } =
+  const { universities, isLoading, addUniversity, updateUniversity, deleteUniversity } =
     useUniversities();
 
   const [search, setSearch] = useState("");
@@ -49,7 +49,7 @@ export default function UniversitiesPage() {
     return universities.filter((university) => {
       const matchesSearch =
         university.name.toLowerCase().includes(search.toLowerCase()) ||
-        university.country.toLowerCase().includes(search.toLowerCase()) ||
+        university.country?.name?.toLowerCase().includes(search.toLowerCase()) ||
         university.city?.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
@@ -59,46 +59,38 @@ export default function UniversitiesPage() {
     });
   }, [universities, search, statusFilter]);
 
-  const handleCreateUniversity = (data: any) => {
-    const now = new Date().toISOString();
-
-    const university: University = {
-      ...data,
-
-      id: data.id || crypto.randomUUID(),
-
-      createdAt: now,
-
-      updatedAt: now,
-    };
-
-    addUniversity(university);
-
-    toast.success("University created successfully");
+  const handleCreateUniversity = async (data: any) => {
+    try {
+      await addUniversity(data);
+      toast.success("University created successfully");
+    } catch {
+      toast.error("Failed to create university");
+    }
   };
 
-  const handleUpdateUniversity = (data: any) => {
+  const handleUpdateUniversity = async (data: any) => {
     if (!editingUniversity) return;
 
-    updateUniversity(editingUniversity.id, {
-      ...editingUniversity,
-      ...data,
-      updatedAt: new Date().toISOString(),
-    });
-
-    toast.success("University updated successfully");
-
-    setEditingUniversity(null);
+    try {
+      await updateUniversity(editingUniversity.id, data);
+      toast.success("University updated successfully");
+      setEditingUniversity(null);
+    } catch {
+      toast.error("Failed to update university");
+    }
   };
 
-  const handleDeleteUniversity = (university: University) => {
+  const handleDeleteUniversity = async (university: University) => {
     const confirmed = window.confirm(`Delete ${university.name}?`);
 
     if (!confirmed) return;
 
-    deleteUniversity(university.id);
-
-    toast.success("University deleted");
+    try {
+      await deleteUniversity(university.id);
+      toast.success("University deleted");
+    } catch {
+      toast.error("Failed to delete university");
+    }
   };
 
   const handleEditUniversity = (university: University) => {
@@ -215,7 +207,7 @@ export default function UniversitiesPage() {
 
           <h3 className="mt-2 text-2xl font-bold">
             {universities.reduce(
-              (total, university) => total + university.scholarships.length,
+              (total, university) => total + (university._count?.scholarships ?? university.scholarships?.length ?? 0),
               0,
             )}
           </h3>
@@ -230,7 +222,11 @@ export default function UniversitiesPage() {
 
       {/* Grid */}
 
-      {filteredUniversities.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed">
+          <h3 className="text-lg font-semibold">Loading Universities...</h3>
+        </div>
+      ) : filteredUniversities.length === 0 ? (
         <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed">
           <h3 className="text-lg font-semibold">No Universities Found</h3>
 

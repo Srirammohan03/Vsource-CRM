@@ -239,29 +239,6 @@ const DegreeTypeEnum = z.enum([
   "certificate",
 ]);
 
-export const UniversityCreateSchema = z.object({
-  name: z.string().min(1),
-  countryId: uuid,
-  logo: optStr,
-  website: optStr,
-  address: optStr,
-  city: optStr,
-  state: optStr,
-  postalCode: optStr,
-  ranking: optInt,
-  establishedYear: optInt,
-  applicationFee: z.number().optional(),
-  currency: optStr,
-  description: optStr,
-  status: UniversityStatusEnum.default("active"),
-  contactPerson: optStr,
-  contactEmail: optStr,
-  contactPhone: optStr,
-  intakeNotes: optStr,
-});
-
-export const UniversityUpdateSchema = UniversityCreateSchema.partial();
-
 export const UniversityCourseCreateSchema = z.object({
   name: z.string().min(1),
   degree: DegreeTypeEnum,
@@ -300,6 +277,31 @@ export const UniversityScholarshipCreateSchema = z.object({
 
 export const UniversityScholarshipUpdateSchema =
   UniversityScholarshipCreateSchema.partial();
+
+export const UniversityCreateSchema = z.object({
+  name: z.string().min(1),
+  countryId: uuid,
+  logo: optStr,
+  website: optStr,
+  address: optStr,
+  city: optStr,
+  state: optStr,
+  postalCode: optStr,
+  ranking: optInt,
+  establishedYear: optInt,
+  applicationFee: z.number().optional(),
+  currency: optStr,
+  description: optStr,
+  status: UniversityStatusEnum.default("active"),
+  contactPerson: optStr,
+  contactEmail: optStr,
+  contactPhone: optStr,
+  intakeNotes: optStr,
+  courses: z.array(UniversityCourseCreateSchema).optional(),
+  scholarships: z.array(UniversityScholarshipCreateSchema).optional(),
+});
+
+export const UniversityUpdateSchema = UniversityCreateSchema.partial();
 
 // ---------------------------------------------------------------------------
 // Country

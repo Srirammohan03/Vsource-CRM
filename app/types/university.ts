@@ -57,7 +57,13 @@ export interface University {
 
   name: string;
 
-  country: string;
+  countryId: string;
+
+  country: {
+    id: string;
+    name: string;
+    code: string;
+  };
 
   city?: string;
 
@@ -89,9 +95,14 @@ export interface University {
 
   status: UniversityStatus;
 
-  courses: UniversityCourse[];
+  courses?: UniversityCourse[];
 
-  scholarships: UniversityScholarship[];
+  scholarships?: UniversityScholarship[];
+
+  _count?: {
+    courses: number;
+    scholarships: number;
+  };
 
   createdAt: string;
 

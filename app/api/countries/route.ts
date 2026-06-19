@@ -52,8 +52,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = CountryCreateSchema.parse(await req.json());
-    const country = await db.country.create({ data: body });
+    const payload = await req.json();
+
+    const country = await db.country.create({
+      data: {
+        name: payload.name,
+        code: payload.name
+          .trim()
+          .substring(0, 2)
+          .toUpperCase(),
+      },
+    });
+
     return created(country, "Country created successfully");
   } catch (err) {
     return handleError(err);

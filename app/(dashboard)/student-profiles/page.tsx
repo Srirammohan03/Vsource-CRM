@@ -53,24 +53,24 @@ interface Application {
   course: string;
   applicationDate: string;
   status:
-    | "Applied"
-    | "Pending"
-    | "Offer Received"
-    | "Priority Offer Received"
-    | "Conditional Offer"
-    | "Unconditional Offer"
-    | "Rejected";
+  | "Applied"
+  | "Pending"
+  | "Offer Received"
+  | "Priority Offer Received"
+  | "Conditional Offer"
+  | "Unconditional Offer"
+  | "Rejected";
 }
 interface Student {
   id: string;
   name: string;
   counsellor: string;
   country:
-    | "United Kingdom"
-    | "United States"
-    | "Canada"
-    | "Australia"
-    | "Germany";
+  | "United Kingdom"
+  | "United States"
+  | "Canada"
+  | "Australia"
+  | "Germany";
   intake: "Sep 2026" | "Jan 2026" | "May 2026";
   admissionDate: string;
   applicationType: string;
@@ -79,14 +79,14 @@ interface Student {
   email: string;
   englishRequirement: string;
   currentStage:
-    | "Lead Created"
-    | "Application Submitted"
-    | "Offer Received"
-    | "Deposit Paid"
-    | "Interview Completed"
-    | "CAS Received"
-    | "Visa Applied"
-    | "Visa Approved";
+  | "Lead Created"
+  | "Application Submitted"
+  | "Offer Received"
+  | "Deposit Paid"
+  | "Interview Completed"
+  | "CAS Received"
+  | "Visa Applied"
+  | "Visa Approved";
   applications: Application[];
 }
 const initialStudents: Student[] = [
@@ -1567,7 +1567,7 @@ export default function Home() {
         twelfthEnglishMoi: payload.twelfthEnglishMoi || "MOI Waiver Letter",
         currentStage:
           (payload.visaDetails?.visaStatus as any) === "Approved" ||
-          (payload.visaDetails?.visaStatus as any) === "Visa Approved"
+            (payload.visaDetails?.visaStatus as any) === "Visa Approved"
             ? ("Visa Approved" as any)
             : ("Lead Created" as any),
         applications: [
@@ -1735,13 +1735,13 @@ export default function Home() {
             updated = updated.map((app) =>
               app.id === editingAppId
                 ? {
-                    ...app,
-                    portal: appPortal,
-                    applicationDate: appDate,
-                    university: appUniversity,
-                    course: appCourse,
-                    status: appStatus as any,
-                  }
+                  ...app,
+                  portal: appPortal,
+                  applicationDate: appDate,
+                  university: appUniversity,
+                  course: appCourse,
+                  status: appStatus as any,
+                }
                 : app,
             );
           } else {
@@ -1816,7 +1816,7 @@ export default function Home() {
       {/* 2. MAIN WORKSPACE CONTENT CONTAINER */}
       <div className="flex-grow flex flex-col min-w-0 min-h-screen">
         {/* TOP COMPLIANCE NAVBAR */}
-  
+
 
         {/* WORKSPACE OPERATIONS MAIN CONTENT */}
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
@@ -1857,11 +1857,10 @@ export default function Home() {
 
                 {/* Profile Widget header card */}
                 <div
-                  className={`p-6 rounded-3xl border shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
-                    isDarkMode
+                  className={`p-6 rounded-3xl border shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode
                       ? "bg-slate-900 border-slate-800"
                       : "bg-white border-slate-100"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-red-605 from-red-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-2xl font-black">
@@ -1902,11 +1901,10 @@ export default function Home() {
 
                 {/* VISUAL STEPPER TIMELINE AND COMPLIANCE INTEGRATION TRACKER (Interactive!) */}
                 <div
-                  className={`p-6 rounded-3xl border shadow-md space-y-4 ${
-                    isDarkMode
+                  className={`p-6 rounded-3xl border shadow-md space-y-4 ${isDarkMode
                       ? "bg-slate-900 border-slate-805"
                       : "bg-white border-slate-100"
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] uppercase font-black text-slate-400 tracking-widest block">
@@ -1947,13 +1945,12 @@ export default function Home() {
                               }),
                             );
                           }}
-                          className={`p-3 rounded-2xl text-center border text-xs font-bold transition-all flex flex-col justify-between h-[85px] hover:scale-[1.03] overflow-hidden select-none cursor-pointer ${
-                            isActive
+                          className={`p-3 rounded-2xl text-center border text-xs font-bold transition-all flex flex-col justify-between h-[85px] hover:scale-[1.03] overflow-hidden select-none cursor-pointer ${isActive
                               ? "bg-red-600 text-white border-red-650 shadow-lg shadow-red-600/15"
                               : isCompleted
                                 ? "bg-emerald-100 text-emerald-800 border-emerald-250 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900"
                                 : "bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-950 dark:border-slate-850 dark:text-slate-500"
-                          }`}
+                            }`}
                         >
                           <span className="text-[10px] font-black font-mono self-start text-inherit opacity-80">
                             0{index + 1}
@@ -2018,11 +2015,10 @@ export default function Home() {
                         <button
                           key={tab.key}
                           onClick={() => setDetailTab(tab.key as any)}
-                          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left text-xs font-bold transition-all border ${
-                            isSel
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left text-xs font-bold transition-all border ${isSel
                               ? "bg-red-600 text-white border-red-600 shadow-xl shadow-red-600/10"
                               : "bg-white border-slate-200/60 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-850"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2.5">
                             <Icon
@@ -2039,11 +2035,10 @@ export default function Home() {
                   {/* Middle panels contents (Col Span 3) */}
                   <div className="lg:col-span-3">
                     <div
-                      className={`p-6 rounded-3xl border shadow-xl min-h-[420px] ${
-                        isDarkMode
+                      className={`p-6 rounded-3xl border shadow-xl min-h-[420px] ${isDarkMode
                           ? "bg-slate-900 border-slate-805 text-slate-100"
                           : "bg-white border-slate-100 text-slate-800"
-                      }`}
+                        }`}
                     >
                       {/* T1. INFORMATION PANEL (Wired fully with edit options!) */}
                       {detailTab === "info" && (
@@ -2252,11 +2247,10 @@ export default function Home() {
                                       setAppUniversity(e.target.value)
                                     }
                                     placeholder="e.g. University of Manchester"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
-                                    }`}
+                                      }`}
                                     required
                                   />
                                 </div>
@@ -2272,11 +2266,10 @@ export default function Home() {
                                       setAppCourse(e.target.value)
                                     }
                                     placeholder="e.g. MSc Advanced Computer Science"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
-                                    }`}
+                                      }`}
                                     required
                                   />
                                 </div>
@@ -2292,11 +2285,10 @@ export default function Home() {
                                       setAppPortal(e.target.value)
                                     }
                                     placeholder="e.g. GVOC / Centurus / Direct"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
-                                    }`}
+                                      }`}
                                     required
                                   />
                                 </div>
@@ -2312,11 +2304,10 @@ export default function Home() {
                                     value={appDate}
                                     onChange={(e) => setAppDate(e.target.value)}
                                     placeholder="15-Jun-2026"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
-                                    }`}
+                                      }`}
                                   />
                                 </div>
 
@@ -2329,11 +2320,10 @@ export default function Home() {
                                     onChange={(e) =>
                                       setAppStatus(e.target.value)
                                     }
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
-                                    }`}
+                                      }`}
                                   >
                                     {[
                                       "Draft",
@@ -2566,11 +2556,10 @@ export default function Home() {
                                   type="text"
                                   name="assignee"
                                   defaultValue={selectedStudent.loan.assignee}
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                   required
                                 />
                               </div>
@@ -2582,11 +2571,10 @@ export default function Home() {
                                 <select
                                   name="nbfc"
                                   defaultValue={selectedStudent.loan.nbfc}
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-650 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-650 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                 >
                                   {[
                                     "Poonawalla",
@@ -2613,11 +2601,10 @@ export default function Home() {
                                 <select
                                   name="status"
                                   defaultValue={selectedStudent.loan.status}
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                 >
                                   {[
                                     "Pending",
@@ -2643,11 +2630,10 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent.loan.pfStatus || "Pending"
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                 >
                                   {[
                                     "Paid",
@@ -2672,11 +2658,10 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent.loan.sanctionedAmount
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                   required
                                 />
                               </div>
@@ -2691,11 +2676,10 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent.loan.disbursedAmount
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                       ? "bg-slate-950 border-slate-800"
                                       : "bg-slate-50 border-slate-200"
-                                  }`}
+                                    }`}
                                   required
                                 />
                               </div>
@@ -2742,11 +2726,10 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode
                                     ? "bg-slate-950 border-slate-800"
                                     : "bg-slate-50 border-slate-202"
-                                }`}
+                                  }`}
                               >
                                 {[
                                   "Deposit Paid",
@@ -2775,11 +2758,10 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode
                                     ? "bg-slate-950 border-slate-800"
                                     : "bg-slate-50 border-slate-202"
-                                }`}
+                                  }`}
                               >
                                 {["Paid", "Pending", "Not Required"].map(
                                   (opt) => (
@@ -2806,11 +2788,10 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode
                                     ? "bg-slate-950 border-slate-800"
                                     : "bg-slate-50 border-slate-202"
-                                }`}
+                                  }`}
                               >
                                 {["Completed", "Pending", "Waived"].map(
                                   (opt) => (
@@ -2835,11 +2816,10 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode
                                     ? "bg-slate-950 border-slate-800"
                                     : "bg-slate-50 border-slate-202"
-                                }`}
+                                  }`}
                               >
                                 {[
                                   "CAS Received",
@@ -2869,11 +2849,10 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode
                                     ? "bg-slate-950 border-slate-800"
                                     : "bg-slate-50 border-slate-202"
-                                }`}
+                                  }`}
                               >
                                 {[
                                   "Visa Approved",
@@ -2926,11 +2905,10 @@ export default function Home() {
                               value={newRemarkText}
                               onChange={(e) => setNewRemarkText(e.target.value)}
                               placeholder="Type a new compliance note, advisory update..."
-                              className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                isDarkMode
+                              className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode
                                   ? "bg-slate-950 border-slate-800 text-slate-200"
                                   : "bg-slate-50 border-slate-202"
-                              }`}
+                                }`}
                               required
                             />
                             <button
@@ -2993,7 +2971,7 @@ export default function Home() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      {/* <div className="flex items-center gap-2">
                         <button
                           onClick={openAddModal}
                           className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4.5 py-2 rounded-xl inline-flex items-center gap-1 cursor-pointer"
@@ -3001,7 +2979,7 @@ export default function Home() {
                           <Plus className="h-4.5 w-4.5" />
                           <span>Quick Register Student</span>
                         </button>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Master Student 32-Column Table */}

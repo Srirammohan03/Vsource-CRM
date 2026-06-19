@@ -21,20 +21,38 @@ export const navigationItems = [
   {
     moduleCode: "MASTER_LEADS",
     to: "/leads",
-    label: "MASTER Leads",
+    label: "MASTER Walkins",
+    icon: Users,
+  },
+  {
+    moduleCode: "MBBS_LEADS",
+    to: "/mbbs-leads",
+    label: "MBBS Walkins",
     icon: Users,
   },
   {
     moduleCode: "STUDENT_PROFILES",
     to: "/student-profiles",
-    label: "Student Profiles",
+    label: "Visa Applications",
     icon: GraduationCap,
   },
   {
-    moduleCode: "MBBS_LEADS",
-    to: "/mbbs-leads",
-    label: "MBBS Leads",
-    icon: Users,
+    moduleCode: "APPLICATIONS",
+    to: "/applications",
+    label: "Applications Tracker",
+    icon: GraduationCap,
+  },
+  {
+    moduleCode: "PERFORMANCES",
+    to: "/performances",
+    label: "Performances",
+    icon: GraduationCap,
+  },
+  {
+    moduleCode: "BRANCHES",
+    to: "/branches",
+    label: "Branches",
+    icon: MapPin,
   },
   {
     moduleCode: "UNIVERSITIES",
@@ -47,12 +65,6 @@ export const navigationItems = [
     to: "/master-settings",
     label: "Master Settings",
     icon: Settings2,
-  },
-  {
-    moduleCode: "BRANCHES",
-    to: "/branches",
-    label: "Branches",
-    icon: MapPin,
   },
   {
     moduleCode: "ROLES",

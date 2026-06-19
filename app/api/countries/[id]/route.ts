@@ -51,3 +51,21 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     return handleError(err);
   }
 }
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  try {
+    const { id } = await params;
+
+    const body = await req.json();
+
+    const country = await db.country.update({
+      where: { id },
+      data: {
+        status: body.status,
+      },
+    });
+
+    return ok(country, "Country status updated successfully");
+  } catch (err) {
+    return handleError(err);
+  }
+}

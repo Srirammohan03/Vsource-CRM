@@ -7,42 +7,55 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export interface Country {
   id: string;
   name: string;
+  status: boolean;
 }
 
 export interface Intake {
   id: string;
   name: string;
+  status: boolean;
 }
 
 export interface LeadSource {
   id: string;
   name: string;
+  status: boolean;
 }
 
 export const getCountries = async () => {
   try {
-    const { data } = await axios.get(`${API_URL}/countries`, {
-      withCredentials: true,
-    });
+    const { data } = await axios.get(
+      `${API_URL}/countries?status=true`,
+      {
+        withCredentials: true,
+      },
+    );
 
     return data?.data || [];
   } catch (error) {
     console.log(error);
+    return [];
   }
 };
 
 export const getIntakes = async () => {
-  const { data } = await axios.get(`${API_URL}/intakes`, {
-    withCredentials: true,
-  });
+  const { data } = await axios.get(
+    `${API_URL}/intakes?status=true`,
+    {
+      withCredentials: true,
+    },
+  );
 
   return data?.data || [];
 };
 
 export const getLeadSources = async () => {
-  const { data } = await axios.get(`${API_URL}/lead-sources`, {
-    withCredentials: true,
-  });
+  const { data } = await axios.get(
+    `${API_URL}/lead-sources?status=true`,
+    {
+      withCredentials: true,
+    },
+  );
 
   return data?.data || [];
 };
@@ -50,6 +63,7 @@ export const getLeadSources = async () => {
 export interface MasterItem {
   id: string;
   name: string;
+  status: boolean;
 }
 
 export const getMasters = async (endpoint: string) => {

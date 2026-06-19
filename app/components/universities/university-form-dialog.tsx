@@ -6,6 +6,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 import {
   Dialog,
@@ -53,7 +55,7 @@ interface UniversityFormDialogProps {
 const DEFAULT_VALUES: UniversityFormValues = {
   id: "",
   name: "",
-  country: "",
+  countryId: "",
   city: "",
   state: "",
   postalCode: "",
@@ -89,13 +91,28 @@ export function UniversityFormDialog({
 }: UniversityFormDialogProps) {
   const isEdit = !!university;
 
+  const { data: countriesData } = useQuery({
+    queryKey: ["countries"],
+    queryFn: async () => {
+      const response = await axios.get("/api/countries");
+      return response.data.data;
+    },
+  });
+  const countries = (countriesData || []) as { id: string; name: string; code: string }[];
+
   const values = useMemo(() => {
     if (!university) {
       return DEFAULT_VALUES;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { country, _count, createdAt, updatedAt, ...rest } = university as any;
     return {
-      ...university,
+      ...DEFAULT_VALUES,
+      ...rest,
+      countryId: university.countryId || (typeof country === 'object' ? country?.id : country) || "",
+      courses: university.courses ?? [],
+      scholarships: university.scholarships ?? [],
     };
   }, [university]);
 
@@ -120,7 +137,13 @@ export function UniversityFormDialog({
 
   const submitHandler = (data: UniversityFormValues) => {
     try {
-      onSubmit(data);
+      // Strip client-side IDs from nested records — server generates them
+      const cleanedData = {
+        ...data,
+        courses: (data.courses ?? []).map(({ id, ...rest }) => rest),
+        scholarships: (data.scholarships ?? []).map(({ id, ...rest }) => rest),
+      };
+      onSubmit(cleanedData as any);
 
       toast.success(isEdit ? "University updated" : "University created");
 
@@ -166,7 +189,21 @@ export function UniversityFormDialog({
                   <div>
                     <Label>Country</Label>
 
-                    <Input {...form.register("country")} />
+                    <Select
+                      value={form.watch("countryId")}
+                      onValueChange={(value) => form.setValue("countryId", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -364,7 +401,7 @@ export function UniversityFormDialog({
             </div>
           </Tabs>
 
-          <DialogFooter className="border-t px-6 py-4">
+          <DialogFooter className="border-t px-6 ">
             <Button
               type="button"
               variant="outline"

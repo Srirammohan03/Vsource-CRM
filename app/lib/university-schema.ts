@@ -54,7 +54,7 @@ export const universitySchema = z.object({
 
   name: z.string().min(2),
 
-  country: z.string().min(2),
+  countryId: z.string().min(1, "Country is required"),
 
   city: z.string().optional(),
 

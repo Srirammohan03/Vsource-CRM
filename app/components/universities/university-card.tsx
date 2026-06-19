@@ -93,7 +93,7 @@ function UniversityCardComponent({
             <div className="font-semibold line-clamp-1">{university.name}</div>
 
             <div className="text-xs opacity-90">
-              {university.city}, {university.country}
+              {university.city}, {university.country?.name}
             </div>
           </div>
         </div>
@@ -151,14 +151,14 @@ function UniversityCardComponent({
             {university.status}
           </Badge>
 
-          <Badge variant="secondary">{university.courses.length} Courses</Badge>
+          <Badge variant="secondary">{university._count?.courses ?? university.courses?.length ?? 0} Courses</Badge>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <StatCard
             icon={<Globe className="h-4 w-4" />}
             label="Country"
-            value={university.country}
+            value={university.country?.name || "-"}
           />
 
           <StatCard
@@ -182,7 +182,7 @@ function UniversityCardComponent({
           <StatCard
             icon={<Building2 className="h-4 w-4" />}
             label="Scholarships"
-            value={String(university.scholarships.length)}
+            value={String(university._count?.scholarships ?? university.scholarships?.length ?? 0)}
           />
         </div>
 

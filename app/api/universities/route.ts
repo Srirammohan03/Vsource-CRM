@@ -64,8 +64,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = UniversityCreateSchema.parse(await req.json());
+    const { courses, scholarships, ...rest } = body;
+    
     const university = await db.university.create({
-      data: body,
+      data: {
+        ...rest,
+        ...(courses && courses.length > 0 && { courses: { create: courses } }),
+        ...(scholarships && scholarships.length > 0 && { scholarships: { create: scholarships } }),
+      },
       include: {
         country: { select: { id: true, name: true, code: true } },
       },

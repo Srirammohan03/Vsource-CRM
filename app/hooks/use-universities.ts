@@ -1,46 +1,60 @@
 // crm-frontend-next\app\hooks\use-universities.ts
 "use client";
 
-import { useState } from "react";
-
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { University } from "@/types/university";
-
-import { universitySeed } from "@/data/universities";
+import { UniversityFormValues } from "@/lib/university-schema";
 
 export function useUniversities() {
-  const [universities, setUniversities] =
-    useState<University[]>(universitySeed);
+  const queryClient = useQueryClient();
 
-  const addUniversity = (
-    university: University
-  ) => {
-    setUniversities((prev) => [
-      university,
-      ...prev,
-    ]);
-  };
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["universities"],
+    queryFn: async () => {
+      const response = await axios.get("/api/universities");
+      return response.data.data as University[];
+    },
+  });
 
-  const updateUniversity = (
-    id: string,
-    data: University
-  ) => {
-    setUniversities((prev) =>
-      prev.map((item) =>
-        item.id === id ? data : item
-      )
-    );
-  };
+  const universities = data || [];
 
-  const deleteUniversity = (id: string) => {
-    setUniversities((prev) =>
-      prev.filter((item) => item.id !== id)
-    );
-  };
+  const addMutation = useMutation({
+    mutationFn: async (university: UniversityFormValues) => {
+      const response = await axios.post("/api/universities", university);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["universities"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UniversityFormValues }) => {
+      const response = await axios.put(`/api/universities/${id}`, data);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["universities"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await axios.delete(`/api/universities/${id}`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["universities"] });
+    },
+  });
 
   return {
     universities,
-    addUniversity,
-    updateUniversity,
-    deleteUniversity,
+    isLoading,
+    error,
+    addUniversity: addMutation.mutateAsync,
+    updateUniversity: (id: string, data: UniversityFormValues) => updateMutation.mutateAsync({ id, data }),
+    deleteUniversity: deleteMutation.mutateAsync,
   };
 }

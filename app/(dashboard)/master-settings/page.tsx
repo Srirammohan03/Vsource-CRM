@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 import { toast } from "sonner";
 
@@ -100,7 +101,34 @@ export default function MasterSettings() {
       toast.error("Failed to add");
     }
   };
+  const handleStatusChange = async (
+    id: string,
+    status: boolean,
+  ) => {
+    try {
+      const res = await fetch(`/api${current.endpoint}/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status,
+        }),
+      });
 
+      if (!res.ok) {
+        throw new Error();
+      }
+
+      toast.success(
+        status ? "Activated successfully" : "Deactivated successfully",
+      );
+
+      await loadData();
+    } catch {
+      toast.error("Failed to update status");
+    }
+  };
   const handleDelete = async (id: string) => {
     try {
       await deleteMaster(current.endpoint, id);
@@ -170,17 +198,33 @@ export default function MasterSettings() {
                 items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-2xl border bg-card px-4 py-3 shadow-sm"
+                    className={`flex items-center justify-between rounded-2xl px-4 py-3 shadow-sm transition-all border ${item.status
+                      ? "border-green-200 bg-green-50"
+                      : "border-red-200 bg-red-50"
+                      }`}
                   >
-                    <span>{item.name}</span>
+                    <div className="flex flex-col">
+                      <span
+                        className={`font-medium ${item.status ? "text-green-800" : "text-red-800"
+                          }`}
+                      >
+                        {item.name}
+                      </span>
 
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <span
+                        className={`text-xs ${item.status ? "text-green-600" : "text-red-600"
+                          }`}
+                      >
+                        {item.status ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+
+                    <Switch
+                      checked={item.status}
+                      onCheckedChange={(checked) =>
+                        handleStatusChange(item.id, checked)
+                      }
+                    />
                   </div>
                 ))
               )}

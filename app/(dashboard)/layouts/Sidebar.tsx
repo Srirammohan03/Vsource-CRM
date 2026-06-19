@@ -43,7 +43,7 @@ const items = [
   {
     moduleCode: "MASTER_LEADS",
     to: "/leads",
-    label: "MASTER Leads",
+    label: "MASTER Walkins",
     icon: Users,
     children: [
       { to: "/leads/add", label: "Add Walk-In" },
@@ -56,7 +56,7 @@ const items = [
   {
     moduleCode: "MBBS_LEADS",
     to: "/mbbs-leads",
-    label: "MBBS Leads",
+    label: "MBBS Walkins",
     icon: Users,
     children: [
       { to: "/mbbs-leads/add", label: "Add Walk-In" },
@@ -71,15 +71,17 @@ const items = [
   {
     moduleCode: "STUDENT_PROFILES",
     to: "/student-profiles",
-    label: "Student Profiles",
+    label: "Visa Applications",
     icon: GraduationCap,
   },
   {
     moduleCode: "Applications",
     to: "/applications",
-    label: "Applications",
+    label: "Applications Tracker",
     icon: FileText,
   },
+  { moduleCode: "PERFORMANCES", to: "/performances", label: "Performances", icon: GraduationCap },
+  { moduleCode: "BRANCHES", to: "/branches", label: "Branches", icon: MapPin },
   {
     moduleCode: "UNIVERSITIES",
     to: "/universities",
@@ -96,7 +98,6 @@ const items = [
     label: "Master Settings",
     icon: Settings2,
   },
-  { moduleCode: "BRANCHES", to: "/branches", label: "Branches", icon: MapPin },
   {
     moduleCode: "ROLES",
     to: "/roles",
