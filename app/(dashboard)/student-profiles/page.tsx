@@ -905,40 +905,7 @@ const initialStudents: Student[] = [
     ],
   },
 ];
-const recentActivities = [
-  {
-    id: "act-1",
-    type: "Visa Slot Booked",
-    student: "Prasad Panjugula",
-    counsellor: "Anjali Sharma",
-    date: "05-Jun-2026",
-    details: "VFS booking completed for June 8th.",
-  },
-  {
-    id: "act-2",
-    type: "Offer Received",
-    student: "Sandeep Kumar",
-    counsellor: "Karan Malhotra",
-    date: "12-Jun-2026",
-    details: "Unconditional Offer from Bedfordshire.",
-  },
-  {
-    id: "act-3",
-    type: "CAS Received",
-    student: "Prasad Panjugula",
-    counsellor: "Anjali Sharma",
-    date: "15-Jun-2026",
-    details: "CAS received from Coventry University.",
-  },
-  {
-    id: "act-4",
-    type: "Loan Approved",
-    student: "Akhil Kumar",
-    counsellor: "Ravi Teja",
-    date: "12-Jun-2026",
-    details: "Self-funding source verified and approved.",
-  },
-];
+
 export default function Home() {
   // Backwards compatible initial state mapped with extra credentials & local documents
   const [students, setStudents] = useState<LocalStudent[]>(() => {
@@ -1857,14 +1824,9 @@ export default function Home() {
     <div
       className={`${isDarkMode ? "dark" : ""} flex min-h-screen bg-background text-foreground transition-colors duration-200`}
     >
-      {/* 1. COMPACT FIXED SIDEBAR NAVIGATION */}
 
-      {/* 2. MAIN WORKSPACE CONTENT CONTAINER */}
       <div className="flex-grow flex flex-col min-w-0 min-h-screen">
-        {/* TOP COMPLIANCE NAVBAR */}
 
-
-        {/* WORKSPACE OPERATIONS MAIN CONTENT */}
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
           {/* CRITICAL HERO GREETING BLOCK */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5">
@@ -3030,7 +2992,7 @@ export default function Home() {
 
                     {/* Master Student 32-Column Table */}
                     <StudentTable
-                      students={filteredStudents}
+                      // students={filteredStudents}
                       isDarkMode={isDarkMode}
                       onSelectStudent={handleSelectStudent}
                       onEditStudent={openEditModal}

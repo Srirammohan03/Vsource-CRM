@@ -23,17 +23,76 @@ export type ApplicationStage =
 
 export interface Lead {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  source: string;
+  leadNumber: string;
+
+  counsellingDate?: string | null;
+
+  studentName?: string;
+  mobileNumber?: string;
+  emailId?: string;
+  password?:string;
+
+  place?: string;
+  passport?: string;
+
+  passportExpireDate?: string | null;
+
+  source?: string;
+
+  branch?: {
+    id: string;
+    name: string;
+  };
+
+  counselors?: {
+    isPrimary: boolean;
+    counselor: {
+      id: string;
+      name: string;
+    };
+  }[];
+
+  preferredCountry?: string;
+  preferredIntake?: string;
+  preferredCourse?: string;
+
+  tenthPercentage?: number;
+  tenthYearOfPassing?: number;
+
+  twelfthPercentage?: number;
+  twelfthYearOfPassing?: number;
+
+  bachelorsCourse?: string;
+  bachelorsUniversityName?: string;
+  bachelorsPercentage?: number;
+  bachelorsYearOfPassing?: number;
+
+  backlogs?: number;
+
+  workExperience?: string;
+
+  greGmatScore?: number;
+  quantitativeScore?: number;
+  verbalScore?: number;
+  analyticalWritingScore?: number;
+
+  englishTestType?: string;
+
+  listeningScore?: number;
+  readingScore?: number;
+  writingScore?: number;
+  speakingScore?: number;
+
+  gapsIfAny?: string;
+
+  remarks?: string;
+
+  nextFollowup?: string | null;
+
   status: LeadStatus;
-  branch: string;
-  counselor: string;
-  country: string;
+
+  isConverted?: boolean;
   createdAt: string;
-  allocationDate?: string;
-  nextFollowup?: string;
 }
 
 export interface Followup {
