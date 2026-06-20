@@ -1,3 +1,8 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -8,493 +13,97 @@ datasource db {
 }
 
 model User {
-  id                         String              @id @default(uuid())
-  name                       String
-  email                      String              @unique
-  password                   String
-  roleId                     String
-  createdAt                  DateTime            @default(now())
-  updatedAt                  DateTime            @updatedAt
-  leadsCreated               Lead[]              @relation("LeadCreatedBy")
-  leadsUpdated               Lead[]              @relation("LeadUpdatedBy")
-  leadCounselorsAssigned     LeadCounselor[]     @relation("LeadAssignedBy")
-  leadAssignments            LeadCounselor[]
-  leadTimelinesCreated       LeadTimeline[]      @relation("LeadTimelineCreatedBy")
-  leadTimelinesUpdated       LeadTimeline[]      @relation("LeadTimelineUpdatedBy")
-  mbbsLeadsCreated           MbbsLead[]          @relation("MbbsLeadCreatedBy")
-  mbbsLeadsUpdated           MbbsLead[]          @relation("MbbsLeadUpdatedBy")
-  mbbsLeadCounselorsAssigned MbbsLeadCounselor[] @relation("MbbsLeadAssignedBy")
+  id String @id @default(uuid())
+
+  name     String
+  email    String @unique
+  password String
+
+  branches Branch[]
+
+  leadAssignments        LeadCounselor[]
+  leadCounselorsAssigned LeadCounselor[] @relation("LeadAssignedBy")
+
   mbbsLeadAssignments        MbbsLeadCounselor[]
-  mbbsTimelinesCreated       MbbsLeadTimeline[]  @relation("MbbsTimelineCreatedBy")
-  mbbsTimelinesUpdated       MbbsLeadTimeline[]  @relation("MbbsTimelineUpdatedBy")
-  students                   Student[]           @relation("CounselorStudents")
-  studentTimelines           StudentTimeline[]   @relation("StudentTimelineCreatedBy")
-  role                       Role                @relation(fields: [roleId], references: [id])
-  branches                   Branch[]            @relation("BranchToUser")
+  mbbsLeadCounselorsAssigned MbbsLeadCounselor[] @relation("MbbsLeadAssignedBy")
+
+  students Student[] @relation("CounselorStudents")
+
+  studentTimelines StudentTimeline[] @relation("StudentTimelineCreatedBy")
+
+  leadTimelinesCreated LeadTimeline[] @relation("LeadTimelineCreatedBy")
+  leadTimelinesUpdated LeadTimeline[] @relation("LeadTimelineUpdatedBy")
+
+  mbbsTimelinesCreated MbbsLeadTimeline[] @relation("MbbsTimelineCreatedBy")
+  mbbsTimelinesUpdated MbbsLeadTimeline[] @relation("MbbsTimelineUpdatedBy")
+
+  leadsCreated Lead[] @relation("LeadCreatedBy")
+  leadsUpdated Lead[] @relation("LeadUpdatedBy")
+
+  mbbsLeadsCreated MbbsLead[] @relation("MbbsLeadCreatedBy")
+  mbbsLeadsUpdated MbbsLead[] @relation("MbbsLeadUpdatedBy")
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Role {
-  id                String                 @id @default(uuid())
-  name              String                 @unique
-  description       String?
-  isSystem          Boolean                @default(false)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  id String @id @default(uuid())
+
+  name String @unique
+
+  description String?
+
+  isSystem Boolean @default(false)
+
+  users User[]
+
   modulePermissions RoleModulePermission[]
-  users             User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Module {
-  id                String                 @id @default(uuid())
-  name              String
-  code              String                 @unique
-  icon              String?
-  sortOrder         Int                    @default(0)
-  isActive          Boolean                @default(true)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  id String @id @default(uuid())
+
+  name String
+
+  code String @unique
+
+  icon String?
+
+  sortOrder Int @default(0)
+
+  isActive Boolean @default(true)
+
   modulePermissions RoleModulePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RoleModulePermission {
-  roleId    String
-  moduleId  String
+  roleId String
+
+  moduleId String
+
   canCreate Boolean @default(false)
-  canRead   Boolean @default(false)
+
+  canRead Boolean @default(false)
+
   canUpdate Boolean @default(false)
+
   canDelete Boolean @default(false)
-  module    Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  role      Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, moduleId])
-}
-
-model Lead {
-  id                      String          @id @default(uuid())
-  leadNumber              String          @unique
-  leadType                LeadType        @default(study_abroad)
-  counsellingDate         DateTime?
-  studentName             String?
-  fatherName              String?
-  mobileNumber            String?
-  emailId                 String?
-  place                   String?
-  passport                String?
-  passportExpireDate      DateTime?
-  source                  String?
-  branchId                String
-  isConverted             Boolean         @default(false)
-  convertedAt             DateTime?
-  tenthPercentage         Float?
-  tenthYearOfPassing      Int?
-  twelfthPercentage       Float?
-  twelfthYearOfPassing    Int?
-  bachelorsCourse         String?
-  bachelorsUniversityName String?
-  bachelorsPercentage     Float?
-  bachelorsYearOfPassing  Int?
-  backlogs                Int?
-  workExperience          String?
-  preferredCountry        String?
-  preferredIntake         String?
-  preferredCourse         String?
-  greGmatScore            Float?
-  quantitativeScore       Float?
-  verbalScore             Float?
-  analyticalWritingScore  Float?
-  englishTestType         String?
-  listeningScore          Float?
-  writingScore            Float?
-  readingScore            Float?
-  speakingScore           Float?
-  gapsIfAny               String?
-  status                  LeadStatus      @default(new)
-  nextFollowup            DateTime?
-  remarks                 String?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  createdById             String?
-  updatedById             String?
-  branch                  Branch          @relation(fields: [branchId], references: [id])
-  createdBy               User?           @relation("LeadCreatedBy", fields: [createdById], references: [id])
-  updatedBy               User?           @relation("LeadUpdatedBy", fields: [updatedById], references: [id])
-  counselors              LeadCounselor[]
-  timelines               LeadTimeline[]
-  student                 Student?
-
-  @@index([branchId])
-  @@index([branchId, status])
-  @@index([branchId, isConverted])
-}
-
-model LeadCounselor {
-  id           String   @id @default(uuid())
-  leadId       String
-  counselorId  String
-  assignedAt   DateTime @default(now())
-  assignedById String?
-  isPrimary    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  assignedBy   User?    @relation("LeadAssignedBy", fields: [assignedById], references: [id])
-  counselor    User     @relation(fields: [counselorId], references: [id])
-  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@unique([leadId, counselorId])
-}
-
-model MbbsLeadCounselor {
-  id           String   @id @default(uuid())
-  mbbsLeadId   String
-  counselorId  String
-  assignedAt   DateTime @default(now())
-  assignedById String?
-  isPrimary    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  assignedBy   User?    @relation("MbbsLeadAssignedBy", fields: [assignedById], references: [id])
-  counselor    User     @relation(fields: [counselorId], references: [id])
-  mbbsLead     MbbsLead @relation(fields: [mbbsLeadId], references: [id], onDelete: Cascade)
-
-  @@unique([mbbsLeadId, counselorId])
-}
-
-model LeadTimeline {
-  id           String    @id @default(uuid())
-  leadId       String
-  description  String
-  nextFollowup DateTime?
-  createdById  String?
-  updatedById  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  createdBy    User?     @relation("LeadTimelineCreatedBy", fields: [createdById], references: [id])
-  lead         Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  updatedBy    User?     @relation("LeadTimelineUpdatedBy", fields: [updatedById], references: [id])
-
-  @@index([leadId])
-}
-
-model MbbsLeadTimeline {
-  id           String    @id @default(uuid())
-  mbbsLeadId   String
-  description  String
-  nextFollowup DateTime?
-  createdById  String?
-  updatedById  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  createdBy    User?     @relation("MbbsTimelineCreatedBy", fields: [createdById], references: [id])
-  mbbsLead     MbbsLead  @relation(fields: [mbbsLeadId], references: [id])
-  updatedBy    User?     @relation("MbbsTimelineUpdatedBy", fields: [updatedById], references: [id])
-
-  @@index([mbbsLeadId])
-}
-
-model MbbsLead {
-  id                  String              @id @default(uuid())
-  leadNumber          String              @unique
-  counsellingDate     DateTime?
-  studentName         String?
-  fatherName          String?
-  mobileNumber        String?
-  emailId             String?
-  address             String?
-  state               String?
-  city                String?
-  passport            String?
-  passportExpireDate  DateTime?
-  source              String?
-  branchId            String
-  twelfthCollegeName  String?
-  twelfthMarks        Float?
-  neetMarks           Float?
-  ept                 String?
-  listeningScore      Float?
-  readingScore        Float?
-  writingScore        Float?
-  speakingScore       Float?
-  preferredCountry    String?
-  preferredIntake     String?
-  preferredUniversity String?
-  preferredCourse     String?
-  remarks             String?
-  status              MbbsLeadStatus      @default(new)
-  nextFollowup        DateTime?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  createdById         String?
-  updatedById         String?
-  branch              Branch              @relation(fields: [branchId], references: [id])
-  createdBy           User?               @relation("MbbsLeadCreatedBy", fields: [createdById], references: [id])
-  updatedBy           User?               @relation("MbbsLeadUpdatedBy", fields: [updatedById], references: [id])
-  counselors          MbbsLeadCounselor[]
-  timelines           MbbsLeadTimeline[]
-}
-
-model Student {
-  id                 String               @id @default(uuid())
-  studentNumber      String               @unique
-  leadId             String               @unique
-  branchId           String
-  counselorId        String?
-  studentName        String
-  mobileNumber       String?
-  emailId            String?
-  status             StudentStatus        @default(active)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  admissionDate      DateTime?
-  applicationType    String?
-  country            String?
-  currentStage       StudentStage?
-  englishRequirement String?
-  intake             String?
-  passportNumber     String?
-  branch             Branch               @relation(fields: [branchId], references: [id])
-  counselor          User?                @relation("CounselorStudents", fields: [counselorId], references: [id])
-  lead               Lead                 @relation(fields: [leadId], references: [id])
-  StudentApplication StudentApplication[]
-  StudentDocument    StudentDocument[]
-  StudentLoan        StudentLoan?
-  StudentRemark      StudentRemark[]
-  timeline           StudentTimeline[]
-  StudentVisaProfile StudentVisaProfile?
-
-  @@index([branchId])
-  @@index([counselorId])
-}
-
-model Branch {
-  id        String     @id @default(uuid())
-  name      String     @unique
-  code      String     @unique
-  email     String?
-  phone     String?
-  city      String?
-  state     String?
-  country   String?
-  pincode   String?
-  address   String?
-  status    Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  leads     Lead[]
-  mbbsLeads MbbsLead[]
-  students  Student[]
-  users     User[]     @relation("BranchToUser")
-}
-
-model StudentTimeline {
-  id           String       @id @default(uuid())
-  studentId    String
-  type         TimelineType
-  title        String
-  description  String?
-  followupDate DateTime?
-  oldValue     String?
-  newValue     String?
-  createdById  String?
-  createdAt    DateTime     @default(now())
-  createdBy    User?        @relation("StudentTimelineCreatedBy", fields: [createdById], references: [id])
-  student      Student      @relation(fields: [studentId], references: [id])
-
-  @@index([studentId])
-  @@index([studentId, createdAt])
-}
-
-model Country {
-  id           String       @id @default(uuid())
-  name         String       @unique
-  code         String       @unique
-  currency     String?
-  status       Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  universities University[]
-}
-
-model Intake {
-  id        String             @id @default(uuid())
-  name      String             @unique
-  status    Boolean            @default(true)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  courses   UniversityCourse[]
-}
-
-model LeadSource {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model LeadDegree {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model LeadUniversity {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model University {
-  id              String                  @id @default(uuid())
-  name            String
-  countryId       String
-  logo            String?
-  website         String?
-  address         String?
-  city            String?
-  state           String?
-  postalCode      String?
-  ranking         Int?
-  establishedYear Int?
-  applicationFee  Decimal?                @db.Decimal(12, 2)
-  currency        String?
-  description     String?
-  status          UniversityStatus        @default(active)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  contactPerson   String?
-  contactEmail    String?
-  contactPhone    String?
-  intakeNotes     String?
-  country         Country                 @relation(fields: [countryId], references: [id])
-  courses         UniversityCourse[]
-  scholarships    UniversityScholarship[]
-
-  @@unique([name, countryId])
-  @@index([countryId])
-  @@index([countryId, city])
-  @@index([name])
-  @@index([city])
-  @@index([status])
-}
-
-model UniversityCourse {
-  id                  String                  @id @default(uuid())
-  universityId        String
-  name                String
-  degree              DegreeType
-  durationMonths      Int?
-  annualTuitionFee    Decimal?                @db.Decimal(12, 2)
-  totalTuitionFee     Decimal?                @db.Decimal(12, 2)
-  currency            String?
-  intakeId            String?
-  minimumPercentage   Float?
-  backlogLimit        Int?
-  englishRequirement  String?
-  ieltsOverall        Float?
-  ieltsListening      Float?
-  ieltsReading        Float?
-  ieltsWriting        Float?
-  ieltsSpeaking       Float?
-  greRequired         Boolean                 @default(false)
-  gmatRequired        Boolean                 @default(false)
-  courseCode          String?
-  description         String?
-  applicationDeadline DateTime?
-  status              Boolean                 @default(true)
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  intake              Intake?                 @relation(fields: [intakeId], references: [id])
-  university          University              @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  scholarships        UniversityScholarship[]
-
-  @@index([universityId])
-}
-
-model UniversityScholarship {
-  id           String            @id @default(uuid())
-  universityId String
-  name         String
-  amount       Decimal?          @db.Decimal(12, 2)
-  percentage   Float?
-  description  String?
-  status       UniversityStatus  @default(active)
-  courseId     String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  course       UniversityCourse? @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  university   University        @relation(fields: [universityId], references: [id], onDelete: Cascade)
-
-  @@index([universityId])
-  @@index([courseId])
-}
-
-model StudentApplication {
-  id              String            @id
-  studentId       String
-  portal          String?
-  universityName  String
-  courseName      String
-  applicationDate DateTime?
-  status          ApplicationStatus
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Student         Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@index([studentId])
-}
-
-model StudentDocument {
-  id           String   @id
-  studentId    String
-  documentType String
-  fileName     String
-  fileUrl      String
-  uploadedAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  Student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-}
-
-model StudentLoan {
-  id               String   @id
-  studentId        String   @unique
-  assignee         String?
-  nbfc             String?
-  status           String?
-  pfStatus         String?
-  sanctionedAmount Decimal? @db.Decimal(12, 2)
-  disbursedAmount  Decimal? @db.Decimal(12, 2)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime
-  Student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-}
-
-model StudentRemark {
-  id          String   @id
-  studentId   String
-  note        String
-  createdById String?
-  createdAt   DateTime @default(now())
-  Student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@index([studentId])
-}
-
-model StudentVisaProfile {
-  id                  String    @id
-  studentId           String    @unique
-  depositStatus       String?
-  depositDeadlineDate DateTime?
-  ihsPaymentStatus    String?
-  interviewStatus     String?
-  casStatus           String?
-  casDeadlineDate     DateTime?
-  visaStatus          String?
-  universityStartDate DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime
-  Student             Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 enum LeadStatus {
@@ -530,19 +139,455 @@ enum LeadType {
   mbbs
 }
 
+model Lead {
+  id String @id @default(uuid())
+
+  leadNumber      String    @unique
+  leadType        LeadType  @default(study_abroad)
+  counsellingDate DateTime?
+
+  studentName String?
+  fatherName  String?
+
+  mobileNumber String?
+  emailId      String?
+
+  place    String?
+  passport String?
+
+  passportExpireDate DateTime?
+
+  source String?
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  counselors LeadCounselor[]
+
+  isConverted Boolean @default(false)
+
+  convertedAt DateTime?
+
+  tenthPercentage    Float?
+  tenthYearOfPassing Int?
+
+  twelfthPercentage    Float?
+  twelfthYearOfPassing Int?
+
+  bachelorsCourse         String?
+  bachelorsUniversityName String?
+
+  bachelorsPercentage    Float?
+  bachelorsYearOfPassing Int?
+
+  backlogs Int?
+
+  workExperience String?
+
+  preferredCountry String?
+  preferredIntake  String?
+  preferredCourse  String?
+
+  greGmatScore           Float?
+  quantitativeScore      Float?
+  verbalScore            Float?
+  analyticalWritingScore Float?
+
+  englishTestType String?
+
+  listeningScore Float?
+  writingScore   Float?
+  readingScore   Float?
+  speakingScore  Float?
+
+  gapsIfAny String?
+
+  status LeadStatus @default(new)
+
+  nextFollowup DateTime?
+  remarks      String?
+
+  student   Student?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String?
+  updatedById String?
+
+  createdBy User? @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("LeadUpdatedBy", fields: [updatedById], references: [id])
+
+  timelines LeadTimeline[]
+
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([branchId, isConverted])
+}
+
+model LeadCounselor {
+  id String @id @default(uuid())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  counselorId String
+  counselor   User   @relation(fields: [counselorId], references: [id])
+
+  assignedAt DateTime @default(now())
+
+  assignedById String?
+  assignedBy   User?   @relation("LeadAssignedBy", fields: [assignedById], references: [id])
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([leadId, counselorId])
+}
+
+model MbbsLeadCounselor {
+  id String @id @default(uuid())
+
+  mbbsLeadId String
+  mbbsLead   MbbsLead @relation(fields: [mbbsLeadId], references: [id], onDelete: Cascade)
+
+  counselorId String
+  counselor   User   @relation(fields: [counselorId], references: [id])
+
+  assignedAt DateTime @default(now())
+
+  assignedById String?
+  assignedBy   User?   @relation("MbbsLeadAssignedBy", fields: [assignedById], references: [id])
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([mbbsLeadId, counselorId])
+}
+
+model LeadTimeline {
+  id String @id @default(uuid())
+
+  leadId String
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  description  String
+  nextFollowup DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdBy User? @relation("LeadTimelineCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("LeadTimelineUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+}
+
+model MbbsLeadTimeline {
+  id String @id @default(uuid())
+
+  mbbsLeadId String
+
+  mbbsLead MbbsLead @relation(fields: [mbbsLeadId], references: [id])
+
+  description  String
+  nextFollowup DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdBy User? @relation("MbbsTimelineCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("MbbsTimelineUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mbbsLeadId])
+}
+
+model MbbsLead {
+  id String @id @default(uuid())
+
+  leadNumber String @unique
+
+  counsellingDate DateTime?
+
+  studentName String?
+  fatherName  String?
+
+  mobileNumber String?
+  emailId      String?
+
+  address String?
+
+  state String?
+  city  String?
+
+  passport           String?
+  passportExpireDate DateTime?
+
+  source String?
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  twelfthCollegeName String?
+  twelfthMarks       Float?
+
+  neetMarks Float?
+
+  timelines MbbsLeadTimeline[]
+
+  ept String?
+
+  listeningScore Float?
+  readingScore   Float?
+  writingScore   Float?
+  speakingScore  Float?
+
+  preferredCountry    String?
+  preferredIntake     String?
+  preferredUniversity String?
+  preferredCourse     String?
+
+  remarks String?
+
+  counselors MbbsLeadCounselor[]
+
+  status MbbsLeadStatus @default(new)
+
+  nextFollowup DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdBy User? @relation("MbbsLeadCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("MbbsLeadUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id String @id @default(uuid())
+
+  studentNumber String @unique
+
+  leadId String @unique
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  counselorId String?
+
+  counselor User? @relation("CounselorStudents", fields: [counselorId], references: [id])
+
+  timeline StudentTimeline[]
+
+  studentName  String
+  mobileNumber String?
+  emailId      String?
+
+  preferredCountry String?
+  preferredCourse  String?
+  status           StudentStatus @default(active)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId])
+  @@index([counselorId])
+}
+
+model Branch {
+  id String @id @default(uuid())
+
+  name String @unique
+  code String @unique
+
+  email String?
+  phone String?
+
+  city  String?
+  state String?
+
+  country String?
+  pincode String?
+
+  address String?
+
+  status Boolean @default(true)
+
+  users     User[]
+  leads     Lead[]
+  mbbsLeads MbbsLead[]
+  students  Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum TimelineType {
   note
   followup
   call
   meeting
+
   status_change
+
   document
   application
   offer_letter
+
   loan
   visa
+
   payment
+
   system
+}
+
+model StudentTimeline {
+  id String @id @default(uuid())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  type TimelineType
+
+  title String
+
+  description String? @db.Text
+
+  followupDate DateTime?
+
+  oldValue String?
+  newValue String?
+
+  createdById String?
+
+  createdBy User? @relation("StudentTimelineCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@index([studentId, createdAt])
+}
+
+model Country {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  code String @unique // AU, US, UK, CA
+
+  currency String?
+
+  universities University[]
+
+  status Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Intake {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  status Boolean @default(true)
+
+  courses UniversityCourse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadSource {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  status Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadDegree {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  status Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadUniversity {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  status Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model University {
+  id String @id @default(uuid())
+
+  name String
+
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+
+  logo String?
+
+  website String?
+
+  address    String?
+  city       String?
+  state      String?
+  postalCode String?
+
+  ranking Int?
+
+  establishedYear Int?
+
+  applicationFee Decimal? @db.Decimal(12, 2)
+
+  currency String? // USD, AUD, GBP, CAD
+
+  description String? @db.Text
+
+  status UniversityStatus @default(active)
+
+  courses      UniversityCourse[]
+  scholarships UniversityScholarship[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  contactPerson String?
+  contactEmail  String?
+  contactPhone  String?
+  intakeNotes   String?  @db.Text
+
+  @@unique([name, countryId])
+  @@index([countryId])
+  @@index([countryId, city])
+  @@index([name])
+  @@index([city])
+  @@index([status])
 }
 
 enum DegreeType {
@@ -554,32 +599,80 @@ enum DegreeType {
   certificate
 }
 
+model UniversityCourse {
+  id String @id @default(uuid())
+
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  name String
+
+  degree DegreeType
+
+  durationMonths Int?
+
+  annualTuitionFee Decimal? @db.Decimal(12, 2)
+
+  totalTuitionFee Decimal? @db.Decimal(12, 2)
+
+  currency String?
+
+  intakeId String?
+  intake   Intake? @relation(fields: [intakeId], references: [id])
+
+  minimumPercentage Float?
+
+  backlogLimit Int?
+
+  englishRequirement String?
+
+  ieltsOverall   Float?
+  ieltsListening Float?
+  ieltsReading   Float?
+  ieltsWriting   Float?
+  ieltsSpeaking  Float?
+
+  greRequired         Boolean   @default(false)
+  gmatRequired        Boolean   @default(false)
+  courseCode          String?
+  description         String?   @db.Text
+  applicationDeadline DateTime?
+  status              Boolean   @default(true)
+
+  scholarships UniversityScholarship[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([universityId])
+}
+
 enum UniversityStatus {
   active
   inactive
   archived
 }
 
-enum ApplicationStatus {
-  draft
-  applied
-  under_review
-  conditional_offer
-  unconditional_offer
-  rejected
-  withdrawn
-}
+model UniversityScholarship {
+  id String @id @default(uuid())
 
-enum StudentStage {
-  application_started
-  application_submitted
-  offer_received
-  deposit_pending
-  deposit_paid
-  cas_pending
-  cas_received
-  visa_filing
-  visa_approved
-  visa_rejected
-  enrolled
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  name String
+
+  amount Decimal? @db.Decimal(12, 2)
+
+  percentage Float?
+
+  description String? @db.Text
+
+  status    UniversityStatus  @default(active)
+  courseId  String?
+  course    UniversityCourse? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([universityId])
+  @@index([courseId])
 }
