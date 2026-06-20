@@ -1,12 +1,13 @@
 // crm-frontend-next\app\(dashboard)\universities\page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Plus, Search, RotateCcw, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
-
 import { UniversityCard } from "@/components/universities/university-card";
 import { UniversityFormDialog } from "@/components/universities/university-form-dialog";
 
@@ -24,40 +25,61 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import { useUniversities } from "@/hooks/use-universities";
-
 import { University, UniversityStatus } from "@/types/university";
 
 export default function UniversitiesPage() {
-  const { universities, isLoading, addUniversity, updateUniversity, deleteUniversity } =
-    useUniversities();
-
   const [search, setSearch] = useState("");
-
-  const [statusFilter, setStatusFilter] = useState<"all" | UniversityStatus>(
-    "all",
-  );
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | UniversityStatus>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+  
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(16); // Set default limit to 16 as requested by the user
 
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [editingUniversity, setEditingUniversity] = useState<University | null>(
-    null,
-  );
-
+  const [editingUniversity, setEditingUniversity] = useState<University | null>(null);
   const [shortlistedIds, setShortlistedIds] = useState<string[]>([]);
 
-  const filteredUniversities = useMemo(() => {
-    return universities.filter((university) => {
-      const matchesSearch =
-        university.name.toLowerCase().includes(search.toLowerCase()) ||
-        university.country?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        university.city?.toLowerCase().includes(search.toLowerCase());
+  // Debounce search query to optimize API requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset to page 1 on new search
+    }, 400);
 
-      const matchesStatus =
-        statusFilter === "all" ? true : university.status === statusFilter;
+    return () => clearTimeout(handler);
+  }, [search]);
 
-      return matchesSearch && matchesStatus;
+  // Fetch universities with server-side pagination, searching, and filtering
+  const { universities, meta, isLoading, addUniversity, updateUniversity, deleteUniversity } =
+    useUniversities({
+      search: debouncedSearch || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      countryId: countryFilter === "all" ? undefined : countryFilter,
+      page,
+      limit,
     });
-  }, [universities, search, statusFilter]);
+
+  // Fetch list of countries dynamically for the filters
+  const { data: countriesData } = useQuery({
+    queryKey: ["countries"],
+    queryFn: async () => {
+      const response = await axios.get("/api/countries");
+      return response.data.data;
+    },
+  });
+  const countries = (countriesData || []) as { id: string; name: string; code: string }[];
+
+  // Fetch the total number of active universities globally
+  const { data: activeCount } = useQuery({
+    queryKey: ["universities", "count", "active"],
+    queryFn: async () => {
+      const response = await axios.get("/api/universities", {
+        params: { status: "active", limit: 1 },
+      });
+      return response.data?.meta?.total ?? 0;
+    },
+  });
 
   const handleCreateUniversity = async (data: any) => {
     try {
@@ -65,6 +87,7 @@ export default function UniversitiesPage() {
       toast.success("University created successfully");
     } catch {
       toast.error("Failed to create university");
+      throw new Error("Failed to create university");
     }
   };
 
@@ -77,17 +100,18 @@ export default function UniversitiesPage() {
       setEditingUniversity(null);
     } catch {
       toast.error("Failed to update university");
+      throw new Error("Failed to update university");
     }
   };
 
   const handleDeleteUniversity = async (university: University) => {
-    const confirmed = window.confirm(`Delete ${university.name}?`);
+    const confirmed = window.confirm(`Delete ${university.name}? This will also delete all associated courses and scholarships.`);
 
     if (!confirmed) return;
 
     try {
       await deleteUniversity(university.id);
-      toast.success("University deleted");
+      toast.success("University deleted successfully");
     } catch {
       toast.error("Failed to delete university");
     }
@@ -104,12 +128,10 @@ export default function UniversitiesPage() {
 
       if (exists) {
         toast.success("Removed from shortlist");
-
         return prev.filter((id) => id !== university.id);
       }
 
       toast.success("Added to shortlist");
-
       return [...prev, university.id];
     });
   };
@@ -122,23 +144,38 @@ export default function UniversitiesPage() {
     }
   };
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setCountryFilter("all");
+    setPage(1);
+  };
+
+  const hasActiveFilters = search !== "" || statusFilter !== "all" || countryFilter !== "all";
+
+  // Calculate start/end indices for pagination description
+  const totalCount = meta?.total ?? 0;
+  const totalPages = meta?.totalPages ?? 1;
+  const startIndex = totalCount === 0 ? 0 : (page - 1) * limit + 1;
+  const endIndex = Math.min(page * limit, totalCount);
+
   return (
     <PageTransition>
       <PageHeader
         title="Universities"
-        description="Manage universities, courses, scholarships and admissions."
+        description="Manage global universities, courses, scholarships and admissions."
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="px-3 py-1.5 font-medium rounded-lg">
               {shortlistedIds.length} Shortlisted
             </Badge>
 
             <Button
               onClick={() => {
                 setEditingUniversity(null);
-
                 setDialogOpen(true);
               }}
+              className="rounded-xl shadow-sm"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add University
@@ -147,110 +184,197 @@ export default function UniversitiesPage() {
         }
       />
 
-      {/* Filters */}
+      {/* Stats Summary Cards */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+          <p className="text-sm font-medium text-muted-foreground">Total Universities</p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight">{totalCount}</h3>
+        </div>
 
-      <div className="mb-6 flex flex-col gap-3 md:flex-row">
+        <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+          <p className="text-sm font-medium text-muted-foreground">Active</p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight text-emerald-600">
+            {activeCount ?? 0}
+          </h3>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+          <p className="text-sm font-medium text-muted-foreground">Global Countries</p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight text-blue-600">
+            {countries.length}
+          </h3>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+          <p className="text-sm font-medium text-muted-foreground">Shortlisted</p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight text-rose-500">{shortlistedIds.length}</h3>
+        </div>
+      </div>
+
+      {/* Filter Toolbar Section */}
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search university, country, city..."
+            placeholder="Search university name, city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 rounded-xl"
           />
         </div>
 
-        <div className="w-full md:w-[220px]">
-          <Select
-            value={statusFilter}
-            onValueChange={(value) =>
-              setStatusFilter(value as "all" | UniversityStatus)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+        <div className="flex flex-col gap-2 sm:flex-row md:w-auto">
+          {/* Country Selector */}
+          <div className="w-full sm:w-[180px]">
+            <Select value={countryFilter} onValueChange={(val) => { setCountryFilter(val); setPage(1); }}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Countries</SelectItem>
+                {countries.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+          {/* Status Selector */}
+          <div className="w-full sm:w-[160px]">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value as "all" | UniversityStatus);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <SelectItem value="active">Active</SelectItem>
-
-              <SelectItem value="inactive">Inactive</SelectItem>
-
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Reset Filters Trigger */}
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              onClick={handleResetFilters}
+              className="rounded-xl px-3 hover:bg-secondary/50"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Stats */}
-
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Total Universities</p>
-
-          <h3 className="mt-2 text-2xl font-bold">{universities.length}</h3>
-        </div>
-
-        <div className="rounded-2xl border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Active</p>
-
-          <h3 className="mt-2 text-2xl font-bold text-emerald-600">
-            {universities.filter((u) => u.status === "active").length}
-          </h3>
-        </div>
-
-        <div className="rounded-2xl border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Scholarships</p>
-
-          <h3 className="mt-2 text-2xl font-bold">
-            {universities.reduce(
-              (total, university) => total + (university._count?.scholarships ?? university.scholarships?.length ?? 0),
-              0,
-            )}
-          </h3>
-        </div>
-
-        <div className="rounded-2xl border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Shortlisted</p>
-
-          <h3 className="mt-2 text-2xl font-bold">{shortlistedIds.length}</h3>
-        </div>
-      </div>
-
-      {/* Grid */}
-
+      {/* Main Grid display / Loading states */}
       {isLoading ? (
-        <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed">
-          <h3 className="text-lg font-semibold">Loading Universities...</h3>
+        <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed bg-card/50">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <h3 className="mt-4 text-lg font-semibold">Loading Universities...</h3>
+          <p className="text-sm text-muted-foreground mt-1">Retrieving database records</p>
         </div>
-      ) : filteredUniversities.length === 0 ? (
-        <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed">
+      ) : universities.length === 0 ? (
+        <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed bg-card/50 px-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/50 mb-4">
+            <SlidersHorizontal className="h-6 w-6 text-muted-foreground" />
+          </div>
           <h3 className="text-lg font-semibold">No Universities Found</h3>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Try changing your filters or create a new university.
+          <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+            We couldn't find any universities matching your current search parameters. Try adjusting filters or create a new entry.
           </p>
+          {hasActiveFilters && (
+            <Button variant="outline" onClick={handleResetFilters} className="mt-4 rounded-xl">
+              Reset Filters
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredUniversities.map((university) => (
-            <UniversityCard
-              key={university.id}
-              university={university}
-              shortlisted={shortlistedIds.includes(university.id)}
-              onShortlist={handleShortlist}
-              onEdit={handleEditUniversity}
-              onDelete={handleDeleteUniversity}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {universities.map((university) => (
+              <UniversityCard
+                key={university.id}
+                university={university}
+                shortlisted={shortlistedIds.includes(university.id)}
+                onShortlist={handleShortlist}
+                onEdit={handleEditUniversity}
+                onDelete={handleDeleteUniversity}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls Section */}
+          <div className="mt-8 flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+            <div className="text-center sm:text-left flex items-center justify-center sm:justify-start gap-2">
+              <span>
+                Showing <span className="font-semibold text-foreground">{startIndex}</span> to{" "}
+                <span className="font-semibold text-foreground">{endIndex}</span> of{" "}
+                <span className="font-semibold text-foreground">{totalCount}</span> results
+              </span>
+              <span className="text-border">|</span>
+              <div className="flex items-center gap-1.5">
+                <span>Show</span>
+                <Select
+                  value={String(limit)}
+                  onValueChange={(val) => {
+                    setLimit(Number(val));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-7 w-[70px] rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="8">8</SelectItem>
+                    <SelectItem value="12">12</SelectItem>
+                    <SelectItem value="16">16</SelectItem>
+                    <SelectItem value="24">24</SelectItem>
+                    <SelectItem value="32">32</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl select-none"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary/30 font-medium text-foreground text-sm">
+                Page {page} of {totalPages}
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl select-none"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
-      {/* Create / Edit Dialog */}
-
+      {/* Creation / Update Form Overlay Dialog */}
       <UniversityFormDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
@@ -262,3 +386,4 @@ export default function UniversitiesPage() {
     </PageTransition>
   );
 }
+

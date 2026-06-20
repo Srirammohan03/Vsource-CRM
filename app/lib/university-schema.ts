@@ -1,99 +1,108 @@
 import { z } from "zod";
 
+// Helper — empty string / null / undefined → undefined (for numbers)
+const emptyToUndefinedNumber = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    const num = Number(val);
+    return isNaN(num) ? undefined : num;
+  },
+  z.number().nonnegative("Value cannot be negative").optional()
+);
+
+// Helper — empty string / null / undefined → undefined (for strings)
+const emptyToUndefinedString = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.string().optional()
+);
+
 export const courseSchema = z.object({
   id: z.string(),
 
   name: z.string().min(1, "Course name is required"),
 
-  courseCode: z.string().optional(),
+  courseCode: emptyToUndefinedString,
 
-  degree: z.enum([
-    "diploma",
-    "bachelors",
-    "masters",
-    "phd",
-    "mba",
-    "certificate",
-  ]),
+  degree: z.enum(["diploma", "bachelors", "masters", "phd", "mba", "certificate"]),
 
-  durationMonths: z.number().optional(),
+  durationMonths: emptyToUndefinedNumber,
 
-  annualTuitionFee: z.number().optional(),
+  annualTuitionFee: emptyToUndefinedNumber,
 
-  totalTuitionFee: z.number().optional(),
+  totalTuitionFee: emptyToUndefinedNumber,
 
-  currency: z.string().optional(),
+  currency: emptyToUndefinedString,
 
-  intake: z.string().optional(),
+  // Stored as intakeId (FK) — maps to Intake.id in the DB
+  intakeId: emptyToUndefinedString,
 
-  minimumPercentage: z.number().optional(),
+  minimumPercentage: emptyToUndefinedNumber,
 
-  backlogLimit: z.number().optional(),
+  backlogLimit: emptyToUndefinedNumber,
 
-  ieltsOverall: z.number().optional(),
+  ieltsOverall: emptyToUndefinedNumber,
 
-  applicationDeadline: z.string().optional(),
+  applicationDeadline: emptyToUndefinedString,
 
-  description: z.string().optional(),
+  description: emptyToUndefinedString,
 });
 
 export const scholarshipSchema = z.object({
   id: z.string(),
 
-  name: z.string().min(1),
+  name: z.string().min(1, "Scholarship name is required"),
 
-  amount: z.number().optional(),
+  amount: emptyToUndefinedNumber,
 
-  percentage: z.number().optional(),
+  percentage: emptyToUndefinedNumber,
 
-  description: z.string().optional(),
+  description: emptyToUndefinedString,
 });
 
 export const universitySchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
 
-  name: z.string().min(2),
+  name: z.string().min(2, "University name must be at least 2 characters"),
 
   countryId: z.string().min(1, "Country is required"),
 
-  city: z.string().optional(),
+  city: emptyToUndefinedString,
 
-  state: z.string().optional(),
+  state: emptyToUndefinedString,
 
-  postalCode: z.string().optional(),
+  postalCode: emptyToUndefinedString,
 
-  website: z.string().optional(),
+  website: emptyToUndefinedString,
 
-  logo: z.string().optional(),
+  logo: emptyToUndefinedString,
 
-  ranking: z.number().optional(),
+  ranking: emptyToUndefinedNumber,
 
-  establishedYear: z.number().optional(),
+  establishedYear: emptyToUndefinedNumber,
 
-  applicationFee: z.number().optional(),
+  applicationFee: emptyToUndefinedNumber,
 
-  currency: z.string().optional(),
+  currency: emptyToUndefinedString,
 
-  description: z.string().optional(),
+  description: emptyToUndefinedString,
 
-  contactPerson: z.string().optional(),
+  contactPerson: emptyToUndefinedString,
 
-  contactEmail: z.string().email().optional().or(z.literal("")),
+  // Allow empty or null email gracefully
+  contactEmail: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.string().email("Invalid email format").optional()
+  ),
 
-  contactPhone: z.string().optional(),
+  contactPhone: emptyToUndefinedString,
 
-  intakeNotes: z.string().optional(),
+  intakeNotes: emptyToUndefinedString,
 
-  status: z.enum([
-    "active",
-    "inactive",
-    "archived",
-  ]),
+  status: z.enum(["active", "inactive", "archived"]),
 
-  courses: z.array(courseSchema),
+  courses: z.array(courseSchema).optional().default([]),
 
-  scholarships: z.array(scholarshipSchema),
+  scholarships: z.array(scholarshipSchema).optional().default([]),
 });
 
-export type UniversityFormValues =
-  z.infer<typeof universitySchema>;
+export type UniversityFormValues = z.infer<typeof universitySchema>;
