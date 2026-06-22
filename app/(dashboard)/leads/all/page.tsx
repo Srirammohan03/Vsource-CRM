@@ -18,13 +18,14 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Search, Download, Plus, Pencil, Trash2, Eye } from "lucide-react";
-import type { LeadStatus } from "@/types";
+import type { Lead, LeadStatus } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import PageActions from "./pageactions";
 import { useAuth } from "@/store";
 import { MODULES } from "@/lib/module-codes";
+import LeadStatusDialog from "@/components/leads/LeadStatusDialog";
 
 // Production API URL fallback configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "NEXT_PUBLIC_API_URL";
@@ -49,78 +50,6 @@ const statusTabs: Array<LeadStatus | "all"> = [
   "lost",
 ];
 
-interface LeadRecord {
-  id: string;
-  leadNumber: string;
-
-  counsellingDate?: string | null;
-
-  studentName?: string;
-  mobileNumber?: string;
-  emailId?: string;
-
-  place?: string;
-  passport?: string;
-
-  passportExpireDate?: string | null;
-
-  source?: string;
-
-  branch?: {
-    id: string;
-    name: string;
-  };
-
-  counselors?: {
-    isPrimary: boolean;
-    counselor: {
-      id: string;
-      name: string;
-    };
-  }[];
-
-  preferredCountry?: string;
-  preferredIntake?: string;
-  preferredCourse?: string;
-
-  tenthPercentage?: number;
-  tenthYearOfPassing?: number;
-
-  twelfthPercentage?: number;
-  twelfthYearOfPassing?: number;
-
-  bachelorsCourse?: string;
-  bachelorsUniversityName?: string;
-  bachelorsPercentage?: number;
-  bachelorsYearOfPassing?: number;
-
-  backlogs?: number;
-
-  workExperience?: string;
-
-  greGmatScore?: number;
-  quantitativeScore?: number;
-  verbalScore?: number;
-  analyticalWritingScore?: number;
-
-  englishTestType?: string;
-
-  listeningScore?: number;
-  readingScore?: number;
-  writingScore?: number;
-  speakingScore?: number;
-
-  gapsIfAny?: string;
-
-  remarks?: string;
-
-  nextFollowup?: string | null;
-
-  status: LeadStatus;
-
-  isConverted?: boolean;
-  createdAt: string;
-}
 
 const branchOptions = [
   "Dilsukhnagar Branch",
@@ -144,11 +73,13 @@ export default function AllLeadsPage() {
   const { canCreate, canUpdate, canDelete } = useAuth();
 
   // Modals & Action States
-  const [selected, setSelected] = useState<LeadRecord | null>(null);
-  const [editingLead, setEditingLead] = useState<LeadRecord | null>(null);
+  const [selected, setSelected] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [editingLeadStatus, setEditingLeadStatus] =
+  useState<Lead | null>(null);
   const [leadIdToDelete, setLeadIdToDelete] = useState<string | null>(null);
 
-  const [leads, setLeads] = useState<LeadRecord[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   const uniqueSources = useMemo(() => {
     return [
@@ -557,6 +488,14 @@ export default function AllLeadsPage() {
                             <Pencil className="size-4" />
                           </Button>
                         )}
+                        {canUpdate(MODULES.MASTER_LEADS) && (
+                          <Badge
+                          className="cursor-pointer"
+                          onClick={() => setEditingLeadStatus(lead)}
+                        >
+                          {lead.status}
+                        </Badge>
+                        )}
                         {canDelete(MODULES.MASTER_LEADS) && (
                           <Button
                             size="icon"
@@ -708,6 +647,14 @@ export default function AllLeadsPage() {
                                 <Pencil className="size-4" />
                               </Button>
                             )}
+                            {canUpdate(MODULES.MASTER_LEADS) && (
+                              <Badge
+                              className="cursor-pointer"
+                              onClick={() => setEditingLeadStatus(lead)}
+                            >
+                              {lead.status}
+                            </Badge>
+                            )}
                             {canDelete(MODULES.MASTER_LEADS) && (
                               <Button
                                 size="icon"
@@ -774,6 +721,13 @@ export default function AllLeadsPage() {
           </Button>
         </div>
       </div>
+
+      <LeadStatusDialog
+  lead={editingLeadStatus}
+  open={!!editingLeadStatus}
+  onClose={() => setEditingLeadStatus(null)}
+  onSuccess={loadLeads}
+/>
 
       <PageActions
         selected={selected as any}

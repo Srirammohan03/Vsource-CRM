@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Eye, Edit, Trash2, Shield, ShieldOff, FileText, ChevronRight, Grid, List, Mail, Phone, Calendar } from 'lucide-react';
 import { Student } from './mockData';
 import { DocumentItem } from './DMSSection';
+import { toast } from 'sonner';
+import { useStudents } from '@/hooks/student/useStudents';
+import { StudentRecord } from '@/types/student';
 
 export interface LocalStudent extends Student {
   password?: string;
@@ -16,16 +19,18 @@ export interface LocalStudent extends Student {
 }
 
 interface StudentTableProps {
-  students: LocalStudent[];
   isDarkMode: boolean;
   onSelectStudent: (id: string) => void;
-  onEditStudent: (student: LocalStudent) => void;
+  onEditStudent: (student: any) => void;
   onDeleteStudent: (id: string) => void;
-  onStatusChange: (id: string, field: string, value: any) => void;
+  onStatusChange: (
+    id: string,
+    field: string,
+    value: any
+  ) => void;
 }
 
 export function StudentTable({
-  students,
   isDarkMode,
   onSelectStudent,
   onEditStudent,
@@ -33,69 +38,10 @@ export function StudentTable({
   onStatusChange
 }: StudentTableProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
-  useEffect(() => {
-    // Detect mobile size on mount and set grid/card view by default if screen is small
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setViewMode('grid');
-      }
-    };
+  const {data,isLoading,isError,error} = useStudents()
 
-    // Set initial view state depending on viewport width asynchronously to avoid synchronous effect updates
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      const timer = setTimeout(() => {
-        setViewMode('grid');
-      }, 0);
-      window.addEventListener('resize', handleResize);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('resize', handleResize);
-      };
-    }
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Helper to calculate completions percentage
-  const getProgressPercentage = (student: LocalStudent): number => {
-    const stage = student.currentStage;
-    switch (stage) {
-      case 'Lead Created':
-        return 12.5;
-      case 'Application Submitted':
-        return 25;
-      case 'Offer Received':
-        return 37.5;
-      case 'Deposit Paid':
-        return 50;
-      case 'Interview Completed':
-        return 62.5;
-      case 'CAS Received':
-        return 75;
-      case 'Visa Applied':
-        return 87.5;
-      case 'Visa Approved':
-        return 100;
-      default: {
-        const vStat = student.visaDetails?.visaStatus as string;
-        if (vStat === 'Approved' || vStat === 'Visa Approved') return 100;
-        if (vStat === 'Applied' || vStat === 'Visa Applied') return 87.5;
-        const cas = student.visaDetails?.casStatus as string;
-        if (cas === 'Received' || cas === 'CAS Received') return 75;
-        const interview = student.visaDetails?.interviewStatus as string;
-        if (interview === 'Completed') return 62.5;
-        const dep = student.visaDetails?.depositStatus as string;
-        if (dep === 'Paid' || dep === 'Deposit Paid') return 50;
-        const app = student.applications?.[0]?.status;
-        if (app && ['Offer Received', 'Priority Offer Received', 'Conditional Offer', 'Unconditional Offer'].includes(app)) return 37.5;
-        if (app && ['Applied', 'Pending', 'Under Review'].includes(app)) return 25;
-        return 12.5;
-      }
-    }
-  };
+  const students = data?.data ?? [];
 
   const togglePassword = (studentId: string) => {
     setVisiblePasswords(prev => ({
@@ -137,109 +83,37 @@ export function StudentTable({
     return 'bg-white text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800';
   };
 
-  const getStudentColorThemeKey = (student: LocalStudent): 'red' | 'green' | 'yellow' | 'white' => {
-    const stage = (student.currentStage || '').toLowerCase().trim();
-    const visaStat = (student.visaDetails?.visaStatus || '').toLowerCase().trim();
-    const loanStat = (student.loan?.status || '').toLowerCase().trim();
-    const firstAppStat = (student.applications?.[0]?.status || '').toLowerCase().trim();
-
-    const isRed = (s: string) => [
-      'dropped', 'student dropped', 'rejected', 'visa rejected', 'cancelled', 'hold', 'drop'
-    ].includes(s) || s === 'hold';
-
-    const hasRejectedApp = student.applications?.some(app => (app.status || '').toLowerCase() === 'rejected');
-
-    if (isRed(stage) || isRed(visaStat) || isRed(loanStat) || isRed(firstAppStat) || hasRejectedApp) {
-      return 'red';
+  useEffect(() => {
+    if (isError) {
+      toast.error(
+        (error as any)?.response?.data?.message ??
+          (error as Error)?.message ??
+          "Failed to load students"
+      );
     }
+  }, [isError, error]);
 
-    const isGreen = (s: string) => [
-      'enrolled', 'visa approved', 'visa approved / enrolled', 'approved', 'disbursed', 'completed', 'paid', 'file closed', 'sanctioned'
-    ].includes(s);
+  if (isLoading) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        Loading students...
+      </div>
+    );
+  }
 
-    if (stage === 'enrolled' || stage === 'visa approved' || isGreen(visaStat) || isGreen(stage)) {
-      return 'green';
-    }
-
-    // For inquiry/documents check if files/documents are present -> makes it active "yellow" state
-    if (stage === 'lead created' || stage === 'inquiry' || stage === 'documents') {
-      if (student.documents && student.documents.length > 0) {
-        return 'yellow';
-      }
-      return 'white';
-    }
-
-    return 'white';
-  };
-
-  const getCardBgColorClass = (student: LocalStudent) => {
-    const colorTheme = getStudentColorThemeKey(student);
-    switch (colorTheme) {
-      case 'red':
-        return isDarkMode
-          ? 'bg-rose-950/25 border-rose-800 text-slate-100 hover:bg-rose-950/35 shadow-rose-950/5'
-          : 'bg-rose-50 border-rose-200 text-rose-950 hover:bg-rose-100/40 shadow-rose-200/10';
-      case 'green':
-        return isDarkMode
-          ? 'bg-emerald-950/25 border-emerald-800 text-slate-100 hover:bg-emerald-950/35 shadow-emerald-950/5'
-          : 'bg-green-300 border-emerald-200 text-emerald-950 hover:bg-emerald-100/40 shadow-emerald-200/10';
-      case 'yellow':
-        return isDarkMode
-          ? 'bg-yellow-950/45 border-yellow-600/85 text-yellow-101 hover:bg-yellow-900/50 shadow-yellow-950/10'
-          : 'bg-yellow-300 border-amber-300 text-amber-950 hover:bg-amber-200/90 shadow-amber-200/15';
-      case 'white':
-      default:
-        return isDarkMode
-          ? 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-850 shadow-slate-950/5'
-          : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50 shadow-slate-100/30';
-    }
-  };
 
   const thBgClass = isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500';
 
   return (
     <div className="space-y-4" id="student-module-master-table">
-      {/* View Switcher Controls */}
-      <div className="flex items-center justify-between gap-4 pb-2 select-none">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">Layout Perspective</span>
-        </div>
-
-        <div className="p-1 bg-slate-100 dark:bg-slate-950/60 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 flex items-center gap-1">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-all ${viewMode === 'table'
-              ? 'bg-white dark:bg-slate-900 text-red-650 shadow-sm'
-              : 'text-slate-400 dark:text-slate-550 hover:text-slate-600 dark:hover:text-slate-300'
-              }`}
-          >
-            <List className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Table Grid</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-all ${viewMode === 'grid'
-              ? 'bg-white dark:bg-slate-900 text-red-655 text-red-600 shadow-sm'
-              : 'text-slate-400 dark:text-slate-550 hover:text-slate-600 dark:hover:text-slate-300'
-              }`}
-          >
-            <Grid className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Card Grid</span>
-          </button>
-        </div>
-      </div>
-
-      {viewMode === 'table' ? (
-        /* Table Grid View (Desktop Perfect) */
-        <div className="overflow-auto max-h-[70vh] rounded-3xl border border-slate-200/85 dark:border-slate-850 bg-white dark:bg-slate-900 shadow-sm relative">
+      <div className="overflow-auto max-h-[70vh] rounded-3xl border border-slate-200/85 dark:border-slate-850 bg-white dark:bg-slate-900 shadow-sm relative">
           <table className="w-full text-left text-xs border-collapse relative animate-fade-in">
             {/* Header row with precise columns defined by User */}
             <thead className="text-[10px] uppercase font-black tracking-wider border-b whitespace-nowrap select-none sticky top-0 z-30">
               <tr>
                 <th className={`px-3 py-3 text-center sticky top-0 left-0 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-12 ${thBgClass}`}>SNO</th>
                 <th className={`px-3 py-3 sticky top-0 left-12 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-20 ${thBgClass}`}>STUD ID</th>
-                <th className={`px-4 py-3 sticky top-0 left-32 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-40 min-w-[160px] ${thBgClass}`}>STUDENT NAME</th>
+                <th className={`px-3 py-3 sticky top-0 left-32 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-40 min-w-[160px] ${thBgClass}`}>STUDENT NAME</th>
                 <th className={`px-4 py-3 ${thBgClass}`}>COUNSELLOR NAME</th>
                 <th className={`px-4 py-3 ${thBgClass}`}>DATE OF ADMISSION</th>
                 <th className={`px-4 py-3 ${thBgClass}`}>TYPE OF APPLICATION</th>
@@ -283,16 +157,22 @@ export function StudentTable({
                   </td>
                 </tr>
               ) : (
-                students.map((student, idx) => {
-                  const firstApp = student.applications[0] || {
-                    portal: 'Direct',
-                    applicationDate: '15-Jun-2026',
-                    university: 'N/A',
-                    course: 'N/A',
-                    status: 'Draft'
-                  };
+                students.map((student:StudentRecord, idx:number) => {
+                  const firstApp =
+  student?.applications?.[0] ?? {
+    portal: "-",
+    applicationDate: null,
+    universityName: "-",
+    courseName: "-",
+    status: "draft",
+  };
 
-                  const latestRemark = student.remarks[student.remarks.length - 1]?.note || 'No active remarks';
+                  const latestRemark =
+  student?.remarks?.length
+    ? student.remarks[
+        student.remarks.length - 1
+      ]?.note
+    : "No active remarks";
 
                   return (
                     <tr
@@ -306,48 +186,54 @@ export function StudentTable({
 
                       {/* 2. Student unique ID (Sticky left-12) */}
                       <td className="px-3 py-3.5 font-mono text-[11px] font-black tracking-wider text-slate-500 bg-white dark:bg-slate-900 sticky left-12 z-10 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] w-20">
-                        STU{100 + Number(student.id)}
+                      {student?.studentNumber ?? "-"}
                       </td>
 
                       {/* 3. Student Name (Sticky left-32) */}
                       <td className="px-4 py-3.5 font-extrabold text-[#000000] dark:text-white hover:underline cursor-pointer sticky left-32 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] truncate w-40 min-w-[160px]" onClick={() => onSelectStudent(student.id)}>
-                        {student.name}
+                        {student?.studentName ?? "-"}
                       </td>
 
                       {/* 4. Counsellor Name */}
                       <td className="px-4 py-3.5 font-semibold text-slate-600 dark:text-slate-300">
-                        {student.counsellor}
+                        {student?.counselor?.name ?? "-"}
                       </td>
 
                       {/* 5. Date of Admission */}
                       <td className="px-4 py-3.5 text-slate-500 font-semibold font-mono text-[11px]">
-                        {student.admissionDate}
+                      {
+  student?.admissionDate
+    ? new Date(
+        student.admissionDate
+      ).toLocaleDateString("en-GB")
+    : "-"
+}
                       </td>
 
                       {/* 6. Type of Application */}
                       <td className="px-4 py-3.5 text-slate-550 dark:text-slate-400 font-semibold">
-                        {student.applicationType || 'Undergrad'}
+                        {student?.applicationType || 'Undergrad'}
                       </td>
 
                       {/* 7. Passport Number */}
                       <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                        {student.passportNumber}
+                        {student?.passportNumber ?? "-"}
                       </td>
 
                       {/* 8. Mobile Number */}
                       <td className="px-4 py-3.5 font-mono text-[11px] text-slate-605 dark:text-slate-400">
-                        {student.mobileNumber}
+                        {student?.mobileNumber?? "-"}
                       </td>
 
                       {/* 9. Email ID */}
                       <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400">
-                        {student.email}
+                        {student?.emailId?? "-"}
                       </td>
 
                       {/* 10. Password */}
                       <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-1.5">
-                          <span>{visiblePasswords[student.id] ? (student.password || 'Pass@2026') : '••••••••'}</span>
+                          <span>{visiblePasswords[student.id] ? (student?.lead?.password || 'Pass@2026') : '••••••••'}</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); togglePassword(student.id); }}
                             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"
@@ -371,7 +257,7 @@ export function StudentTable({
 
                       {/* 13. 12th English / MOI */}
                       <td className="px-4 py-3.5 text-slate-500 font-medium">
-                        {student.twelfthEnglishMoi || 'MOI Waiver Letter'}
+                        {student?.lead?.twelfthPercentage || 'MOI Waiver Letter'}
                       </td>
 
                       {/* 14. Application Status overall */}
@@ -388,22 +274,28 @@ export function StudentTable({
 
                       {/* 16. Application Date */}
                       <td className="px-4 py-3.5 font-mono text-[10px] text-slate-400">
-                        {firstApp.applicationDate}
+                      {
+  firstApp?.applicationDate
+    ? new Date(
+        firstApp.applicationDate
+      ).toLocaleDateString("en-GB")
+    : "-"
+}
                       </td>
 
                       {/* 17. University Name */}
-                      <td className="px-4 py-3.5 text-slate-800 dark:text-slate-205 font-bold truncate max-w-[180px]" title={firstApp.university}>
-                        {firstApp.university}
+                      <td className="px-4 py-3.5 text-slate-800 dark:text-slate-205 font-bold truncate max-w-[180px]" title={firstApp?.universityName ?? "-"}>
+                        {firstApp?.universityName ?? "-"}
                       </td>
 
                       {/* 18. Course Name */}
-                      <td className="px-4 py-3.5 text-slate-550 dark:text-slate-400 truncate max-w-[150px]" title={firstApp.course}>
-                        {firstApp.course}
+                      <td className="px-4 py-3.5 text-slate-550 dark:text-slate-400 truncate max-w-[150px]" title={firstApp?.courseName?? "-"}>
+                        {firstApp?.courseName ?? "-"}
                       </td>
 
                       {/* 19. Pursuing / Graduate */}
                       <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-bold font-mono">
-                        {student.pursuingGraduate || 'Graduate'}
+                        {student?.lead?.bachelorsCourse || 'Graduate'}
                       </td>
 
                       {/* 20. Offer Status */}
@@ -415,86 +307,98 @@ export function StudentTable({
 
                       {/* 21. Deposit Deadline Date */}
                       <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                        {student.depositDeadlineDate || '30-Jun-2026'}
+                        {student?.visaProfile?.depositDeadlineDate
+  ? new Date(
+      student.visaProfile.depositDeadlineDate
+    ).toLocaleDateString("en-GB")
+  : "-"}
                       </td>
 
                       {/* 22. Deposit Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaDetails.depositStatus)}`}>
-                          {student.visaDetails.depositStatus}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.depositStatus ?? "-")}`}>
+                          {student?.visaProfile?.depositStatus?? "-"}
                         </span>
                       </td>
 
                       {/* 23. IHS & Visa Paid Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaDetails.ihsPayment)}`}>
-                          {student.visaDetails.ihsPayment}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaProfile?.ihsPaymentStatus?? "-")}`}>
+                          {student.visaProfile?.ihsPaymentStatus?? "-"}
                         </span>
                       </td>
 
                       {/* 24. Interview Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaDetails.interviewStatus)}`}>
-                          {student.visaDetails.interviewStatus}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.interviewStatus?? "-")}`}>
+                          {student?.visaProfile?.interviewStatus?? "-"}
                         </span>
                       </td>
 
                       {/* 25. CAS Deadline Date */}
                       <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                        {student.casDeadlineDate || '10-Aug-2026'}
+                     { student?.visaProfile?.casDeadlineDate
+  ? new Date(
+      student.visaProfile.casDeadlineDate
+    ).toLocaleDateString("en-GB")
+  : "-"}
                       </td>
 
                       {/* 26. CAS Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaDetails.casStatus)}`}>
-                          {student.visaDetails.casStatus}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.casStatus ?? "-")}`}>
+                          {student?.visaProfile?.casStatus}
                         </span>
                       </td>
 
                       {/* 27. Visa Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaDetails.visaStatus)}`}>
-                          {student.visaDetails.visaStatus}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.visaStatus ?? "-")}`}>
+                          {student?.visaProfile?.visaStatus}
                         </span>
                       </td>
 
                       {/* 28. Univ Start Date */}
                       <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                        {student.univStartDate || '15-Sep-2026'}
+                        {student?.visaProfile?.universityStartDate
+  ? new Date(
+      student.visaProfile.universityStartDate
+    ).toLocaleDateString("en-GB")
+  : "-"}
                       </td>
 
                       {/* 29. Fintech Assignee */}
                       <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-medium font-mono text-[11px]">
-                        {student.loan.assignee}
+                        {student?.loan?.assignee}
                       </td>
 
                       {/* 30. NBFC */}
                       <td className="px-4 py-3.5 text-slate-605 dark:text-slate-300 font-bold">
-                        {student.loan.nbfc}
+                        {student.loan?.nbfc}
                       </td>
 
                       {/* 31. Loan Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.loan.status)}`}>
-                          {student.loan.status}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.loan?.status??"-")}`}>
+                          {student.loan?.status}
                         </span>
                       </td>
 
                       {/* 32. PF Status */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.loan.pfStatus || 'Pending')}`}>
-                          {student.loan.pfStatus || 'Pending'}
+                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.loan?.pfStatus  ?? 'Pending')}`}>
+                          {student.loan?.pfStatus || 'Pending'}
                         </span>
                       </td>
 
                       {/* 33. Sanctioned */}
                       <td className="px-4 py-3.5 font-black text-slate-805 dark:text-slate-300 font-mono">
-                        {student.loan.sanctionedAmount}
+                        {student.loan?.sanctionedAmount}
                       </td>
 
                       {/* 34. Disbursed */}
                       <td className="px-4 py-3.5 font-bold text-emerald-600 font-mono">
-                        {student.loan.disbursedAmount}
+                        {student.loan?.disbursedAmount}
                       </td>
 
                       {/* 35. Remarks timeline note */}
@@ -539,236 +443,6 @@ export function StudentTable({
             </tbody>
           </table>
         </div>
-      ) : (
-        /* Mobile Card Grid View (Responsive with completion calculation indicator loop) */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="student-grid-card-view">
-          {students.length === 0 ? (
-            <div className="col-span-full text-center py-16 bg-white dark:bg-slate-900 border rounded-3xl p-6">
-              <p className="text-xs text-slate-400 font-bold">No registered active students found in criteria.</p>
-            </div>
-          ) : (
-            students.map((student, idx) => {
-              const firstApp = student.applications[0] || {
-                portal: 'Direct',
-                applicationDate: '15-Jun-2026',
-                university: 'N/A',
-                course: 'N/A',
-                status: 'Draft'
-              };
-              const latestRemark = student.remarks[student.remarks.length - 1]?.note || 'No active remarks';
-              const percent = getProgressPercentage(student);
-
-              return (
-                <div
-                  key={student.id}
-                  className={`rounded-3xl border p-5 relative flex flex-col justify-between transition-all duration-300 hover:shadow-md ${getCardBgColorClass(student)
-                    }`}
-                >
-                  <div>
-                    {/* Card Top Pill Bar */}
-                    <div className="flex items-center justify-between gap-2 mb-3.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] bg-red-650/10 text-red-600 px-2.5 py-0.5 rounded-lg font-black font-mono">
-                          #{idx + 1}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono font-black tracking-wider">
-                          STU{100 + Number(student.id)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-md font-bold text-slate-705 dark:text-slate-300">
-                          {student.intake}
-                        </span>
-                        <span className="text-[10px] bg-red-650/5 text-red-600 font-black px-2 py-0.5 rounded-md">
-                          {student.country}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Student Identity Block */}
-                    <div className="mb-4">
-                      <h4
-                        onClick={() => onSelectStudent(student.id)}
-                        className="text-base font-black text-black dark:text-white hover:text-red-600 dark:hover:text-red-400 hover:underline cursor-pointer transition-colors leading-tight"
-                      >
-                        {student.name}
-                      </h4>
-
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px] text-slate-404 text-slate-400 font-semibold">
-                        <span className="text-slate-700 dark:text-slate-300">Counsellor: {student.counsellor}</span>
-                        <span className="text-slate-200 dark:text-slate-800">•</span>
-                        <span>Adm: {student.admissionDate}</span>
-                        <span className="text-slate-200 dark:text-slate-800">•</span>
-                        <span className="text-slate-500 font-black text-[10px] uppercase">{student.applicationType || 'Undergrad'}</span>
-                      </div>
-
-                      {/* Extended contact details container */}
-                      <div className="mt-2.5 space-y-1 border-t border-dashed border-slate-100 dark:border-slate-800/80 pt-2.5">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                          <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{student.email}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1.5 text-xs text-slate-605 dark:text-slate-300">
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span className="font-mono">{student.mobileNumber}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
-                            <span>Pas:</span>
-                            <span className="font-semibold">{visiblePasswords[student.id] ? (student.password || 'Pass@2026') : '••••••••'}</span>
-                            <button
-                              onClick={() => togglePassword(student.id)}
-                              className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"
-                            >
-                              {visiblePasswords[student.id] ? <ShieldOff className="h-2.5 w-2.5" /> : <Shield className="h-2.5 w-2.5" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PROGRESS BAR WITH THE PERCENTAGE COMPLETED (CRITICAL USER MANDATE) */}
-                    <div className="mb-4 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                      <div className="flex items-center justify-between gap-2 mb-1.5 font-bold select-none">
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">
-                          Progress
-                        </span>
-                        <span className="text-xs text-red-650 text-red-600 font-black font-mono">
-                          {percent}%
-                        </span>
-                      </div>
-
-                      {/* Linear progress line container template */}
-                      <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden relative">
-                        <div
-                          className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-emerald-500 rounded-full transition-all duration-500"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between text-[10px] mt-2 select-none">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Workflow Phase</span>
-                        <span className="font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider text-[9px] bg-red-600/5 px-1.5 py-0.5 rounded text-red-656">
-                          {student.currentStage}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Primary Enrollment details Card - Hidden as of now to reduce card length */}
-                    {/*
-                    <div className="mb-4 bg-slate-50 dark:bg-slate-950/20 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/40 space-y-1.5">
-                      <div className="flex items-center justify-between gap-1.5">
-                        <span className="text-[9px] uppercase font-black text-amber-600 tracking-wider">
-                          Primary Course Enrollment
-                        </span>
-                        <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${getCellColorClass(firstApp.status)}`}>
-                          {firstApp.status}
-                        </span>
-                      </div>
-                      <div className="text-xs font-black text-slate-800 dark:text-slate-200 truncate" title={firstApp.university}>
-                        {firstApp.university}
-                      </div>
-                      <div className="text-[11px] text-slate-500 truncate mt-0.5 italic">
-                        {firstApp.course}
-                      </div>
-                      <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono pt-1.5 border-t border-slate-100 dark:border-slate-800/20">
-                        <span>Portal: <span className="font-semibold text-slate-600 dark:text-slate-300">{firstApp.portal}</span></span>
-                        <span>Filing Date: {firstApp.applicationDate}</span>
-                      </div>
-                    </div>
-                    */}
-
-                    {/* Core Process Timelines indicators / Workflow Status Flags - Hidden as of now to reduce card length */}
-                    {/*
-                    <div className="mb-4 text-[10px] space-y-1.5">
-                      <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest border-b pb-0.5 border-slate-105 dark:border-slate-800">
-                        Workflow Status Flags
-                      </p>
-                      
-                      <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[10px]">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-slate-400 font-medium">Deposit:</span>
-                          <span className={`px-1.5 py-0.5 font-bold rounded text-[9px] ${getCellColorClass(student.visaDetails.depositStatus)}`}>
-                            {student.visaDetails.depositStatus}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-slate-400 font-medium">CAS:</span>
-                          <span className={`px-1.5 py-0.5 font-bold rounded text-[9px] ${getCellColorClass(student.visaDetails.casStatus)}`}>
-                            {student.visaDetails.casStatus}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-slate-400 font-medium">IHS & Fee:</span>
-                          <span className={`px-1.5 py-0.5 font-bold rounded text-[9px] ${getCellColorClass(student.visaDetails.ihsPayment)}`}>
-                            {student.visaDetails.ihsPayment}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-slate-400 font-medium">Visa status:</span>
-                          <span className={`px-1.5 py-0.5 font-bold rounded text-[9px] ${getCellColorClass(student.visaDetails.visaStatus)}`}>
-                            {student.visaDetails.visaStatus}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between col-span-2 pt-1 border-t border-dashed border-slate-100 dark:border-slate-850">
-                          <span className="text-slate-400 font-medium">Fintech Loan ({student.loan.nbfc}):</span>
-                          <span className={`px-1.5 py-0.5 font-bold rounded text-[9px] ${getCellColorClass(student.loan.status)}`}>
-                            {student.loan.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between col-span-2">
-                          <span className="text-slate-400 font-medium">Sanctioned / Disbursed:</span>
-                          <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">
-                            {student.loan.sanctionedAmount} / <span className="font-black text-emerald-600">{student.loan.disbursedAmount}</span>
-                          </span>
-                        </div>
-
-                      </div>
-                    </div>
-                    */}
-                  </div>
-
-                  {/* Card Bottom / Footer Actions and bubble remarks */}
-                  <div className=" border-t border-slate-100 dark:border-slate-800/80 space-y-3 shrink-0">
-                    <div className="text-[11px] px-2.5 py-2 bg-slate-100/50 dark:bg-slate-950/40 rounded-xl text-slate-500 italic truncate max-h-[36px] items-center" title={latestRemark}>
-                      &ldquo;{latestRemark}&rdquo;
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onSelectStudent(student.id)}
-                        className="flex-1 bg-red-650/10 text-red-655 text-red-600 hover:bg-red-600 hover:text-white py-1.8 py-2 rounded-xl text-xs font-black tracking-wide inline-flex items-center justify-center gap-1 transition-all cursor-pointer"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>View Documents</span>
-                      </button>
-
-                      <button
-                        onClick={() => onEditStudent(student)}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 p-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                        title="Edit Info"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => onDeleteStudent(student.id)}
-                        className="bg-rose-550/10 hover:bg-rose-600 hover:text-white text-rose-500 p-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                        title="Delete Portfolio"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -373,36 +373,203 @@ model MbbsLead {
   updatedAt DateTime @updatedAt
 }
 
+enum StudentStage {
+  application_started
+
+  application_submitted
+
+  offer_received
+
+  deposit_pending
+  deposit_paid
+
+  cas_pending
+  cas_received
+
+  visa_filing
+
+  visa_approved
+  visa_rejected
+
+  enrolled
+}
+
 model Student {
   id String @id @default(uuid())
 
   studentNumber String @unique
 
   leadId String @unique
-  lead   Lead   @relation(fields: [leadId], references: [id])
+  lead Lead @relation(fields: [leadId], references: [id])
 
   branchId String
-  branch   Branch @relation(fields: [branchId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
 
   counselorId String?
+  counselor User? @relation("CounselorStudents",fields: [counselorId],references: [id])
 
-  counselor User? @relation("CounselorStudents", fields: [counselorId], references: [id])
+  studentName String
+  mobileNumber String?
+  emailId String?
+
+  passportNumber String?
+
+  country String?
+
+  intake String?
+
+  admissionDate DateTime?
+
+  applicationType String?
+
+  englishRequirement String?
+
+  currentStage StudentStage?
+
+  status StudentStatus @default(active)
+
+  applications StudentApplication[]
+
+  loan StudentLoan?
+
+  visaProfile StudentVisaProfile?
+
+  remarks StudentRemark[]
 
   timeline StudentTimeline[]
 
-  studentName  String
-  mobileNumber String?
-  emailId      String?
-
-  preferredCountry String?
-  preferredCourse  String?
-  status           StudentStatus @default(active)
+  documents StudentDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([branchId])
   @@index([counselorId])
+}
+
+enum ApplicationStatus {
+  draft
+
+  applied
+
+  under_review
+
+  conditional_offer
+
+  unconditional_offer
+
+  rejected
+
+  withdrawn
+}
+
+model StudentApplication {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+
+  portal String?
+
+  universityName String
+
+  courseName String
+
+  applicationDate DateTime?
+
+  status ApplicationStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+model StudentVisaProfile {
+  id String @id @default(uuid())
+
+  studentId String @unique
+
+  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+
+  depositStatus String?
+
+  depositDeadlineDate DateTime?
+
+  ihsPaymentStatus String?
+
+  interviewStatus String?
+
+  casStatus String?
+
+  casDeadlineDate DateTime?
+
+  visaStatus String?
+
+  universityStartDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudentLoan {
+  id String @id @default(uuid())
+
+  studentId String @unique
+
+ student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+
+  assignee String?
+
+  nbfc String?
+
+  status String?
+
+  pfStatus String?
+
+  sanctionedAmount Decimal? @db.Decimal(12,2)
+
+  disbursedAmount Decimal? @db.Decimal(12,2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudentRemark {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+
+
+  note String @db.Text
+
+  createdById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model StudentDocument {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+
+
+  documentType String
+
+  fileName String
+
+  fileUrl String
+
+  uploadedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
 }
 
 model Branch {
