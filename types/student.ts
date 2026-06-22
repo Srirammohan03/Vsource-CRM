@@ -87,10 +87,24 @@ export interface StudentRecord {
 
 export interface Applications {
   id: string;
+
   portal?: string;
-  universityName: string;
-  courseName: string;
+
+  universityId: string;
+  courseId: string;
+
+  university?: {
+    id: string;
+    name: string;
+  };
+
+  course?: {
+    id: string;
+    name: string;
+  };
+
   status: string;
+
   applicationDate?: string | Date;
 }
 

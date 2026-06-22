@@ -5,35 +5,45 @@ import { X, Save, UserPlus, FileEdit, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { counsellorsList, countriesList, intakesList } from "./mockData";
 import { StudentRecord } from "@/types/student";
+import { useUpdateStudent } from "@/hooks/student/useUpdateStudent";
 
 interface AddEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   isDarkMode: boolean;
-  studentToEdit: StudentRecord | null; // null if Adding
-  onSave: (studentData: Partial<StudentRecord>) => void;
+  studentToEdit: StudentRecord | null;
 }
+
+const applicationStatusReverseMap: Record<string, string> = {
+  draft: "Draft",
+  applied: "Applied",
+  under_review: "Pending",
+  conditional_offer: "Conditional Offer",
+  unconditional_offer: "Unconditional Offer",
+  rejected: "Rejected",
+  withdrawn: "Deferred",
+};
 
 export function AddEditModal({
   isOpen,
   onClose,
   isDarkMode,
   studentToEdit,
-  onSave,
 }: AddEditModalProps) {
   console.log("studentToEdit", studentToEdit);
+  const updateStudentMutation = useUpdateStudent();
   // Form states
   const [name, setName] = useState("");
   const [counsellor, setCounsellor] = useState("Prasad Panjugula");
   const [country, setCountry] = useState("United Kingdom");
   const [intake, setIntake] = useState("Sep 2026");
-  const [admissionDate, setAdmissionDate] = useState("15-Jun-2026");
+  const [admissionDate, setAdmissionDate] = useState("");
   const [applicationType, setApplicationType] = useState("Master");
   const [passportNumber, setPassportNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  useState("MOI Waiver Letter");
+  const [englishRequirement, setEnglishRequirement] =
+    useState("MOI Waiver Letter");
 
   // Financiers
   const [assignee, setAssignee] = useState("Sunil");
@@ -77,8 +87,6 @@ export function AddEditModal({
 
       const firstName = studentToEdit.studentName?.split(" ")[0] || "Student";
 
-      setPassword(`Pass${firstName}@2026`);
-
       setAssignee(studentToEdit.loan?.assignee || "");
 
       setNbfc(studentToEdit.loan?.nbfc || "");
@@ -97,7 +105,9 @@ export function AddEditModal({
 
       const firstApp = studentToEdit.applications?.[0];
 
-      setAppStatus(firstApp?.status || "draft");
+      setAppStatus(
+        applicationStatusReverseMap[firstApp?.status ?? "draft"] ?? "Draft",
+      );
 
       setDepositStatus(studentToEdit.visaProfile?.depositStatus || "Pending");
 
@@ -115,41 +125,98 @@ export function AddEditModal({
 
       setPfStatus(studentToEdit.loan?.pfStatus || "Pending");
     } else {
-      // keep your existing reset code
+      setName("");
+      setCounsellor("Prasad Panjugula");
+      setCountry("United Kingdom");
+      setIntake("Sep 2026");
+      setAdmissionDate("");
+      setApplicationType("Master");
+      setPassportNumber("");
+      setMobileNumber("");
+      setEmail("");
+
+      setAssignee("");
+      setNbfc("");
+
+      setSanctionedAmount("");
+      setDisbursedAmount("");
+
+      setAppStatus("Draft");
+
+      setDepositStatus("Pending");
+      setIhsPayment("Pending");
+      setInterviewStatus("Pending");
+      setCasStatus("Pending");
+      setVisaStatus("Draft Pending");
+
+      setLoanStatus("Pending");
+      setPfStatus("Pending");
     }
   }, [studentToEdit, isOpen]);
 
-  const randomizePassword = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-    let res = "Pass";
-    for (let i = 0; i < 4; i++) {
-      res += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    res += "@2026";
-    setPassword(res);
+  const applicationStatusMap: Record<string, string> = {
+    Draft: "draft",
+    Applied: "applied",
+    "Conditional Offer": "conditional_offer",
+    "Unconditional Offer": "unconditional_offer",
+    Rejected: "rejected",
+    Pending: "under_review",
+    "Offer Received": "conditional_offer",
+    "Priority Offer Received": "conditional_offer",
+    Deferred: "withdrawn",
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
 
-    const studentPayload: Partial<StudentRecord> = {
-      studentName: name,
+    if (!studentToEdit) return;
+
+    const getCurrentStage = () => {
+      if (visaStatus === "Visa Approved" || visaStatus === "Approved") {
+        return "visa_approved";
+      }
+
+      if (visaStatus === "Visa Rejected" || visaStatus === "Rejected") {
+        return "visa_rejected";
+      }
+
+      if (visaStatus === "Visa Applied" || visaStatus === "Applied") {
+        return "visa_filing";
+      }
+
+      if (casStatus === "CAS Received" || casStatus === "Received") {
+        return "cas_received";
+      }
+
+      if (depositStatus === "Deposit Paid" || depositStatus === "Paid") {
+        return "deposit_paid";
+      }
+
+      return "application_started";
+    };
+
+    const payload = {
+      studentName: name.trim(),
+      mobileNumber: mobileNumber.trim(),
+      emailId: email.trim(),
+      passportNumber: passportNumber.trim(),
+
       country,
       intake,
-      admissionDate,
+      admissionDate: admissionDate || null,
+
       applicationType,
-      passportNumber,
-      mobileNumber,
-      emailId: email,
+      englishRequirement,
+
+      currentStage: getCurrentStage(),
 
       loan: {
-        assignee,
+        assignee: assignee.trim(),
         nbfc,
         status: loanStatus,
         pfStatus,
-        sanctionedAmount: sanctionedAmount || undefined,
-        disbursedAmount: disbursedAmount || undefined,
+        sanctionedAmount: sanctionedAmount?.replace(/[^\d.]/g, "") || null,
+        disbursedAmount: disbursedAmount?.replace(/[^\d.]/g, "") || null,
       },
 
       visaProfile: {
@@ -161,13 +228,26 @@ export function AddEditModal({
       },
 
       applications:
-        studentToEdit?.applications?.map((app, idx) => ({
+        studentToEdit.applications?.map((app, idx) => ({
           ...app,
-          status: idx === 0 ? appStatus : app.status,
+          status:
+            idx === 0
+              ? (applicationStatusMap[appStatus] ?? "draft")
+              : app.status,
         })) ?? [],
     };
 
-    onSave(studentPayload);
+    try {
+      await updateStudentMutation.mutateAsync({
+        id: studentToEdit.id,
+        payload,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error(error);
+    }
+
     onClose();
   };
 
@@ -216,7 +296,7 @@ export function AddEditModal({
                   </h3>
                   <p className="text-[10px] text-slate-400">
                     {studentToEdit
-                      ? `Updating STU${100 + Number(studentToEdit.id)} file records`
+                      ? `Updating STU${100 + Number(studentToEdit.studentNumber)} file records`
                       : "Initiate new folders and compliance checklists"}
                   </p>
                 </div>
@@ -327,7 +407,7 @@ export function AddEditModal({
                       Admission Date
                     </label>
                     <input
-                      type="text"
+                      type="date"
                       value={admissionDate}
                       onChange={(e) => setAdmissionDate(e.target.value)}
                       placeholder="e.g. 15-Jun-2026"
@@ -436,34 +516,6 @@ export function AddEditModal({
                           : "bg-slate-50 border-slate-200"
                       }`}
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-2 block">
-                      Immigration Portal Password
-                    </label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Secure system password"
-                        className={`flex-1 px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                          isDarkMode
-                            ? "bg-slate-950 border-slate-800"
-                            : "bg-slate-50 border-slate-200"
-                        }`}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={randomizePassword}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl border border-inherit text-slate-400 hover:text-red-600"
-                        title="Randomize secure credentials key"
-                      >
-                        <RefreshCcw className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
                   </div>
                 </div>
 
@@ -832,13 +884,19 @@ export function AddEditModal({
 
               <button
                 type="button"
+                disabled={updateStudentMutation.isPending}
                 onClick={() =>
                   document.getElementById("addedit-submit-btn-tag")?.click()
                 }
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-lg shadow-red-600/15 inline-flex items-center justify-center gap-1.5 uppercase tracking-wide transition-all cursor-pointer"
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-lg shadow-red-600/15 inline-flex items-center justify-center gap-1.5 uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="h-4 w-4" />
-                <span>Commit Case Folder</span>
+
+                <span>
+                  {updateStudentMutation.isPending
+                    ? "Saving..."
+                    : "Commit Case Folder"}
+                </span>
               </button>
             </div>
           </motion.div>

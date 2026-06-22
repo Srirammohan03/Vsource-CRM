@@ -1,123 +1,23 @@
-// app/api/students/[id]/route.ts
+// app\api\students\[id]\route.ts
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { handleError, ok } from "@/lib/api-helpers";
 
-import  db  from "@/lib/prisma";
-import { ok, handleError } from "@/lib/api-helpers";
-
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
-
-export async function GET(
+export async function PATCH(
   req: NextRequest,
-  { params }: RouteContext
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
 
-    const student = await db.student.findUnique({
-      where: {
-        id,
-      },
+    const body = await req.json();
 
-      include: {
-        lead: {
-          select: {
-            id: true,
-            leadNumber: true,
-            studentName: true,
-            emailId: true,
-            mobileNumber: true,
-            preferredCountry: true,
-            preferredIntake: true,
-            status: true,
-            createdAt: true,
-          },
+    const result = await prisma.$transaction(async (tx) => {
+      const student = await tx.student.update({
+        where: {
+          id,
         },
-
-        branch: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
-
-        counselor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-
-        applications: {
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-
-        visaProfile: true,
-
-        loan: true,
-
-        documents: {
-          orderBy: {
-            uploadedAt: "desc",
-          },
-        },
-
-        remarks: {
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-
-        timeline: {
-          orderBy: {
-            createdAt: "desc",
-          },
-
-          include: {
-            createdBy: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!student) {
-      throw new Error("Student not found");
-    }
-
-    return ok(
-      student,
-      "Student details fetched successfully"
-    );
-  } catch (err) {
-    return handleError(err);
-  }
-}
-
-export async function PATCH(
-    req: NextRequest,
-    { params }: RouteContext
-  ) {
-    try {
-      const { id } = await params;
-  
-      const body = await req.json();
-  
-      const student = await db.student.update({
-        where: { id },
-  
         data: {
           studentName: body.studentName,
           mobileNumber: body.mobileNumber,
@@ -125,18 +25,103 @@ export async function PATCH(
           passportNumber: body.passportNumber,
           country: body.country,
           intake: body.intake,
+          admissionDate: body.admissionDate
+            ? new Date(body.admissionDate)
+            : null,
           applicationType: body.applicationType,
-          englishRequirement: body.englishRequirement,
-          currentStage: body.currentStage,
-          counselorId: body.counselorId,
         },
       });
-  
-      return ok(
-        student,
-        "Student updated successfully"
-      );
-    } catch (err) {
-      return handleError(err);
-    }
+
+      if (body.loan) {
+        await tx.studentLoan.upsert({
+          where: {
+            studentId: id,
+          },
+          create: {
+            studentId: id,
+            assignee: body.loan.assignee,
+            nbfc: body.loan.nbfc,
+            status: body.loan.status,
+            pfStatus: body.loan.pfStatus,
+            sanctionedAmount: body.loan.sanctionedAmount
+              ? Number(
+                  String(body.loan.sanctionedAmount).replace(/[^0-9.]/g, ""),
+                )
+              : null,
+            disbursedAmount: body.loan.disbursedAmount
+              ? Number(
+                  String(body.loan.disbursedAmount).replace(/[^0-9.]/g, ""),
+                )
+              : null,
+          },
+          update: {
+            assignee: body.loan.assignee,
+            nbfc: body.loan.nbfc,
+            status: body.loan.status,
+            pfStatus: body.loan.pfStatus,
+            sanctionedAmount: body.loan.sanctionedAmount
+              ? Number(
+                  String(body.loan.sanctionedAmount).replace(/[^0-9.]/g, ""),
+                )
+              : null,
+            disbursedAmount: body.loan.disbursedAmount
+              ? Number(
+                  String(body.loan.disbursedAmount).replace(/[^0-9.]/g, ""),
+                )
+              : null,
+          },
+        });
+      }
+
+      if (body.visaProfile) {
+        await tx.studentVisaProfile.upsert({
+          where: {
+            studentId: id,
+          },
+          create: {
+            studentId: id,
+            depositStatus: body.visaProfile.depositStatus,
+            ihsPaymentStatus: body.visaProfile.ihsPaymentStatus,
+            interviewStatus: body.visaProfile.interviewStatus,
+            casStatus: body.visaProfile.casStatus,
+            visaStatus: body.visaProfile.visaStatus,
+          },
+          update: {
+            depositStatus: body.visaProfile.depositStatus,
+            ihsPaymentStatus: body.visaProfile.ihsPaymentStatus,
+            interviewStatus: body.visaProfile.interviewStatus,
+            casStatus: body.visaProfile.casStatus,
+            visaStatus: body.visaProfile.visaStatus,
+          },
+        });
+      }
+
+      if (body.applications && body.applications.length > 0) {
+        for (const app of body.applications) {
+          await tx.studentApplication.update({
+            where: {
+              id: app.id,
+            },
+            data: {
+              portal: app.portal,
+              universityName: app.universityName,
+              courseName: app.courseName,
+              applicationDate: app.applicationDate
+                ? new Date(app.applicationDate)
+                : null,
+              status: app.status,
+            },
+          });
+        }
+      }
+
+      return student;
+    });
+
+    return ok(result, "Students Saved successfully");
+  } catch (error) {
+    console.error(error);
+
+    return handleError(error);
   }
+}

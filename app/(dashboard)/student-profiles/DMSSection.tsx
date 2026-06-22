@@ -1,749 +1,505 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { 
-  FileText, FolderOpen, Upload, RefreshCw, Trash2, Download, Eye, 
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw, Maximize2, Minimize2, CheckCircle, AlertCircle
-} from 'lucide-react';
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import {
+  FileText,
+  FolderOpen,
+  Upload,
+  RefreshCw,
+  Trash2,
+  Download,
+  Eye,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Clean TypeScript Data Modeling definitions
 export interface DocumentItem {
   id: string;
-  category: string;
-  name: string;
-  fileType: 'pdf' | 'jpg' | 'jpeg' | 'png';
-  uploadedAt: string;
-  fileSize: string;
-  content?: string;
-  fileUrl?: string;
+  studentId: string;
+  documentType: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: string | Date;
+  createdAt: string | Date;
 }
 
 interface DMSSectionProps {
   studentId: string;
   studentName: string;
-  documents: DocumentItem[];
   isDarkMode: boolean;
-  onAddDocument: (doc: Omit<DocumentItem, 'id'>) => void;
-  onDeleteDocument: (docId: string) => void;
-  onReplaceDocument: (docId: string, updatedFile: Partial<DocumentItem>) => void;
 }
 
 export function DMSSection({
   studentId,
   studentName,
-  documents,
   isDarkMode,
-  onAddDocument,
-  onDeleteDocument,
-  onReplaceDocument
 }: DMSSectionProps) {
-  // Categories required by prompt
+  const queryClient = useQueryClient();
+
+  // Controlled Interface View State Management Hooks
+  const [selectedCategory, setSelectedCategory] = useState<string>("Passport");
+  const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
+  const [zoomScale, setZoomScale] = useState<number>(1.0);
+  const [rotationDegrees, setRotationDegrees] = useState<number>(0);
+  const [noticeMessage, setNoticeMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  // Standard static Category buckets mapping inside global structure
   const categoriesList = [
-    'Passport', '10th Marks Memo', '12th Marks Memo', 'Degree Certificates', 
-    'MOI', 'IELTS', 'Resume', 'SOP', 'LOR', 'Financial Documents', 'Visa Documents', 'Other Documents'
+    "Passport",
+    "10th Marks Memo",
+    "12th Marks Memo",
+    "Bachelors Degree",
+    "Transcript Documents",
+    "IELTS/PTE Score Card",
+    "Statement of Purpose (SOP)",
+    "Letters of Recommendation (LOR)",
+    "Experience Documents",
+    "Resume/CV",
+    "Financial Statements",
+    "Visa Application Forms",
   ];
 
-  const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(documents[0] || null);
-  const [rotateDeg, setRotateDeg] = useState(0);
-  const [zoomScale, setZoomScale] = useState(1);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // Custom file upload states
-  const [uploadCategory, setUploadCategory] = useState('Passport');
-  const [uploadName, setUploadName] = useState('');
-  const [uploadFormat, setUploadFormat] = useState<'pdf' | 'jpg' | 'png'>('pdf');
-  const [uploadSize, setUploadSize] = useState('1.5 MB');
-  const [isUploading, setIsUploading] = useState(false);
-
-  // Device file upload states
-  const [selectedDeviceFile, setSelectedDeviceFile] = useState<File | null>(null);
-  const [selectedDeviceFileUrl, setSelectedDeviceFileUrl] = useState<string>('');
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setDeviceFileDetails(file);
+  const triggerNotice = (text: string, type: "success" | "error") => {
+    setNoticeMessage({ text, type });
+    setTimeout(() => setNoticeMessage(null), 4000);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    setDeviceFileDetails(file);
-  };
+  // 1. TanStack Query: Fetch current student file logs
+  const {
+    data: serverResponse,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["student-documents", studentId],
+    queryFn: async () => {
+      const res = await axios.get(`/api/students/${studentId}/documents`);
+      return res.data;
+    },
+    enabled: !!studentId,
+  });
 
-  const setDeviceFileDetails = (file: File) => {
-    setSelectedDeviceFile(file);
-    
-    // Auto-populate document name and format
-    const lastDot = file.name.lastIndexOf('.');
-    const nameWithoutExt = lastDot > -1 ? file.name.substring(0, lastDot) : file.name;
-    const ext = file.name.substring(lastDot + 1).toLowerCase();
-    
-    setUploadName(nameWithoutExt);
-    if (ext === 'pdf') {
-      setUploadFormat('pdf');
-    } else if (ext === 'jpg' || ext === 'jpeg') {
-      setUploadFormat('jpg');
-    } else if (ext === 'png') {
-      setUploadFormat('png');
+  const documents: DocumentItem[] = serverResponse?.success
+    ? serverResponse.data
+    : [];
+
+  // 2. TanStack Mutation: Remote File Upload Handlers
+  const uploadMutation = useMutation({
+    mutationFn: async (payload: { file: File; category: string }) => {
+      const dataForm = new FormData();
+      dataForm.append("file", payload.file);
+      dataForm.append("documentType", payload.category);
+      const res = await axios.post(
+        `/api/students/${studentId}/documents`,
+        dataForm,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        triggerNotice(
+          "Document file synced and logged successfully.",
+          "success",
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["student-documents", studentId],
+        });
+      } else {
+        triggerNotice(
+          data.message || "Failed running document storage registration.",
+          "error",
+        );
+      }
+    },
+    onError: (err: any) => {
+      const errMsg =
+        err.response?.data?.message ||
+        "Network exception encountered writing file logs.";
+      triggerNotice(errMsg, "error");
+    },
+  });
+
+  // 3. TanStack Mutation: Resource Purge Lifecycle Routines
+  const deleteMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      const res = await axios.delete(
+        `/api/students/${studentId}/documents/${docId}`,
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        triggerNotice(
+          "Document tracking information purged from server system logs.",
+          "success",
+        );
+        if (selectedDoc?.id) setSelectedDoc(null);
+        queryClient.invalidateQueries({
+          queryKey: ["student-documents", studentId],
+        });
+      } else {
+        triggerNotice(
+          data.message || "Failed running file drops from ledger map.",
+          "error",
+        );
+      }
+    },
+    onError: (err: any) => {
+      const errMsg =
+        err.response?.data?.message ||
+        "Network exception encountered running data extraction drops.";
+      triggerNotice(errMsg, "error");
+    },
+  });
+
+  // Handle file input selection events natively
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetCategory: string,
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      const targetFile = e.target.files[0];
+      uploadMutation.mutate({ file: targetFile, category: targetCategory });
     }
-    
-    // Convert to readable file size
-    const mb = file.size / (1024 * 1024);
-    if (mb >= 1) {
-      setUploadSize(`${mb.toFixed(1)} MB`);
-    } else {
-      setUploadSize(`${Math.round(file.size / 1024)} KB`);
-    }
-
-    // Generate Object URL for previewing
-    const url = URL.createObjectURL(file);
-    setSelectedDeviceFileUrl(url);
   };
 
-  // Filter or retrieve current file for a category
-  const getDocByCategory = (cat: string) => {
-    return documents.find(d => d.category === cat);
-  };
-
-  // Navigating doc-by-doc inside the viewer
-  const handleDocCycle = (direction: 'next' | 'prev') => {
-    if (documents.length <= 1) return;
-    const currentIndex = documents.findIndex(d => d.id === selectedDoc?.id);
-    if (currentIndex === -1) {
-      setSelectedDoc(documents[0]);
-      return;
-    }
-    
-    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (nextIndex >= documents.length) nextIndex = 0;
-    if (nextIndex < 0) nextIndex = documents.length - 1;
-    
-    setSelectedDoc(documents[nextIndex]);
-    setRotateDeg(0);
-    setZoomScale(1);
-  };
-
-  const handleZoom = (type: 'in' | 'out') => {
-    setZoomScale(prev => {
-      const next = type === 'in' ? prev + 0.15 : prev - 0.15;
-      return Math.max(0.6, Math.min(next, 2));
-    });
+  const handleZoom = (direction: "in" | "out") => {
+    setZoomScale((prev) =>
+      direction === "in"
+        ? Math.min(prev + 0.2, 3.0)
+        : Math.max(prev - 0.2, 0.5),
+    );
   };
 
   const handleRotate = () => {
-    setRotateDeg(prev => (prev + 90) % 360);
+    setRotationDegrees((prev) => (prev + 90) % 360);
   };
 
-  const triggerUpload = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadName.trim()) return;
-    setIsUploading(true);
-
-    setTimeout(() => {
-      const newDoc: Omit<DocumentItem, 'id'> = {
-        category: uploadCategory,
-        name: uploadName.endsWith('.' + uploadFormat) ? uploadName : `${uploadName}.${uploadFormat}`,
-        fileType: uploadFormat,
-        uploadedAt: '15-Jun-2026',
-        fileSize: uploadSize,
-        content: selectedDeviceFile 
-          ? `DEVICE FILE UPLOADED SUCCESSFULLY\nFile: ${selectedDeviceFile.name}\nSize: ${uploadSize}\nType: ${selectedDeviceFile.type}\nLast Modified: ${new Date(selectedDeviceFile.lastModified).toLocaleDateString()}`
-          : `SIMULATED FILE CANOPY\nCategory: ${uploadCategory}\nFile: ${uploadName}\nUploaded by Counsellor\nAcademic Verification Code: SUCCESS-ED-2026`,
-        fileUrl: selectedDeviceFileUrl || undefined
-      };
-      onAddDocument(newDoc);
-      
-      // Select the newly uploaded doc
-      const mockId = `temp-${Date.now()}`;
-      setSelectedDoc({ ...newDoc, id: mockId });
-      
-      setIsUploading(false);
-      setUploadName('');
-      setSelectedDeviceFile(null);
-      setSelectedDeviceFileUrl('');
-    }, 850);
-  };
-
-  const triggerDownloadSim = (doc: DocumentItem) => {
-    // Generate toast trigger or simulate actual text block link downloads
-    const blob = new Blob([doc.content || 'Overseas CRM Document Content'], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = doc.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const triggerReplaceSim = (docId: string, category: string) => {
-    const updatedName = `Replaced_${category}_Review_Copy.pdf`;
-    onReplaceDocument(docId, {
-      name: updatedName,
-      uploadedAt: '15-Jun-2026',
-      fileSize: '1.8 MB',
-      content: `REPLACED DOCUMENT COOPERATIVE\nCategory: ${category}\nVersion: 2.0 (Verified SLA Approved)\nReplaced On: 15-Jun-2026`
-    });
-    
-    // Auto re-select
-    const target = documents.find(d => d.id === docId);
-    if (target) {
-      setSelectedDoc({
-        ...target,
-        name: updatedName,
-        uploadedAt: '15-Jun-2026',
-        fileSize: '1.8 MB',
-        content: `REPLACED DOCUMENT COOPERATIVE\nCategory: ${category}\nVersion: 2.0 (Verified SLA Approved)\nReplaced On: 15-Jun-2026`
-      });
-    }
-  };
+  // Filter global files list according to client category view choices
+  const currentCategoryDocs = documents.filter(
+    (d) => d.documentType === selectedCategory,
+  );
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6" id="dms-layout-root">
-      
-      {/* LEFT COLUMN: 12 FOLDERS DIRECTORY */}
-      <div className="xl:col-span-2 space-y-6">
-        <div className={`p-5 rounded-3xl border shadow-sm ${
-          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
-        }`}>
-          <div className="flex items-center gap-2 mb-4">
-            <FolderOpen className="h-5 w-5 text-red-600 shrink-0" />
-            <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">Overseas Document Folders</h4>
-              <p className="text-[10px] text-slate-400">Strict standard files compliance checklists ({documents.length} of 12 uploaded)</p>
+    <div
+      className={`p-6 rounded-2xl border transition-all duration-300 ${isDarkMode ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-800"}`}
+    >
+      {/* Dynamic Status Notifications Alert Banner Bar */}
+      <AnimatePresence>
+        {noticeMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl border text-sm font-medium ${
+              noticeMessage.type === "success"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                : "bg-rose-50 border-rose-200 text-rose-800"
+            }`}
+          >
+            {noticeMessage.type === "success" ? (
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-rose-600" />
+            )}
+            <span>{noticeMessage.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Tracking Identity Sub-Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5 mb-6 border-slate-700/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-red-600/10 text-red-500">
+            <FolderOpen className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight">
+              Document Management Locker
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Secure verification hub for{" "}
+              <span className="font-semibold text-red-500">{studentName}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-mono bg-slate-800/40 px-3 py-1.5 rounded-lg border border-slate-700/30">
+          <span className="text-slate-400">STUDENT_ID:</span>
+          <span className="font-bold text-slate-200">{studentId}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* Category Navigation Controls Sidebar Block */}
+        <div className="xl:col-span-4 flex flex-col gap-1.5 max-h-[640px] overflow-y-auto pr-2 custom-scrollbar">
+          {categoriesList.map((category) => {
+            const hasDocs = documents.some((d) => d.documentType === category);
+            const isSelected = selectedCategory === category;
+
+            return (
+              <button
+                key={category}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setSelectedDoc(null);
+                  setZoomScale(1.0);
+                  setRotationDegrees(0);
+                }}
+                className={`w-full flex items-center justify-between text-left p-3 rounded-xl text-xs font-medium transition-all group ${
+                  isSelected
+                    ? "bg-red-600 text-white shadow-md shadow-red-600/10"
+                    : isDarkMode
+                      ? "bg-slate-800/40 hover:bg-slate-800 text-slate-300"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <FileText
+                    className={`h-4 w-4 shrink-0 ${isSelected ? "text-white" : "text-slate-400 group-hover:text-red-500"}`}
+                  />
+                  <span className="truncate">{category}</span>
+                </div>
+                {hasDocs && (
+                  <span
+                    className={`text-[10px] px-2 py-0.5 font-bold font-mono rounded-full ${isSelected ? "bg-white/20 text-white" : "bg-red-500/10 text-red-500"}`}
+                  >
+                    LIVE
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Central Workspace File Control Deck Canvas Panel */}
+        <div className="xl:col-span-8 flex flex-col gap-4 min-h-[500px]">
+          {/* Main Upload Dropzone Controller Card Box */}
+          <div
+            className={`p-5 rounded-xl border border-dashed transition-all ${
+              isDarkMode
+                ? "bg-slate-800/20 border-slate-750"
+                : "bg-slate-50/50 border-slate-300"
+            }`}
+          >
+            <div className="flex flex-col items-center justify-center text-center py-4">
+              <div className="p-3 bg-red-500/10 rounded-full text-red-500 mb-2">
+                {uploadMutation.isPending ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Upload className="h-6 w-6" />
+                )}
+              </div>
+              <p className="text-xs font-semibold mb-1">
+                {uploadMutation.isPending
+                  ? "Ingesting physical block contents..."
+                  : `Upload resource to [${selectedCategory}]`}
+              </p>
+              <p className="text-[11px] text-slate-400 mb-4">
+                Supported Extensions: PDF, PNG, JPG, WEBP (Max 5MB)
+              </p>
+
+              <label className="relative inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow cursor-pointer transition-all">
+                <Upload className="h-3.5 w-3.5" />
+                <span>Select Document File</span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.png,.jpg,.jpeg,.webp"
+                  disabled={uploadMutation.isPending}
+                  onChange={(e) => handleFileChange(e, selectedCategory)}
+                />
+              </label>
             </div>
           </div>
 
-          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-            {categoriesList.map(category => {
-              const file = getDocByCategory(category);
-              return (
-                <div 
-                  key={category}
-                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-xs ${
-                    file 
-                      ? selectedDoc?.id === file.id
-                        ? 'border-red-500 bg-red-600/5 dark:bg-red-600/10'
-                        : 'border-slate-200 dark:border-slate-800 bg-emerald-500/5 hover:border-red-600/40'
-                      : 'border-slate-150 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-75'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <FileText className={`h-4.5 w-4.5 shrink-0 ${file ? 'text-emerald-500' : 'text-slate-400'}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-extrabold text-slate-700 dark:text-slate-300 truncate">{category}</div>
-                      {file ? (
-                        <p className="text-[10px] text-slate-400 truncate tracking-tight">{file.name} · {file.fileSize}</p>
-                      ) : (
-                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-0.5 mt-0.5">
-                          <AlertCircle className="h-3 w-3" /> Missing Checklist Item
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          {/* Core File Asset Data List Grid Matrix Box */}
+          <div className="flex-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+              Available Files ({currentCategoryDocs.length})
+            </h3>
 
-                  {/* Actions Row */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {file ? (
-                      <>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-xs gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-red-500" />
+                <span>Reading document vault records...</span>
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12 text-xs text-rose-500 font-medium">
+                Failed to sync system database logs.
+              </div>
+            ) : currentCategoryDocs.length === 0 ? (
+              <div className="text-center py-12 text-xs text-slate-400 border rounded-xl border-dashed border-slate-700/20">
+                No files loaded under this category classification structure.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {currentCategoryDocs.map((doc) => {
+                  const isPdf = doc.fileName.toLowerCase().endsWith(".pdf");
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className={`p-3 rounded-xl border flex flex-col justify-between gap-3 transition-all ${
+                        selectedDoc?.id === doc.id
+                          ? "border-red-500 bg-red-500/5 shadow-sm"
+                          : isDarkMode
+                            ? "bg-slate-800/40 border-slate-750"
+                            : "bg-slate-50 border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-2 bg-slate-700/30 rounded-lg shrink-0 text-slate-400">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="truncate flex-1">
+                          <p
+                            className="text-xs font-semibold truncate text-slate-200"
+                            title={doc.fileName}
+                          >
+                            {doc.fileName}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            {new Date(doc.uploadedAt).toLocaleDateString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-700/10">
                         <button
-                          onClick={() => { setSelectedDoc(file); setRotateDeg(0); setZoomScale(1); }}
-                          className="p-1 px-1.5 bg-slate-100 hover:bg-red-600 hover:text-white dark:bg-slate-800 rounded-lg text-slate-400 font-bold text-[10px] inline-flex items-center gap-0.5 transition-colors"
-                          title="Preview document"
+                          onClick={() => {
+                            setSelectedDoc(doc);
+                            setZoomScale(1.0);
+                            setRotationDegrees(0);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-slate-700/30 transition-all"
+                          title="Preview Document File"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          onClick={() => triggerReplaceSim(file.id, file.category)}
-                          className="p-1 px-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800 rounded-lg text-slate-400 font-bold text-[10px]"
-                          title="Replace document"
+                        <a
+                          href={doc.fileUrl}
+                          download={doc.fileName}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-slate-700/30 transition-all"
+                          title="Download Resource File File"
                         >
-                          <RefreshCw className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => triggerDownloadSim(file)}
-                          className="p-1 px-1.5 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 rounded-lg text-slate-400 font-bold text-[10px]"
-                          title="Download document text file"
-                        >
-                          <Download className="h-3 w-3" />
-                        </button>
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
                         <button
                           onClick={() => {
-                            onDeleteDocument(file.id);
-                            if (selectedDoc?.id === file.id) {
-                              const remaining = documents.filter(d => d.id !== file.id);
-                              setSelectedDoc(remaining[0] || null);
+                            if (
+                              confirm(
+                                "Confirm asset termination drop? This deletes the physical disk entry permanently.",
+                              )
+                            ) {
+                              deleteMutation.mutate(doc.id);
                             }
                           }}
-                          className="p-1 px-1.5 bg-slate-100 hover:bg-rose-600 hover:text-white dark:bg-slate-800 rounded-lg text-slate-400 font-bold text-[10px]"
-                          title="Delete checklist document"
+                          disabled={deleteMutation.isPending}
+                          className="p-1.5 text-slate-400 hover:text-rose-500 rounded hover:bg-slate-700/30 transition-all"
+                          title="Purge Archive Record File"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          {deleteMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
                         </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setUploadCategory(category);
-                          setUploadName(`${category}_Verified_${studentName.replace(/\s+/g, '_')}`);
-                        }}
-                        className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-lg flex items-center gap-0.5 uppercase tracking-wide transition-colors"
-                      >
-                        <Upload className="h-3 w-3" /> Upload
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CUSTOM DMS FILE UPLOADER WIZARD */}
-        <div className={`p-5 rounded-3xl border shadow-sm ${
-          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
-        }`}>
-          <h4 className="text-xs font-black uppercase tracking-wider mb-3 text-slate-800 dark:text-slate-100">DMS Upload Portal File Desk</h4>
-          
-          <form onSubmit={triggerUpload} className="space-y-3">
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">Target Folder Classification</label>
-              <select
-                value={uploadCategory}
-                onChange={(e) => setUploadCategory(e.target.value)}
-                className={`w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                  isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-                }`}
-              >
-                {categoriesList.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">Digital format</label>
-                <select
-                  value={uploadFormat}
-                  onChange={(e) => setUploadFormat(e.target.value as any)}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <option value="pdf">PDF File</option>
-                  <option value="jpg">JPG Image</option>
-                  <option value="png">PNG Image</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">Simulated Size</label>
-                <select
-                  value={uploadSize}
-                  onChange={(e) => setUploadSize(e.target.value)}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <option value="1.2 MB">1.2 MB</option>
-                  <option value="2.1 MB">2.1 MB</option>
-                  <option value="510 KB">510 KB</option>
-                  <option value="4.5 MB">4.5 MB</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">Counsellor Document Title</label>
-              <input
-                type="text"
-                value={uploadName}
-                onChange={(e) => setUploadName(e.target.value)}
-                placeholder="e.g. My_Degree_Convocat_Copy"
-                className={`w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                  isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-                }`}
-                required
-              />
-            </div>
-
-            {/* DEVICE FILE DRAG AND DROP ZONE */}
-            <div className="space-y-1">
-              <label className="text-[10px] text-slate-400 uppercase font-black block mb-0.5">Device File Attachment</label>
-              <div 
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-2xl p-3.5 text-center transition-all relative group ${
-                  isDragging 
-                    ? 'border-red-500 bg-red-500/5 scale-[1.01]' 
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 hover:border-red-650'
-                }`}
-              >
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  id="device-file-picker"
-                />
-                <div className="flex flex-col items-center justify-center gap-1">
-                  <Upload className={`h-5 w-5 transition-colors ${selectedDeviceFile ? 'text-emerald-500' : 'text-slate-400 group-hover:text-red-500'}`} />
-                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-full block px-2">
-                    {selectedDeviceFile ? selectedDeviceFile.name : 'Drag & Drop file or Click to Browse'}
-                  </span>
-                  <span className="text-[9px] text-slate-400">
-                    {selectedDeviceFile ? `Selected Class: ${uploadFormat.toUpperCase()} · ${uploadSize}` : 'Supports PDF, JPG, PNG from local system'}
-                  </span>
-                </div>
-              </div>
-              {selectedDeviceFile && (
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDeviceFile(null);
-                      setSelectedDeviceFileUrl('');
-                      setUploadName('');
-                    }}
-                    className="text-[9px] font-black text-rose-500 uppercase tracking-widest hover:underline"
-                  >
-                    Clear Attachment
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isUploading || !uploadName.trim()}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-extrabold text-xs py-2.5 rounded-xl inline-flex items-center justify-center gap-1.5 uppercase tracking-wider shadow-lg shadow-red-600/10 transition-all cursor-pointer"
-            >
-              {isUploading ? (
-                <>
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  <span>Configuring SLA Vault...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-3.5 w-3.5" />
-                  <span>Submit Document to Filesystem</span>
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-      </div>
-
-      {/* RIGHT COLUMN: INTEGRATED DOCUMENT VIEWER SCREEN */}
-      <div className="xl:col-span-3">
-        <div className={`p-5 rounded-3xl border shadow-sm min-h-[550px] flex flex-col justify-between ${
-          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
-        }`} id="document-viewer-box">
-          
-          {/* TOP DIALOG CONTROLS */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-inherit">
-            <div>
-              <span className="text-[9px] font-mono font-black text-red-600 bg-red-600/5 px-2.5 py-0.5 rounded-full uppercase tracking-widest border border-red-600/10 mb-1.5 block max-w-fit">
-                LIVE SECURE ENCRYPTED VIEWER
-              </span>
-              <h5 className="font-extrabold text-xs truncate max-w-[280px] text-slate-800 dark:text-slate-100" title={selectedDoc?.name || 'No Selected Document'}>
-                {selectedDoc ? selectedDoc.name : 'No Active File Loaded'}
-              </h5>
-              <p className="text-[10px] text-slate-400">
-                {selectedDoc ? `${selectedDoc.category} | ${selectedDoc.fileSize}` : 'DMS is currently idling'}
-              </p>
-            </div>
-
-            {selectedDoc && (
-              <div className="flex items-center gap-1 self-end sm:self-auto">
-                {/* Prev doc */}
-                <button
-                  onClick={() => handleDocCycle('prev')}
-                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-600 hover:text-white dark:bg-slate-800 text-slate-400 transition-colors"
-                  title="Previous Document"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                {/* Page info tag */}
-                <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-850 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                  Checklist: {documents.findIndex(d => d.id === selectedDoc.id) + 1} / {documents.length}
-                </span>
-                {/* Next doc */}
-                <button
-                  onClick={() => handleDocCycle('next')}
-                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-600 hover:text-white dark:bg-slate-800 text-slate-400 transition-colors"
-                  title="Next Document"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* INNER CANVAS */}
-          <div className="flex-1 my-4 flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 rounded-2xl overflow-hidden min-h-[380px] relative">
-            <AnimatePresence mode="wait">
-              {!selectedDoc ? (
-                <motion.div
-                  key="empty-viewer"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center max-w-xs space-y-3"
-                >
-                  <div className="bg-red-600/10 h-12 w-12 rounded-full text-red-656 text-red-600 flex items-center justify-center mx-auto">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-300">File Vault Display Waiting</h4>
-                  <p className="text-[10px] text-slate-400 leading-normal">
-                    Select a checklist folder file on the left side menu, or click the preview button to launch the high-contrast document visualizer.
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={selectedDoc.id}
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="w-full h-full flex items-center justify-center pt-2"
-                >
-                  {/* CANVAS CONTENT AREA */}
-                  <div 
-                    className="transition-transform duration-200 origin-center text-xs shadow-lg max-w-full max-h-full"
-                    style={{ 
-                      transform: `rotate(${rotateDeg}deg) scale(${zoomScale})`,
-                      width: '100%',
-                      maxWidth: '380px'
-                    }}
-                  >
-                    
-                    {selectedDoc.fileUrl ? (
-                      <div className="bg-white text-slate-900 border border-slate-300 rounded-lg p-3 min-h-[330px] flex flex-col justify-between shadow-sm overflow-hidden select-none">
-                        <div className="border-b border-slate-200 pb-1.5 text-center leading-snug">
-                          <div className="text-[10px] font-black tracking-wider text-red-600 uppercase">SECURE DEVICE ATTACHMENT</div>
-                          <div className="text-[8px] font-bold text-slate-400 mt-0.5 uppercase">{selectedDoc.category} · {selectedDoc.fileSize}</div>
-                        </div>
-
-                        <div className="my-3 flex-1 flex items-center justify-center overflow-hidden max-h-[250px] bg-slate-55 rounded-lg border border-slate-100 p-1">
-                          {selectedDoc.fileType === 'pdf' ? (
-                            <iframe 
-                              src={selectedDoc.fileUrl} 
-                              className="w-full h-[220px] rounded border-0" 
-                              title={selectedDoc.name}
-                            />
-                          ) : (
-                            <img 
-                              src={selectedDoc.fileUrl} 
-                              className="max-w-full max-h-[220px] object-contain rounded" 
-                              alt={selectedDoc.name} 
-                            />
-                          )}
-                        </div>
-
-                        <div className="text-[8px] font-mono text-center text-slate-400 tracking-tight">
-                          FILE NAME: {selectedDoc.name}
-                        </div>
-                      </div>
-                    ) : (
-                      /* Simulated Document Paper */
-                      <div className="bg-white text-slate-900 border border-slate-300 rounded-lg p-6 min-h-[330px] font-mono flex flex-col justify-between selection:bg-red-600/10">
-                        
-                        {/* Document template letterhead */}
-                        <div className="border-b-2 border-slate-900 pb-2 text-center relative leading-snug space-y-1">
-                          <div className="text-[12px] font-black tracking-widest text-red-600 uppercase">INTERNATIONAL SERVICE SYSTEM</div>
-                          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">STUDENT IMMIGRATION ADMISSIONS VAULT</div>
-                          <div className="text-[7px] text-slate-400 font-bold">DATE REC: {selectedDoc.uploadedAt} · REF: IMM_CRM_{studentId}</div>
-                          
-                          {/* Red Simulated Official Stamp block */}
-                          {selectedDoc.category === 'Visa Documents' && (
-                            <div className="absolute right-0 top-0 border-2 border-dashed border-rose-500 text-rose-500 font-extrabold text-[7px] p-0.5 rotate-12 rounded uppercase">
-                              VISA APPROVED
-                            </div>
-                          )}
-                          {selectedDoc.category === 'Passport' && (
-                            <div className="absolute right-2 top-0 border-2 border-amber-500 text-amber-500 font-extrabold text-[7px] p-0.5 -rotate-6 rounded uppercase">
-                              ORIGINAL SECURE
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Document Body text details */}
-                        <div className="my-4 space-y-2 text-[8px] text-slate-700 leading-relaxed font-bold break-words whitespace-pre-wrap flex-1">
-                          {selectedDoc.content || `SIMULATED DIGITAL COPY\nFile Name: ${selectedDoc.name}\nVerification Code: VALID-09-887\nVerified on Overseas CRM system`}
-                        </div>
-
-                        {/* Footer signatures and seal lines */}
-                        <div className="border-t border-slate-300 pt-2 flex items-center justify-between text-[7px] text-slate-400 font-bold mt-auto shrink-0">
-                          <div>
-                            <div>AUDITED BY: ADMISSION DESK</div>
-                            <div>MEMBER ID: ADM-2026-X</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="inline-block border border-slate-400/50 p-1 font-black text-[6px] tracking-widest bg-slate-50 text-slate-600">
-                              ★ APPROVED SLA ★
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-                    )}
-
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* LOWER INTERACTIVE ACTION BAR */}
+          {/* Interactive Inspection Frame Panel Area */}
           {selectedDoc && (
-            <div className="pt-3 border-t border-inherit flex items-center justify-between gap-2.5 text-slate-400">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleZoom('out')}
-                  className="p-1 px-2 bg-slate-105 hover:bg-red-600 hover:text-white dark:bg-slate-850 rounded-lg text-slate-400 font-bold text-[10px] inline-flex items-center gap-0.5"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-[10px] font-mono font-bold bg-slate-105 dark:bg-slate-850 px-2 rounded-lg py-1">
-                  {Math.round(zoomScale * 100)}%
+            <div
+              className={`mt-4 p-4 rounded-xl border flex flex-col gap-3 ${
+                isDarkMode
+                  ? "bg-slate-950 border-slate-800"
+                  : "bg-slate-100 border-slate-300"
+              }`}
+            >
+              <div className="flex items-center justify-between border-b pb-2 border-slate-700/20">
+                <span className="text-xs font-bold truncate max-w-[70%]">
+                  Preview: {selectedDoc.fileName}
                 </span>
-                <button
-                  onClick={() => handleZoom('in')}
-                  className="p-1 px-2 bg-slate-105 hover:bg-red-600 hover:text-white dark:bg-slate-850 rounded-lg text-slate-400 font-bold text-[10px] inline-flex items-center gap-0.5"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleZoom("out")}
+                    className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="text-[10px] font-mono font-bold w-12 text-center">
+                    {Math.round(zoomScale * 100)}%
+                  </span>
+                  <button
+                    onClick={() => handleZoom("in")}
+                    className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={handleRotate}
+                    className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded flex items-center gap-1 text-[10px] px-2"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Pivot
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={handleRotate}
-                  className="p-1 px-2.5 bg-slate-105 hover:bg-red-600 hover:text-white dark:bg-slate-850 rounded-lg text-slate-400 font-bold text-[10px] inline-flex items-center gap-1 transition-all"
-                  title="Rotate Document 90 Degrees"
-                >
-                  <RotateCw className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Rotate 90°</span>
-                </button>
-
-                <button
-                  onClick={() => setIsFullscreen(prev => !prev)}
-                  className={`p-1 px-2.5 bg-slate-105 hover:bg-red-600 hover:text-white dark:bg-slate-850 rounded-lg text-slate-400 font-bold text-[10px] inline-flex items-center gap-1 transition-all ${
-                    isFullscreen ? 'border border-red-500 text-red-500' : ''
-                  }`}
-                  title="Toggle Fullscreen Lightbox"
-                >
-                  {isFullscreen ? (
-                    <>
-                      <Minimize2 className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Minimize</span>
-                    </>
-                  ) : (
-                    <>
-                      <Maximize2 className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Lightbox</span>
-                    </>
-                  )}
-                </button>
+              <div className="w-full h-96 overflow-auto rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center p-4 relative">
+                {selectedDoc.fileName.toLowerCase().endsWith(".pdf") ? (
+                  <iframe
+                    src={`${selectedDoc.fileUrl}#toolbar=0`}
+                    className="w-full h-full rounded bg-white"
+                    style={{
+                      transform: `scale(${zoomScale}) rotate(${rotationDegrees}deg)`,
+                      transition: "transform 0.2s ease-in-out",
+                    }}
+                  />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={selectedDoc.fileUrl}
+                    alt="Inspection Frame Panel Asset View"
+                    className="max-h-full max-w-full object-contain"
+                    style={{
+                      transform: `scale(${zoomScale}) rotate(${rotationDegrees}deg)`,
+                      transition: "transform 0.2s ease-in-out",
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}
-
         </div>
       </div>
-
-      {/* FULLSCREEN DISPLAY PORTAL BOX IMAGE/PDF LIGHTBOX */}
-      {isFullscreen && selectedDoc && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col justify-between p-6">
-          <div className="flex items-center justify-between text-white border-b border-slate-800 pb-3">
-            <div>
-              <h4 className="text-sm font-black uppercase tracking-wider">{selectedDoc.category} · Preview</h4>
-              <p className="text-xs text-slate-400">{selectedDoc.name} ({selectedDoc.fileSize})</p>
-            </div>
-            
-            <button
-              onClick={() => setIsFullscreen(false)}
-              className="p-2 bg-red-600 hover:bg-red-700 text-white font-black rounded-full"
-            >
-              <Minimize2 className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
-            {selectedDoc.fileUrl ? (
-              <div 
-                className="bg-white text-slate-900 rounded-xl p-4 shadow-2xl relative transition-transform"
-                style={{ 
-                  transform: `rotate(${rotateDeg}deg) scale(${zoomScale * 1.3})`,
-                  width: '100%',
-                  maxWidth: '560px',
-                  minHeight: '440px'
-                }}
-              >
-                {selectedDoc.fileType === 'pdf' ? (
-                  <iframe 
-                    src={selectedDoc.fileUrl} 
-                    className="w-full h-[400px] rounded-lg border border-slate-200" 
-                    title={selectedDoc.name}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <img 
-                      src={selectedDoc.fileUrl} 
-                      className="max-w-full max-h-[400px] object-contain rounded-md" 
-                      alt={selectedDoc.name} 
-                    />
-                    <div className="text-center text-xs font-bold text-slate-500 mt-3">{selectedDoc.name}</div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div 
-                className="bg-white text-slate-900 rounded-xl p-10 font-mono shadow-2xl relative transition-transform"
-                style={{ 
-                  transform: `rotate(${rotateDeg}deg) scale(${zoomScale * 1.3})`,
-                  width: '100%',
-                  maxWidth: '480px',
-                  minHeight: '440px'
-                }}
-              >
-                <div className="border-b-4 border-slate-900 pb-3 text-center mb-6 leading-tight">
-                  <div className="text-lg font-black text-red-600">INTERNATIONAL SYSTEM SERVICES</div>
-                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">OFFICIAL ADMISSIONS COMPLIANCE PLATFORM</div>
-                  <div className="text-[9px] text-slate-400 font-mono">HASH: SHA-256V-IMM_{selectedDoc.id}</div>
-                </div>
-
-                <div className="text-xs font-bold leading-relaxed text-slate-800 break-words whitespace-pre-wrap py-4 pb-12">
-                  {selectedDoc.content || 'DOCUMENT METRIC PREVIEW'}
-                </div>
-
-                <div className="border-t border-slate-300 pt-4 flex items-center justify-between text-[9px] text-slate-500 font-mono absolute bottom-6 left-10 right-10">
-                  <div>AUDITED OVERSEAS COMPLIANCE</div>
-                  <div>APPROVED STATUS: OK</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-center gap-3 border-t border-slate-850 pt-3 text-white">
-            <button onClick={() => handleZoom('out')} className="p-2 bg-slate-800 hover:bg-red-650 rounded-lg"><ZoomOut className="h-4 w-4" /></button>
-            <span className="text-xs font-mono font-bold px-3">{Math.round(zoomScale * 100)} %</span>
-            <button onClick={() => handleZoom('in')} className="p-2 bg-slate-800 hover:bg-red-650 rounded-lg"><ZoomIn className="h-4 w-4" /></button>
-            <button onClick={handleRotate} className="p-2 bg-slate-800 hover:bg-red-650 rounded-lg ml-2 flex items-center gap-1.5 text-xs"><RotateCw className="h-4 w-4" /> Rotate</button>
-            <button onClick={() => triggerDownloadSim(selectedDoc)} className="p-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg ml-2 flex items-center gap-1.5 text-xs"><Download className="h-4 w-4" /> Download Text Copy</button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

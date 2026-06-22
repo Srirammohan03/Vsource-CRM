@@ -1,47 +1,70 @@
 import { NextRequest } from "next/server";
-import  db  from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { ok, handleError } from "@/lib/api-helpers";
-
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
 
 export async function POST(
   req: NextRequest,
-  { params }: RouteContext
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: studentId } = await params;
 
     const body = await req.json();
 
-    const application =
-      await db.studentApplication.create({
-        data: {
-          studentId: id,
+    if (!body.universityId) {
+      throw new Error("University is required");
+    }
 
-          portal: body.portal,
+    if (!body.courseId) {
+      throw new Error("Course is required");
+    }
 
-          universityName:
-            body.universityName,
+    // Validate course belongs to selected university
+    const course = await prisma.universityCourse.findFirst({
+      where: {
+        id: body.courseId,
+        universityId: body.universityId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-          courseName:
-            body.courseName,
+    if (!course) {
+      throw new Error(
+        "Selected course does not belong to the selected university",
+      );
+    }
 
-          applicationDate:
-            body.applicationDate,
-
-          status: body.status,
+    const application = await prisma.studentApplication.create({
+      data: {
+        studentId,
+        portal: body.portal ?? null,
+        universityId: body.universityId,
+        courseId: body.courseId,
+        applicationDate: body.applicationDate
+          ? new Date(body.applicationDate)
+          : null,
+        status: body.status,
+      },
+      include: {
+        university: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
-      });
+        course: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
 
-    return ok(
-      application,
-      "Application added successfully"
-    );
-  } catch (err) {
-    return handleError(err);
+    return ok(application, "Application created successfully");
+  } catch (error) {
+    return handleError(error);
   }
 }

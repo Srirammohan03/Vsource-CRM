@@ -400,17 +400,17 @@ model Student {
   studentNumber String @unique
 
   leadId String @unique
-  lead Lead @relation(fields: [leadId], references: [id])
+  lead   Lead   @relation(fields: [leadId], references: [id])
 
   branchId String
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch   Branch @relation(fields: [branchId], references: [id])
 
   counselorId String?
-  counselor User? @relation("CounselorStudents",fields: [counselorId],references: [id])
+  counselor   User?   @relation("CounselorStudents", fields: [counselorId], references: [id])
 
-  studentName String
+  studentName  String
   mobileNumber String?
-  emailId String?
+  emailId      String?
 
   passportNumber String?
 
@@ -468,13 +468,15 @@ model StudentApplication {
 
   studentId String
 
-  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   portal String?
 
-  universityName String
+  universityId String
+  university   University @relation(fields: [universityId], references: [id])
 
-  courseName String
+  courseId String
+  course   UniversityCourse @relation(fields: [courseId], references: [id])
 
   applicationDate DateTime?
 
@@ -484,6 +486,8 @@ model StudentApplication {
   updatedAt DateTime @updatedAt
 
   @@index([studentId])
+  @@index([universityId])
+  @@index([courseId])
 }
 
 model StudentVisaProfile {
@@ -491,7 +495,7 @@ model StudentVisaProfile {
 
   studentId String @unique
 
-  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   depositStatus String?
 
@@ -518,7 +522,7 @@ model StudentLoan {
 
   studentId String @unique
 
- student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   assignee String?
 
@@ -528,9 +532,9 @@ model StudentLoan {
 
   pfStatus String?
 
-  sanctionedAmount Decimal? @db.Decimal(12,2)
+  sanctionedAmount Decimal? @db.Decimal(12, 2)
 
-  disbursedAmount Decimal? @db.Decimal(12,2)
+  disbursedAmount Decimal? @db.Decimal(12, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -541,8 +545,7 @@ model StudentRemark {
 
   studentId String
 
-  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
-
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   note String @db.Text
 
@@ -558,8 +561,7 @@ model StudentDocument {
 
   studentId String
 
-  student Student @relation(fields: [studentId],references: [id],onDelete: Cascade)
-
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   documentType String
 
@@ -742,6 +744,8 @@ model University {
   courses      UniversityCourse[]
   scholarships UniversityScholarship[]
 
+  studentApplications StudentApplication[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   contactPerson String?
@@ -807,6 +811,8 @@ model UniversityCourse {
   status              Boolean   @default(true)
 
   scholarships UniversityScholarship[]
+
+  studentApplications StudentApplication[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

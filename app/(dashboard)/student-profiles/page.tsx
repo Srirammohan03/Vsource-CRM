@@ -1,4 +1,3 @@
-// crm-frontend-next\app\(dashboard)\studentProfiles\page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,8 +24,22 @@ import { AddEditModal } from "./AddEditModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStudents } from "@/hooks/student/useStudents";
 import { Applications, Remarks, StudentRecord } from "@/types/student";
+import { useCreateStudentApplication } from "@/hooks/student/useCreateStudentApplication";
+import { useUpdateStudentApplication } from "@/hooks/student/useUpdateStudentApplication";
+import { useDeleteStudentApplication } from "@/hooks/student/useDeleteStudentApplication";
+import { useCreateStudentRemark } from "@/hooks/student/useCreateStudentRemark";
+import { useUpdateStudent } from "@/hooks/student/useUpdateStudent";
+import { api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { STUDENTKEY } from "@/services/student/query-key";
+import { toast } from "sonner";
+import {
+  useCourseDropdown,
+  useUniversityDropdown,
+} from "@/hooks/student/applications/useUniversityDropdown";
 
 export default function Home() {
+  const queryClient = useQueryClient();
   const { data, isLoading } = useStudents();
 
   const [currentView, setCurrentView] = useState<"students">("students");
@@ -34,6 +47,57 @@ export default function Home() {
     null,
   );
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [detailTab, setDetailTab] = useState<
+    "info" | "documents" | "applications" | "finance" | "visa" | "remarks"
+  >("info");
+
+  const [globalSearch, setGlobalSearch] = useState<string>("");
+  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
+
+  const [filterCounsellor, setFilterCounsellor] = useState<string>("All");
+  const [filterIntake, setFilterIntake] = useState<string>("All");
+  const [filterCountry, setFilterCountry] = useState<string>("All");
+  const [filterVisaStatus, setFilterVisaStatus] = useState<string>("All");
+  const [filterLoanStatus, setFilterLoanStatus] = useState<string>("All");
+  const [filterCasStatus, setFilterCasStatus] = useState<string>("All");
+  const [filterNbfc, setFilterNbfc] = useState<string>("All");
+  const [filterFintechAssignee, setFilterFintechAssignee] =
+    useState<string>("All");
+  const [filterAppStatus, setFilterAppStatus] = useState<string>("All");
+  const [filterUniversity, setFilterUniversity] = useState<string>("All");
+  const [filterDateType, setFilterDateType] = useState<string>("All");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+
+  const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
+  const [studentToEdit, setStudentToEdit] = useState<StudentRecord | null>(
+    null,
+  );
+
+  const [appLayout, setAppLayout] = useState<"cards" | "table">("cards");
+  const [showAddAppForm, setShowAddAppForm] = useState<boolean>(false);
+  const [editingAppId, setEditingAppId] = useState<string | null>(null);
+  const [appPortal, setAppPortal] = useState<string>("GVOC");
+  const [appDate, setAppDate] = useState<string>("");
+  const [appIntake, setAppIntake] = useState<string>("Sep 2026");
+  const [appStatus, setAppStatus] = useState<string>("Pending");
+
+  const [visaForm, setVisaForm] = useState({
+    depositStatus: "",
+    ihsPaymentStatus: "",
+    interviewStatus: "",
+    casStatus: "",
+    visaStatus: "",
+  });
+
+  const [newRemarkText, setNewRemarkText] = useState<string>("");
+  const [selectedUniversityId, setSelectedUniversityId] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+
+  const { data: universities, isLoading: isUniversitiesLoad } =
+    useUniversityDropdown();
+  const { data: courses, isLoading: isCourseLoad } =
+    useCourseDropdown(selectedUniversityId);
 
   const students = useMemo(() => {
     return data?.data ?? [];
@@ -57,53 +121,12 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  // Detail page state variables
-  const [detailTab, setDetailTab] = useState<
-    "info" | "documents" | "applications" | "finance" | "visa" | "remarks"
-  >("info");
+  const createApplicationMutation = useCreateStudentApplication();
+  const updateApplicationMutation = useUpdateStudentApplication();
+  const deleteApplicationMutation = useDeleteStudentApplication();
+  const createRemarkMutation = useCreateStudentRemark();
+  const updateStudentMutation = useUpdateStudent();
 
-  // Search state
-  const [globalSearch, setGlobalSearch] = useState<string>("");
-  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
-
-  // Advanced Filters State Management
-  const [filterCounsellor, setFilterCounsellor] = useState<string>("All");
-  const [filterIntake, setFilterIntake] = useState<string>("All");
-  const [filterCountry, setFilterCountry] = useState<string>("All");
-  const [filterVisaStatus, setFilterVisaStatus] = useState<string>("All");
-  const [filterLoanStatus, setFilterLoanStatus] = useState<string>("All");
-  const [filterCasStatus, setFilterCasStatus] = useState<string>("All");
-  const [filterNbfc, setFilterNbfc] = useState<string>("All");
-  const [filterFintechAssignee, setFilterFintechAssignee] =
-    useState<string>("All");
-  const [filterAppStatus, setFilterAppStatus] = useState<string>("All");
-  const [filterUniversity, setFilterUniversity] = useState<string>("All");
-  const [filterDateType, setFilterDateType] = useState<string>("All");
-  const [customStartDate, setCustomStartDate] = useState<string>("");
-  const [customEndDate, setCustomEndDate] = useState<string>("");
-
-  // Modals / Toggles
-  // const [isFilterSidebarOpen, setIsFilterSidebarOpen] =
-  //   useState<boolean>(false);
-  const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
-  const [studentToEdit, setStudentToEdit] = useState<StudentRecord | null>(
-    null,
-  );
-
-  // Application sub-module (Tab 3) workflow states
-  const [appLayout, setAppLayout] = useState<"cards" | "table">("cards");
-  const [showAddAppForm, setShowAddAppForm] = useState<boolean>(false);
-  const [editingAppId, setEditingAppId] = useState<string | null>(null);
-  const [appPortal, setAppPortal] = useState<string>("GVOC");
-  const [appDate, setAppDate] = useState<string>("15-Jun-2026");
-  const [appUniversity, setAppUniversity] = useState<string>("");
-  const [appCourse, setAppCourse] = useState<string>("");
-  const [appIntake, setAppIntake] = useState<string>("Sep 2026");
-  const [appStatus, setAppStatus] = useState<string>("Pending");
-
-  const [newRemarkText, setNewRemarkText] = useState<string>("");
-
-  // Reset Filters wrapper
   const resetFilters = () => {
     setFilterCounsellor("All");
     setFilterIntake("All");
@@ -120,7 +143,6 @@ export default function Home() {
     setCustomEndDate("");
   };
 
-  // Admission parsed dates solver
   const parseStudentAdmissionDate = (dateStr: string): Date => {
     const parts = dateStr.split("-");
     if (parts.length !== 3) return new Date();
@@ -180,7 +202,7 @@ export default function Home() {
         return sTime >= minDate.getTime() && sTime <= maxDate.getTime();
       }
       case "Last 30 Days": {
-        const minDate = new Date(2026, 4, 16); // May 16, 2026
+        const minDate = new Date(2026, 4, 16);
         const maxDate = new Date(2026, 5, 15, 23, 59, 59);
         return sTime >= minDate.getTime() && sTime <= maxDate.getTime();
       }
@@ -221,10 +243,8 @@ export default function Home() {
     }
   };
 
-  // Sorted & Filtered Students list
   const filteredStudents = useMemo(() => {
     return students.filter((student: StudentRecord) => {
-      // Search matching criteria
       if (globalSearch.trim() !== "") {
         const q = globalSearch?.toLowerCase();
         const matchesSearch =
@@ -269,7 +289,7 @@ export default function Home() {
 
       if (filterUniversity !== "All") {
         const hasMatchingUni = student.applications.some(
-          (app) => app.universityName === filterUniversity,
+          (app) => app.university?.name === filterUniversity,
         );
         if (!hasMatchingUni) return false;
       }
@@ -306,14 +326,14 @@ export default function Home() {
     customEndDate,
   ]);
 
-  // Selected Student Object active state lookup
-  const selectedStudent: StudentRecord = useMemo(() => {
+  const selectedStudent = useMemo<StudentRecord | null>(() => {
     return (
-      students.find((s: StudentRecord) => s.id === selectedStudentId) || null
+      students.find((s: StudentRecord) => s.id === selectedStudentId) ?? null
     );
   }, [students, selectedStudentId]);
 
-  // Handle student router selector
+  console.log("selectedStudent", selectedStudent);
+
   const handleSelectStudent = (id: string) => {
     setSelectedStudentId(id);
     setCurrentView("students");
@@ -322,7 +342,6 @@ export default function Home() {
     setShowSearchResults(false);
   };
 
-  // EDIT BASIC PROFILE WRAPPER
   const openEditModal = (student: StudentRecord) => {
     setStudentToEdit(student);
     setIsAddEditOpen(true);
@@ -333,55 +352,63 @@ export default function Home() {
     setIsAddEditOpen(true);
   };
 
-  // DELETE CASE FILE
-  const handleDeleteStudent = (id: string) => {
-    confirm(
-      "Are you sure you want to permanently delete this student's folders and case records? This is irreversible.",
-    );
+  const handleDeleteStudent = async (id: string) => {
+    if (
+      confirm(
+        "Are you sure you want to permanently delete this student's folders and case records? This is irreversible.",
+      )
+    ) {
+      try {
+        await api.delete(`/students/${id}`);
+        toast.success("Student records deleted successfully.");
+        queryClient.invalidateQueries({ queryKey: STUDENTKEY.all });
+        if (selectedStudentId === id) setSelectedStudentId(null);
+      } catch (error) {
+        toast.error("Failed to delete student records.");
+      }
+    }
   };
 
-  // CHANGE STATUS SELECT FROM TABLE INLINE OR FROM TIMELINE (Wired with progress colors!)
-  const handleTableStatusChange = (
+  const handleTableStatusChange = async (
     studentId: string,
     field: string,
-    value: any,
-  ) => {};
+    value: string,
+  ) => {
+    if (!selectedStudent) return;
 
-  // SAVE EDIT/ADD PROFILE FORM SUBMIT COMMAND
-  const handleSaveStudentPayload = (payload: Partial<StudentRecord>) => {};
-
-  // DMS DOCUMENT METADATA SYNCS
-  const handleAddDocumentToStudent = (
-    studentId: string,
-    docPayload: Omit<DocumentItem, "id">,
-  ) => {};
-
-  const handleDeleteDocumentFromStudent = (
-    studentId: string,
-    docId: string,
-  ) => {};
-
-  const handleReplaceDocumentInStudent = (
-    studentId: string,
-    docId: string,
-    updated: Partial<DocumentItem>,
-  ) => {};
-
-  // ADDS REMARK LOG LINE TO ACTIVE PORTFOLIO CHRONOLOGY
-  const handleAddRemark = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRemarkText.trim() || !selectedStudentId) return;
-
-    setNewRemarkText("");
+    await updateStudentMutation.mutateAsync({
+      id: studentId,
+      payload: {
+        visaProfile: {
+          ...selectedStudent.visaProfile,
+          [field]: value,
+        },
+      },
+    });
   };
 
-  // MULTIPLE UNIVERSITY APPLICATIONS WORKFLOW IMPLEMENTATION (TAB 3)
+  const handleAddRemark = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newRemarkText.trim() || !selectedStudentId) return;
+
+    try {
+      await createRemarkMutation.mutateAsync({
+        studentId: selectedStudentId,
+        note: newRemarkText.trim(),
+      });
+      setNewRemarkText("");
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleTriggerAddApp = () => {
     setEditingAppId(null);
     setAppPortal("Direct");
     setAppDate("15-Jun-2026");
-    setAppUniversity("");
-    setAppCourse("");
+    setSelectedUniversityId("");
+    setSelectedCourseId("");
     setAppIntake("Sep 2026");
     setAppStatus("Pending");
     setShowAddAppForm(true);
@@ -395,36 +422,86 @@ export default function Home() {
         ? new Date(app.applicationDate).toLocaleDateString("en-GB")
         : "-",
     );
-    setAppUniversity(app.universityName);
-    setAppCourse(app.courseName);
+    setSelectedUniversityId(app.universityId);
+    setSelectedCourseId(app.courseId);
     setAppIntake("Sep 2026");
     setAppStatus(app.status);
     setShowAddAppForm(true);
   };
 
-  const handleSaveUniversityAppForm = (e: React.FormEvent) => {
+  const handleSaveUniversityAppForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!appUniversity.trim() || !appCourse.trim() || !selectedStudentId)
+
+    if (!selectedStudentId) return;
+
+    const applicationStatusMap = {
+      Draft: "draft",
+      Applied: "applied",
+      Pending: "under_review",
+      "Offer Received": "conditional_offer",
+      "Priority Offer Received": "conditional_offer",
+      "Conditional Offer": "conditional_offer",
+      "Unconditional Offer": "unconditional_offer",
+      Rejected: "rejected",
+      Deferred: "withdrawn",
+    };
+
+    if (!selectedUniversityId) {
+      toast.error("Select a university");
       return;
+    }
+
+    if (!selectedCourseId) {
+      toast.error("Select a course");
+      return;
+    }
+
+    const payload = {
+      portal: appPortal,
+      universityId: selectedUniversityId,
+      courseId: selectedCourseId,
+      applicationDate: appDate ? new Date(appDate).toISOString() : null,
+      status:
+        applicationStatusMap[appStatus as keyof typeof applicationStatusMap] ??
+        "draft",
+    };
+
+    if (editingAppId) {
+      await updateApplicationMutation.mutateAsync({
+        applicationId: editingAppId,
+        payload,
+      });
+    } else {
+      await createApplicationMutation.mutateAsync({
+        studentId: selectedStudentId,
+        payload,
+      });
+    }
 
     setShowAddAppForm(false);
     setEditingAppId(null);
-    setAppUniversity("");
-    setAppCourse("");
   };
 
-  const handleDeleteUniversityApp = (appId: string) => {
-    confirm(
-      "Are you sure you want to delete this university application entry?",
-    );
+  const handleDeleteUniversityApp = async (appId: string) => {
+    if (!confirm("Delete application?")) return;
+    await deleteApplicationMutation.mutateAsync(appId);
   };
 
-  // SAVE TAB 4 FINANCIAL DETAILS FORM BACK TO IMMIGRATION FOLDER
-  const handleSaveFinancesTab = (e: React.FormEvent, finPayload: any) => {
+  const handleSaveFinancesTab = async (e: React.FormEvent, finPayload: any) => {
     e.preventDefault();
-    if (!selectedStudentId) return;
 
-    alert("Financial credit and NBFC parameters updated successfully!");
+    if (!selectedStudent) return;
+
+    try {
+      await updateStudentMutation.mutateAsync({
+        id: selectedStudent.id,
+        payload: {
+          loan: finPayload,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -433,7 +510,6 @@ export default function Home() {
     >
       <div className="grow flex flex-col min-w-0 min-h-screen">
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
-          {/* CRITICAL HERO GREETING BLOCK */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5">
             <div>
               <span className="text-red-601 font-black tracking-widest text-[10px] uppercase text-red-600 block">
@@ -451,7 +527,6 @@ export default function Home() {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* 3. CASE FOLIO VERIFICATION: STUDENT DETAIL VIEW */}
             {selectedStudentId && selectedStudent ? (
               <motion.div
                 key="student-detail-profile"
@@ -460,7 +535,6 @@ export default function Home() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Return Navigator Toggle */}
                 <button
                   onClick={() => setSelectedStudentId(null)}
                   className="inline-flex items-center gap-1.5 text-xs font-black text-red-600 hover:underline hover:scale-[1.01] transition-transform"
@@ -468,13 +542,8 @@ export default function Home() {
                   ← Return to Master Profiles Directory
                 </button>
 
-                {/* Profile Widget header card */}
                 <div
-                  className={`p-6 rounded-3xl border shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
-                    isDarkMode
-                      ? "bg-slate-900 border-slate-800"
-                      : "bg-white border-slate-100"
-                  }`}
+                  className={`p-6 rounded-3xl border shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-red-605 from-red-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-2xl font-black">
@@ -502,7 +571,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Flow pipeline active stage */}
                   <div className="flex flex-col lg:items-end gap-1">
                     <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider">
                       Embassy Pipeline Node
@@ -516,13 +584,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* VISUAL STEPPER TIMELINE AND COMPLIANCE INTEGRATION TRACKER (Interactive!) */}
                 <div
-                  className={`p-6 rounded-3xl border shadow-md space-y-4 ${
-                    isDarkMode
-                      ? "bg-slate-900 border-slate-805"
-                      : "bg-white border-slate-100"
-                  }`}
+                  className={`p-6 rounded-3xl border shadow-md space-y-4 ${isDarkMode ? "bg-slate-900 border-slate-805" : "bg-white border-slate-100"}`}
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] uppercase font-black text-slate-400 tracking-widest block">
@@ -574,9 +637,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* BOTTOM TABS SECTION GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                  {/* Left Column navigation tabs */}
                   <div className="space-y-1.5 lg:col-span-1">
                     {[
                       {
@@ -643,16 +704,10 @@ export default function Home() {
                     })}
                   </div>
 
-                  {/* Middle panels contents (Col Span 3) */}
                   <div className="lg:col-span-3">
                     <div
-                      className={`p-6 rounded-3xl border shadow-xl min-h-[420px] ${
-                        isDarkMode
-                          ? "bg-slate-900 border-slate-805 text-slate-100"
-                          : "bg-white border-slate-100 text-slate-800"
-                      }`}
+                      className={`p-6 rounded-3xl border shadow-xl min-h-[420px] ${isDarkMode ? "bg-slate-900 border-slate-805 text-slate-100" : "bg-white border-slate-100 text-slate-800"}`}
                     >
-                      {/* T1. INFORMATION PANEL (Wired fully with edit options!) */}
                       {detailTab === "info" && (
                         <div className="space-y-6">
                           <div className="flex items-center justify-between border-b pb-3 border-inherit">
@@ -676,7 +731,7 @@ export default function Home() {
                             {[
                               {
                                 label: "Student Identification ID",
-                                val: `STU${100 + Number(selectedStudent.id)}`,
+                                val: `STU${100 + Number(selectedStudent?.studentName)}`,
                                 icon: User,
                               },
                               {
@@ -755,7 +810,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* T2. DOCUMENT MANAGEMENT SYSTEM TAB (Integrated real DMSSection!) */}
                       {detailTab === "documents" && (
                         <div className="space-y-4">
                           <div className="pb-2 border-b border-inherit">
@@ -768,35 +822,16 @@ export default function Home() {
                             </p>
                           </div>
 
-                          {/* <DMSSection
-                            studentId={selectedStudent.id}
-                            studentName={selectedStudent.studentName}
-                            documents={selectedStudent.documents || []}
-                            isDarkMode={isDarkMode}
-                            onAddDocument={(doc) =>
-                              handleAddDocumentToStudent(
-                                selectedStudent.id,
-                                doc,
-                              )
-                            }
-                            onDeleteDocument={(docId) =>
-                              handleDeleteDocumentFromStudent(
-                                selectedStudent.id,
-                                docId,
-                              )
-                            }
-                            onReplaceDocument={(docId, updated) =>
-                              handleReplaceDocumentInStudent(
-                                selectedStudent.id,
-                                docId,
-                                updated,
-                              )
-                            }
-                          /> */}
+                          {selectedStudent && (
+                            <DMSSection
+                              studentId={selectedStudent.id}
+                              studentName={selectedStudent.studentName}
+                              isDarkMode={isDarkMode}
+                            />
+                          )}
                         </div>
                       )}
 
-                      {/* T3. ADVANCED MULTIPLE APPLICATIONS TAB PANEL */}
                       {detailTab === "applications" && (
                         <div className="space-y-6">
                           <div className="flex items-center justify-between pb-3 border-b border-inherit">
@@ -811,7 +846,6 @@ export default function Home() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              {/* Layout selector toggle */}
                               <div className="bg-slate-100 dark:bg-slate-950 p-1 rounded-xl flex gap-1">
                                 <button
                                   onClick={() => setAppLayout("cards")}
@@ -839,7 +873,6 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* Quick Add Form Dialog inside the Tab */}
                           {showAddAppForm && (
                             <form
                               onSubmit={handleSaveUniversityAppForm}
@@ -854,42 +887,59 @@ export default function Home() {
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                                 <div>
                                   <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                    University Name
+                                    University
                                   </label>
-                                  <input
-                                    type="text"
-                                    value={appUniversity}
-                                    onChange={(e) =>
-                                      setAppUniversity(e.target.value)
-                                    }
-                                    placeholder="e.g. University of Manchester"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
+
+                                  <select
+                                    value={selectedUniversityId}
+                                    onChange={(e) => {
+                                      setSelectedUniversityId(e.target.value);
+                                      setSelectedCourseId("");
+                                    }}
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
                                       isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
                                     }`}
-                                    required
-                                  />
+                                  >
+                                    <option value="">Select University</option>
+
+                                    {universities.map((university: any) => (
+                                      <option
+                                        key={university.id}
+                                        value={university.id}
+                                      >
+                                        {university.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
 
                                 <div>
                                   <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                    Course Name
+                                    Course
                                   </label>
-                                  <input
-                                    type="text"
-                                    value={appCourse}
+
+                                  <select
+                                    value={selectedCourseId}
                                     onChange={(e) =>
-                                      setAppCourse(e.target.value)
+                                      setSelectedCourseId(e.target.value)
                                     }
-                                    placeholder="e.g. MSc Advanced Computer Science"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
+                                    disabled={!selectedUniversityId}
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
                                       isDarkMode
                                         ? "bg-slate-900 border-slate-800"
                                         : "bg-white border-slate-200"
                                     }`}
-                                    required
-                                  />
+                                  >
+                                    <option value="">Select Course</option>
+
+                                    {courses.map((course: any) => (
+                                      <option key={course.id} value={course.id}>
+                                        {course.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
 
                                 <div>
@@ -903,11 +953,7 @@ export default function Home() {
                                       setAppPortal(e.target.value)
                                     }
                                     placeholder="e.g. GVOC / Centurus / Direct"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
-                                        ? "bg-slate-900 border-slate-800"
-                                        : "bg-white border-slate-200"
-                                    }`}
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
                                     required
                                   />
                                 </div>
@@ -919,15 +965,10 @@ export default function Home() {
                                     Application Date
                                   </label>
                                   <input
-                                    type="text"
+                                    type="date"
                                     value={appDate}
                                     onChange={(e) => setAppDate(e.target.value)}
-                                    placeholder="15-Jun-2026"
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
-                                        ? "bg-slate-900 border-slate-800"
-                                        : "bg-white border-slate-200"
-                                    }`}
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
                                   />
                                 </div>
 
@@ -940,11 +981,7 @@ export default function Home() {
                                     onChange={(e) =>
                                       setAppStatus(e.target.value)
                                     }
-                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                      isDarkMode
-                                        ? "bg-slate-900 border-slate-800"
-                                        : "bg-white border-slate-200"
-                                    }`}
+                                    className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
                                   >
                                     {[
                                       "Draft",
@@ -973,10 +1010,17 @@ export default function Home() {
                                     Cancel
                                   </button>
                                   <button
+                                    disabled={
+                                      createApplicationMutation.isPending ||
+                                      updateApplicationMutation.isPending
+                                    }
                                     type="submit"
                                     className="px-4 py-1.5 bg-red-655 bg-red-600 text-white rounded-xl text-xs font-black shadow"
                                   >
-                                    Save Entry
+                                    {createApplicationMutation.isPending ||
+                                    updateApplicationMutation.isPending
+                                      ? "Saving..."
+                                      : "Save Entry"}
                                   </button>
                                 </div>
                               </div>
@@ -1006,10 +1050,10 @@ export default function Home() {
                                         </span>
                                       </div>
                                       <h5 className="font-extrabold text-sm mb-1">
-                                        {app?.universityName ?? "-"}
+                                        {app?.university?.name ?? "-"}
                                       </h5>
                                       <p className="text-[11px] text-slate-400 font-medium mb-4">
-                                        {app?.courseName ?? "-"}
+                                        {app.course?.name ?? "-"}
                                       </p>
                                     </div>
 
@@ -1082,10 +1126,10 @@ export default function Home() {
                                           {app.portal}
                                         </td>
                                         <td className="px-4 py-3 font-bold">
-                                          {app.universityName}
+                                          {app.university?.name ?? "-"}
                                         </td>
                                         <td className="px-4 py-3 text-slate-500">
-                                          {app.courseName}
+                                          {app.course?.name ?? "-"}
                                         </td>
                                         <td className="px-4 py-3 text-slate-400">
                                           {app?.applicationDate
@@ -1129,7 +1173,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* T4. FINANCIAL CREDIT CONTROL PANEL */}
                       {detailTab === "finance" && (
                         <div className="space-y-6">
                           <div className="pb-3 border-b border-inherit">
@@ -1192,11 +1235,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.assignee ?? "-"
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                   required
                                 />
                               </div>
@@ -1210,11 +1249,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.nbfc ?? "-"
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-650 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-650 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                 >
                                   {[
                                     "Poonawalla",
@@ -1243,11 +1278,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.status ?? "-"
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                 >
                                   {[
                                     "Pending",
@@ -1273,11 +1304,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.pfStatus || "Pending"
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                 >
                                   {[
                                     "Paid",
@@ -1302,11 +1329,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.sanctionedAmount
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                   required
                                 />
                               </div>
@@ -1321,11 +1344,7 @@ export default function Home() {
                                   defaultValue={
                                     selectedStudent?.loan?.disbursedAmount
                                   }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                    isDarkMode
-                                      ? "bg-slate-950 border-slate-800"
-                                      : "bg-slate-50 border-slate-200"
-                                  }`}
+                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                                   required
                                 />
                               </div>
@@ -1343,7 +1362,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* T5. VISA STATS MILESTONES PROGRESS TRACKER */}
                       {detailTab === "visa" && (
                         <div className="space-y-6">
                           <div className="pb-3 border-b border-inherit">
@@ -1372,11 +1390,7 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
-                                    ? "bg-slate-950 border-slate-800"
-                                    : "bg-slate-50 border-slate-202"
-                                }`}
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
                               >
                                 {[
                                   "Deposit Paid",
@@ -1403,15 +1417,11 @@ export default function Home() {
                                 onChange={(e) =>
                                   handleTableStatusChange(
                                     selectedStudent.id,
-                                    "ihsPayment",
+                                    "ihsPaymentStatus",
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
-                                    ? "bg-slate-950 border-slate-800"
-                                    : "bg-slate-50 border-slate-202"
-                                }`}
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
                               >
                                 {["Paid", "Pending", "Not Required"].map(
                                   (opt) => (
@@ -1438,11 +1448,7 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
-                                    ? "bg-slate-950 border-slate-800"
-                                    : "bg-slate-50 border-slate-202"
-                                }`}
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
                               >
                                 {["Completed", "Pending", "Waived"].map(
                                   (opt) => (
@@ -1467,11 +1473,7 @@ export default function Home() {
                                     e.target.value,
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
-                                    ? "bg-slate-950 border-slate-800"
-                                    : "bg-slate-50 border-slate-202"
-                                }`}
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
                               >
                                 {[
                                   "CAS Received",
@@ -1494,18 +1496,18 @@ export default function Home() {
                               </label>
                               <select
                                 value={selectedStudent?.visaProfile?.visaStatus}
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  setVisaForm((prev) => ({
+                                    ...prev,
+                                    visaStatus: e.target.value,
+                                  }));
                                   handleTableStatusChange(
                                     selectedStudent.id,
                                     "visaStatus",
                                     e.target.value,
-                                  )
-                                }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${
-                                  isDarkMode
-                                    ? "bg-slate-950 border-slate-800"
-                                    : "bg-slate-50 border-slate-202"
-                                }`}
+                                  );
+                                }}
+                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
                               >
                                 {[
                                   "Visa Approved",
@@ -1536,7 +1538,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* T6. CHRONOLOGICAL REMARKS HUB */}
                       {detailTab === "remarks" && (
                         <div className="space-y-6">
                           <div className="pb-3 border-b border-inherit">
@@ -1558,11 +1559,7 @@ export default function Home() {
                               value={newRemarkText}
                               onChange={(e) => setNewRemarkText(e.target.value)}
                               placeholder="Type a new compliance note, advisory update..."
-                              className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${
-                                isDarkMode
-                                  ? "bg-slate-950 border-slate-800 text-slate-200"
-                                  : "bg-slate-50 border-slate-202"
-                              }`}
+                              className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-200" : "bg-slate-50 border-slate-202"}`}
                               required
                             />
                             <button
@@ -1607,9 +1604,6 @@ export default function Home() {
               </motion.div>
             ) : (
               <>
-                {/* 1. CORE PIXEL-PERFECT DASHBOARD VIEW */}
-
-                {/* 2. ALL STUDENT PROFILES (Master Table rendering 32 specs columns!) */}
                 {currentView === "students" && (
                   <motion.div
                     key="students-view"
@@ -1628,21 +1622,9 @@ export default function Home() {
                           compliance folders
                         </p>
                       </div>
-
-                      {/* <div className="flex items-center gap-2">
-                        <button
-                          onClick={openAddModal}
-                          className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4.5 py-2 rounded-xl inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="h-4.5 w-4.5" />
-                          <span>Quick Register Student</span>
-                        </button>
-                      </div> */}
                     </div>
 
-                    {/* Master Student 32-Column Table */}
                     <StudentTable
-                      // students={filteredStudents}
                       isDarkMode={isDarkMode}
                       onSelectStudent={handleSelectStudent}
                       onEditStudent={openEditModal}
@@ -1657,15 +1639,11 @@ export default function Home() {
         </main>
       </div>
 
-      {/* 3. FLOATING FILTER SIDEBAR DRAWER PANEL (Fully Responsive!) */}
-
-      {/* 4. DRAWER DIALOG BOX FOR ADD & EDIT STUDENT FOLIO */}
       <AddEditModal
         isOpen={isAddEditOpen}
         onClose={() => setIsAddEditOpen(false)}
         isDarkMode={isDarkMode}
         studentToEdit={studentToEdit}
-        onSave={handleSaveStudentPayload}
       />
     </div>
   );

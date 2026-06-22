@@ -133,6 +133,21 @@ export async function GET(req: NextRequest) {
 
         loan: true,
 
+        documents: {
+          select: {
+            id: true,
+            studentId: true,
+            documentType: true,
+            fileName: true,
+            fileUrl: true,
+            uploadedAt: true,
+            createdAt: true,
+          },
+          orderBy: {
+            uploadedAt: "desc",
+          },
+        },
+
         remarks: {
           orderBy: {
             createdAt: "desc",
