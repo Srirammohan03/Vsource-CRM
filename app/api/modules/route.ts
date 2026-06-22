@@ -45,7 +45,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = ModuleCreateSchema.parse(await req.json());
-    const module = await db.module.create({ data: body });
+    const module = await db.module.create({
+      data: {
+        ...body,
+        sortOrder: body.sortOrder ?? undefined,
+      },
+    });
     return created(module, "Module created successfully");
   } catch (err) {
     return handleError(err);

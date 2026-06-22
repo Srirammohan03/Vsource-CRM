@@ -8,8 +8,8 @@
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { PrismaClient } from "@prisma/client";
 import { ApiError } from "./rbac";
+import { Prisma } from "@/generated/prisma/client";
 
 // ---------------------------------------------------------------------------
 // Generic response envelope

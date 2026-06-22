@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { counsellorsList, countriesList, intakesList, visaStatusesList, loanStatusesList } from '../lib/mockData';
+// import { counsellorsList, countriesList, intakesList, visaStatusesList, loanStatusesList } from '../lib/mockData';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, Filter, RotateCcw, X } from 'lucide-react';
+import { counsellorsList, intakesList, loanStatusesList, visaStatusesList, countriesList } from '@/(dashboard)/applications-tracker/mockData';
+
 
 interface FilterSidebarProps {
     isOpen: boolean;

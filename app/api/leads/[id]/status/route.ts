@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import  db  from "@/lib/prisma";
 import { handleError, ok } from "@/lib/api-helpers";
+import { Prisma } from "@/generated/prisma/client";
 
 export async function PATCH(
   req: NextRequest,
@@ -26,7 +27,7 @@ export async function PATCH(
       throw new Error("Lead not found");
     }
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedLead = await tx.lead.update({
         where: { id },
         data: {
@@ -61,7 +62,7 @@ export async function PATCH(
               branchId: lead.branchId,
 
               counselorId:
-                lead.counselors.find((c) => c.isPrimary)
+                lead.counselors.find((c: any) => c.isPrimary)
                   ?.counselorId ?? null,
 
               studentName: lead.studentName ?? "",

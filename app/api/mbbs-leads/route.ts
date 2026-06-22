@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       data: body as any,
       include: {
         branch: { select: { id: true, name: true } },
-        assignedCounselor: { select: { id: true, name: true } },
+   
       },
     });
     return created(lead, "MBBS Lead created successfully");

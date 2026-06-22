@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       PERMISSIONS.READ,
     );
 
-    const branches = currentUser.branches.map((branch) => ({
+    const branches = currentUser.branches.map((branch: any) => ({
       id: branch.id,
       name: branch.name,
     }));
