@@ -15,7 +15,8 @@ import {
   buildMeta,
 } from "@/lib/api-helpers";
 import { UniversityCourseCreateSchema } from "@/lib/schemas";
-import type { DegreeType } from "@/generated/prisma";
+import { DegreeType } from "@/generated/prisma/enums";
+// import type { DegreeType } from "@/generated/prisma";
 
 type Ctx = { params: Promise<{ id: string }> };
 

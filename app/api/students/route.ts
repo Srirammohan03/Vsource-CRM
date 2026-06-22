@@ -2,7 +2,7 @@
 
 import { NextRequest } from "next/server";
 
-import  db  from "@/lib/prisma";
+import db from "@/lib/prisma";
 import { ok, handleError } from "@/lib/api-helpers";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -74,20 +74,28 @@ export async function GET(req: NextRequest) {
 
     if (visaStatus) {
       where.visaProfile = {
-        visaStatus,
+        is: {
+          visaStatus,
+        },
       };
     }
 
     if (casStatus) {
       where.visaProfile = {
-        ...(where.visaProfile || {}),
-        casStatus
+        is: {
+          ...(where.visaProfile && "is" in where.visaProfile
+            ? where.visaProfile.is
+            : {}),
+          casStatus,
+        },
       };
     }
 
     if (loanStatus) {
       where.loan = {
-        status: loanStatus,
+        is: {
+          status: loanStatus,
+        },
       };
     }
 
@@ -96,11 +104,11 @@ export async function GET(req: NextRequest) {
 
       include: {
         lead: {
-            select: {
-              twelfthPercentage: true,
-              bachelorsCourse: true,
-            }
+          select: {
+            twelfthPercentage: true,
+            bachelorsCourse: true,
           },
+        },
         branch: {
           select: {
             id: true,
@@ -138,10 +146,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return ok(
-      students,
-      "Students fetched successfully"
-    );
+    return ok(students, "Students fetched successfully");
   } catch (err) {
     return handleError(err);
   }

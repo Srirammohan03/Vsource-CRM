@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
     // We can run a transaction to delete existing permissions and insert new ones
     // Or we can just use upsert or createMany
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: any) => {
       // Clear existing permissions for this role
       await tx.roleModulePermission.deleteMany({
         where: { roleId },

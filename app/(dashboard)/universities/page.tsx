@@ -301,7 +301,7 @@ export default function UniversitiesPage() {
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {universities.map((university) => (
+            {universities.map((university: University) => (
               <UniversityCard
                 key={university.id}
                 university={university}

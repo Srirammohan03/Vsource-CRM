@@ -482,7 +482,7 @@ export default function UniversityDetailsPage() {
             <UniversityFormDialog
                 open={editOpen}
                 onOpenChange={setEditOpen}
-                university={university}
+                university={university as any}
                 onSubmit={async (data) => {
                     try {
                         await axios.put(

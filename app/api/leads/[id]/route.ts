@@ -11,6 +11,7 @@ import { ok, notFound, noContent, handleError } from "@/lib/api-helpers";
 import { LeadUpdateSchema } from "@/lib/schemas";
 import { getAuthorizedUser } from "@/lib/rbac";
 import { MODULES, PERMISSIONS } from "@/lib/module-codes";
+import { Prisma } from "@/generated/prisma/client";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -67,7 +68,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { id } = await params;
     const body = LeadUpdateSchema.parse(await req.json());
     const { counselorIds, ...leadData } = body;
-    const lead = await db.$transaction(async (tx) => {
+    const lead = await db.$transaction(
+  async (tx: Prisma.TransactionClient) => {
       const updatedLead = await tx.lead.update({
         where: { id },
         data: leadData,

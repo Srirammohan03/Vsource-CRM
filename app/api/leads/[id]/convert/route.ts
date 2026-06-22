@@ -10,7 +10,8 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import db from "@/lib/prisma";
 import { ok, notFound, badRequest, handleError } from "@/lib/api-helpers";
-
+import { Prisma } from "@/generated/prisma/client";
+// import { Prisma } from "@prisma/client";
 type Ctx = { params: Promise<{ id: string }> };
 
 const ConvertSchema = z.object({
@@ -22,41 +23,43 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   try {
     const { id: leadId } = await params;
     const { studentNumber, counselorId } = ConvertSchema.parse(
-      await req.json()
+      await req.json(),
     );
 
     const lead = await db.lead.findUnique({ where: { id: leadId } });
     if (!lead) return notFound("Lead");
     if (lead.isConverted) return badRequest("Lead is already converted");
 
-    const result = await db.$transaction(async (tx) => {
-      // Mark lead as converted
-      const updatedLead = await tx.lead.update({
-        where: { id: leadId },
-        data: {
-          isConverted: true,
-          convertedAt: new Date(),
-          status: "converted",
-        },
-      });
+    const result = await db.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Mark lead as converted
+        const updatedLead = await tx.lead.update({
+          where: { id: leadId },
+          data: {
+            isConverted: true,
+            convertedAt: new Date(),
+            status: "converted",
+          },
+        });
 
-      // Create student record
-      const student = await tx.student.create({
-        data: {
-          studentNumber,
-          leadId,
-          branchId: lead.branchId,
-          counselorId: counselorId ?? lead.assignedCounselorId ?? undefined,
-          studentName: lead.studentName ?? "",
-          mobileNumber: lead.mobileNumber ?? undefined,
-          emailId: lead.emailId ?? undefined,
-          preferredCountry: lead.preferredCountry ?? undefined,
-          preferredCourse: lead.preferredCourse ?? undefined,
-        },
-      });
+        // Create student record
+        const student = await tx.student.create({
+          data: {
+            studentNumber,
+            leadId,
+            branchId: lead.branchId,
+            counselorId: counselorId ?? undefined,
+            studentName: lead.studentName ?? "",
+            mobileNumber: lead.mobileNumber ?? undefined,
+            emailId: lead.emailId ?? undefined,
 
-      return { lead: updatedLead, student };
-    });
+            country: lead.preferredCountry ?? undefined,
+          },
+        });
+
+        return { lead: updatedLead, student };
+      },
+    );
 
     return ok(result, "Lead converted to student successfully");
   } catch (err) {

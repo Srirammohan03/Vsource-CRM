@@ -41,12 +41,21 @@ export async function GET(req: NextRequest) {
         skip,
         take,
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { users: true, leads: true, students: true, mbbsLeads: true } } },
+        include: {
+          _count: {
+            select: {
+              users: true,
+              leads: true,
+              students: true,
+              mbbsLeads: true,
+            },
+          },
+        },
       }),
       db.branch.count({ where }),
     ]);
 
-    const formattedBranches = branches.map(b => ({
+    const formattedBranches = branches.map((b: (typeof branches)[number]) => ({
       ...b,
       usersCount: b._count?.users || 0,
       leadsCount: (b._count?.leads || 0) + (b._count?.mbbsLeads || 0),

@@ -53,13 +53,17 @@ export function UniversityDetailsAccordion({ university }: Props) {
             <InfoCard
               icon={<Globe className="size-4" />}
               label="Country"
-              value={typeof university.country === 'object' ? university.country?.name ?? '-' : String(university.country ?? '-')}
+              value={
+                typeof university.country === "object"
+                  ? (university.country?.name ?? "-")
+                  : String(university.country ?? "-")
+              }
             />
 
             <InfoCard
               icon={<MapPin className="size-4" />}
               label="City"
-              value={university?.city}
+              value={university?.city ?? "-"}
             />
 
             <InfoCard

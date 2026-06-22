@@ -2,7 +2,6 @@ import { ModuleCode } from "@/store";
 
 export interface ModulePermission {
   moduleId: string;
-
   canCreate: boolean;
   canRead: boolean;
   canUpdate: boolean;

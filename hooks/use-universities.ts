@@ -25,7 +25,7 @@ export function useUniversities(params?: UseUniversitiesParams) {
     },
   });
 
-  const universities = data?.data || [];
+  const universities: University[] = data?.data || [];
   const meta = data?.meta;
 
   const addMutation = useMutation({
@@ -39,7 +39,13 @@ export function useUniversities(params?: UseUniversitiesParams) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UniversityFormValues }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UniversityFormValues;
+    }) => {
       const response = await axios.put(`/api/universities/${id}`, data);
       return response.data.data;
     },
@@ -64,7 +70,8 @@ export function useUniversities(params?: UseUniversitiesParams) {
     isLoading,
     error,
     addUniversity: addMutation.mutateAsync,
-    updateUniversity: (id: string, data: UniversityFormValues) => updateMutation.mutateAsync({ id, data }),
+    updateUniversity: (id: string, data: UniversityFormValues) =>
+      updateMutation.mutateAsync({ id, data }),
     deleteUniversity: deleteMutation.mutateAsync,
   };
 }
