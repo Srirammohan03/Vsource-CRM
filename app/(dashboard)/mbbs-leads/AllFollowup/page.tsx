@@ -1,3 +1,4 @@
+"use client"
 import { useMemo, useState } from "react";
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";

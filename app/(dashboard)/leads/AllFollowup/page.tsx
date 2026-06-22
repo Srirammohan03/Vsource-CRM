@@ -1,3 +1,4 @@
+"use client";
 import { useMemo, useState } from "react";
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,8 +26,6 @@ export default function AllFollowupPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "timeline">("table");
-
-
 
   const filtered = useMemo(() => {
     return seedFollowups.filter((item) => {

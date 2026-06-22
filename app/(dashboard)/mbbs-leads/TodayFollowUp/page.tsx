@@ -1,3 +1,4 @@
+"use client";
 import { useMemo, useState } from "react";
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,7 +52,6 @@ const statusMeta = {
 };
 
 export default function TodayFollowupPage() {
- 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Followup | null>(null);
   const [rescheduleFollowup, setRescheduleFollowup] = useState<Followup | null>(

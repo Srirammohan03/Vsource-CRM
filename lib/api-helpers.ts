@@ -8,7 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { Prisma } from "@/generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { ApiError } from "./rbac";
 
 // ---------------------------------------------------------------------------
