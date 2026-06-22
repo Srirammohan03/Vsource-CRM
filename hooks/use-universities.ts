@@ -6,18 +6,27 @@ import axios from "axios";
 import { University } from "@/types/university";
 import { UniversityFormValues } from "@/lib/university-schema";
 
-export function useUniversities() {
+export interface UseUniversitiesParams {
+  search?: string;
+  status?: string;
+  countryId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useUniversities(params?: UseUniversitiesParams) {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["universities"],
+    queryKey: ["universities", params],
     queryFn: async () => {
-      const response = await axios.get("/api/universities");
-      return response.data.data as University[];
+      const response = await axios.get("/api/universities", { params });
+      return response.data; // response.data returns the envelope { success: true, data: University[], meta: PaginationMeta }
     },
   });
 
-  const universities = data || [];
+  const universities = data?.data || [];
+  const meta = data?.meta;
 
   const addMutation = useMutation({
     mutationFn: async (university: UniversityFormValues) => {
@@ -51,6 +60,7 @@ export function useUniversities() {
 
   return {
     universities,
+    meta,
     isLoading,
     error,
     addUniversity: addMutation.mutateAsync,

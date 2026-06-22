@@ -1,4 +1,4 @@
-// crm-frontend-next\app\components\universities\university-scholarship-form.tsx
+// app\components\universities\university-scholarship-form.tsx
 "use client";
 
 import { memo } from "react";
@@ -94,7 +94,7 @@ function UniversityScholarshipFormComponent({ index, control, remove }: Props) {
             <Input
               type="number"
               value={amount.value ?? ""}
-              onChange={(e) => amount.onChange(Number(e.target.value))}
+              onChange={(e) => amount.onChange(e.target.value === "" ? "" : Number(e.target.value))}
               placeholder="5000"
             />
           </div>
@@ -105,7 +105,7 @@ function UniversityScholarshipFormComponent({ index, control, remove }: Props) {
             <Input
               type="number"
               value={percentage.value ?? ""}
-              onChange={(e) => percentage.onChange(Number(e.target.value))}
+              onChange={(e) => percentage.onChange(e.target.value === "" ? "" : Number(e.target.value))}
               placeholder="25"
             />
           </div>
