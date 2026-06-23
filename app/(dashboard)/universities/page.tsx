@@ -2,7 +2,14 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Search, RotateCcw, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import {
+  Plus,
+  Search,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -30,15 +37,22 @@ import { University, UniversityStatus } from "@/types/university";
 export default function UniversitiesPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | UniversityStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | UniversityStatus>(
+    "all",
+  );
   const [countryFilter, setCountryFilter] = useState<string>("all");
-  
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(16); // Set default limit to 16 as requested by the user
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingUniversity, setEditingUniversity] = useState<University | null>(null);
+  const [editingUniversity, setEditingUniversity] = useState<University | null>(
+    null,
+  );
   const [shortlistedIds, setShortlistedIds] = useState<string[]>([]);
+  const [tierFilter, setTierFilter] = useState<
+    "all" | "T1" | "T2" | "T3" | "T4"
+  >("all");
 
   // Debounce search query to optimize API requests
   useEffect(() => {
@@ -51,14 +65,21 @@ export default function UniversitiesPage() {
   }, [search]);
 
   // Fetch universities with server-side pagination, searching, and filtering
-  const { universities, meta, isLoading, addUniversity, updateUniversity, deleteUniversity } =
-    useUniversities({
-      search: debouncedSearch || undefined,
-      status: statusFilter === "all" ? undefined : statusFilter,
-      countryId: countryFilter === "all" ? undefined : countryFilter,
-      page,
-      limit,
-    });
+  const {
+    universities,
+    meta,
+    isLoading,
+    addUniversity,
+    updateUniversity,
+    deleteUniversity,
+  } = useUniversities({
+    search: debouncedSearch || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    tier: tierFilter === "all" ? undefined : tierFilter,
+    countryId: countryFilter === "all" ? undefined : countryFilter,
+    page,
+    limit,
+  });
 
   // Fetch list of countries dynamically for the filters
   const { data: countriesData } = useQuery({
@@ -68,7 +89,11 @@ export default function UniversitiesPage() {
       return response.data.data;
     },
   });
-  const countries = (countriesData || []) as { id: string; name: string; code: string }[];
+  const countries = (countriesData || []) as {
+    id: string;
+    name: string;
+    code: string;
+  }[];
 
   // Fetch the total number of active universities globally
   const { data: activeCount } = useQuery({
@@ -105,7 +130,9 @@ export default function UniversitiesPage() {
   };
 
   const handleDeleteUniversity = async (university: University) => {
-    const confirmed = window.confirm(`Delete ${university.name}? This will also delete all associated courses and scholarships.`);
+    const confirmed = window.confirm(
+      `Delete ${university.name}? This will also delete all associated courses and scholarships.`,
+    );
 
     if (!confirmed) return;
 
@@ -147,12 +174,16 @@ export default function UniversitiesPage() {
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setTierFilter("all");
     setCountryFilter("all");
     setPage(1);
   };
 
-  const hasActiveFilters = search !== "" || statusFilter !== "all" || countryFilter !== "all";
-
+  const hasActiveFilters =
+    search !== "" ||
+    statusFilter !== "all" ||
+    tierFilter !== "all" ||
+    countryFilter !== "all";
   // Calculate start/end indices for pagination description
   const totalCount = meta?.total ?? 0;
   const totalPages = meta?.totalPages ?? 1;
@@ -166,7 +197,10 @@ export default function UniversitiesPage() {
         description="Manage global universities, courses, scholarships and admissions."
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="px-3 py-1.5 font-medium rounded-lg">
+            <Badge
+              variant="secondary"
+              className="px-3 py-1.5 font-medium rounded-lg"
+            >
               {shortlistedIds.length} Shortlisted
             </Badge>
 
@@ -187,8 +221,12 @@ export default function UniversitiesPage() {
       {/* Stats Summary Cards */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-          <p className="text-sm font-medium text-muted-foreground">Total Universities</p>
-          <h3 className="mt-2 text-3xl font-bold tracking-tight">{totalCount}</h3>
+          <p className="text-sm font-medium text-muted-foreground">
+            Total Universities
+          </p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight">
+            {totalCount}
+          </h3>
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
@@ -199,15 +237,21 @@ export default function UniversitiesPage() {
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-          <p className="text-sm font-medium text-muted-foreground">Global Countries</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Global Countries
+          </p>
           <h3 className="mt-2 text-3xl font-bold tracking-tight text-blue-600">
             {countries.length}
           </h3>
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-          <p className="text-sm font-medium text-muted-foreground">Shortlisted</p>
-          <h3 className="mt-2 text-3xl font-bold tracking-tight text-rose-500">{shortlistedIds.length}</h3>
+          <p className="text-sm font-medium text-muted-foreground">
+            Shortlisted
+          </p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight text-rose-500">
+            {shortlistedIds.length}
+          </h3>
         </div>
       </div>
 
@@ -226,7 +270,13 @@ export default function UniversitiesPage() {
         <div className="flex flex-col gap-2 sm:flex-row md:w-auto">
           {/* Country Selector */}
           <div className="w-full sm:w-[180px]">
-            <Select value={countryFilter} onValueChange={(val) => { setCountryFilter(val); setPage(1); }}>
+            <Select
+              value={countryFilter}
+              onValueChange={(val) => {
+                setCountryFilter(val);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Country" />
               </SelectTrigger>
@@ -261,7 +311,27 @@ export default function UniversitiesPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-full sm:w-[160px]">
+            <Select
+              value={tierFilter}
+              onValueChange={(value) => {
+                setTierFilter(value as "all" | "T1" | "T2" | "T3" | "T4");
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Tier" />
+              </SelectTrigger>
 
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="T1">T1</SelectItem>
+                <SelectItem value="T2">T2</SelectItem>
+                <SelectItem value="T3">T3</SelectItem>
+                <SelectItem value="T4">T4</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {/* Reset Filters Trigger */}
           {hasActiveFilters && (
             <Button
@@ -280,8 +350,12 @@ export default function UniversitiesPage() {
       {isLoading ? (
         <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed bg-card/50">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <h3 className="mt-4 text-lg font-semibold">Loading Universities...</h3>
-          <p className="text-sm text-muted-foreground mt-1">Retrieving database records</p>
+          <h3 className="mt-4 text-lg font-semibold">
+            Loading Universities...
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Retrieving database records
+          </p>
         </div>
       ) : universities.length === 0 ? (
         <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed bg-card/50 px-4 text-center">
@@ -290,10 +364,15 @@ export default function UniversitiesPage() {
           </div>
           <h3 className="text-lg font-semibold">No Universities Found</h3>
           <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-            We couldn't find any universities matching your current search parameters. Try adjusting filters or create a new entry.
+            We couldn't find any universities matching your current search
+            parameters. Try adjusting filters or create a new entry.
           </p>
           {hasActiveFilters && (
-            <Button variant="outline" onClick={handleResetFilters} className="mt-4 rounded-xl">
+            <Button
+              variant="outline"
+              onClick={handleResetFilters}
+              className="mt-4 rounded-xl"
+            >
               Reset Filters
             </Button>
           )}
@@ -317,9 +396,19 @@ export default function UniversitiesPage() {
           <div className="mt-8 flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
             <div className="text-center sm:text-left flex items-center justify-center sm:justify-start gap-2">
               <span>
-                Showing <span className="font-semibold text-foreground">{startIndex}</span> to{" "}
-                <span className="font-semibold text-foreground">{endIndex}</span> of{" "}
-                <span className="font-semibold text-foreground">{totalCount}</span> results
+                Showing{" "}
+                <span className="font-semibold text-foreground">
+                  {startIndex}
+                </span>{" "}
+                to{" "}
+                <span className="font-semibold text-foreground">
+                  {endIndex}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-foreground">
+                  {totalCount}
+                </span>{" "}
+                results
               </span>
               <span className="text-border">|</span>
               <div className="flex items-center gap-1.5">
@@ -386,4 +475,3 @@ export default function UniversitiesPage() {
     </PageTransition>
   );
 }
-

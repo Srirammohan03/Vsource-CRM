@@ -10,6 +10,7 @@ export interface UseUniversitiesParams {
   search?: string;
   status?: string;
   countryId?: string;
+   tier?: string;
   page?: number;
   limit?: number;
 }

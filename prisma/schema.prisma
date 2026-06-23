@@ -394,10 +394,14 @@ enum StudentStage {
   enrolled
 }
 
+enum GenderType {
+  male
+  female
+  others
+}
+
 model Student {
   id String @id @default(uuid())
-
-  studentNumber String @unique
 
   leadId String @unique
   lead   Lead   @relation(fields: [leadId], references: [id])
@@ -408,25 +412,20 @@ model Student {
   counselorId String?
   counselor   User?   @relation("CounselorStudents", fields: [counselorId], references: [id])
 
-  studentName  String
-  mobileNumber String?
-  emailId      String?
+  studentName String
 
-  passportNumber String?
+  mobileNumber String @unique
+  emailId      String @unique
+  password     String?
 
-  country String?
+  dob DateTime?
 
-  intake String?
+  gender GenderType?
 
-  admissionDate DateTime?
-
-  applicationType String?
-
-  englishRequirement String?
+  applicationDate DateTime?
 
   currentStage StudentStage?
-
-  status StudentStatus @default(active)
+  status       StudentStatus @default(active)
 
   applications StudentApplication[]
 
@@ -446,7 +445,6 @@ model Student {
   @@index([branchId])
   @@index([counselorId])
 }
-
 enum ApplicationStatus {
   draft
 
@@ -715,6 +713,7 @@ enum UniversityTier {
   T1
   T2
   T3
+  T4
 }
 
 model University {
@@ -725,7 +724,7 @@ model University {
   countryId String
   country   Country @relation(fields: [countryId], references: [id])
 
-  tier UniversityTier @default(T3)
+  tier UniversityTier @default(T4)
 
   logo String?
 

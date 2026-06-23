@@ -14,7 +14,7 @@ import {
   buildMeta,
 } from "@/lib/api-helpers";
 import { UniversityCreateSchema } from "@/lib/schemas";
-import { UniversityStatus } from "@/generated/prisma/enums";
+import { UniversityStatus, UniversityTier } from "@/generated/prisma/enums";
 // import type { UniversityStatus } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
@@ -25,23 +25,46 @@ export async function GET(req: NextRequest) {
     const search = sp.get("search") ?? undefined;
     const countryId = sp.get("countryId") ?? undefined;
     const status = sp.get("status") as UniversityStatus | null;
+    const tier = sp.get("tier") as UniversityTier | null;
     const city = sp.get("city") ?? undefined;
-    const ranking = sp.get("ranking") ? parseInt(sp.get("ranking")!) : undefined;
+    const ranking = sp.get("ranking")
+      ? parseInt(sp.get("ranking")!)
+      : undefined;
 
     const where = {
       ...(countryId && { countryId }),
       ...(status && { status }),
-      ...(city && { city: { contains: city, mode: "insensitive" as const } }),
+      ...(tier && { tier }),
+      ...(city && {
+        city: {
+          contains: city,
+          mode: "insensitive" as const,
+        },
+      }),
       ...(ranking && { ranking: { lte: ranking } }),
       ...(search && {
         OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
-          { city: { contains: search, mode: "insensitive" as const } },
-          { description: { contains: search, mode: "insensitive" as const } },
+          {
+            name: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          },
+          {
+            city: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          },
+          {
+            description: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          },
         ],
       }),
     };
-
     const [universities, total] = await Promise.all([
       db.university.findMany({
         where,
@@ -66,12 +89,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = UniversityCreateSchema.parse(await req.json());
     const { courses, scholarships, ...rest } = body;
-    
+
     const university = await db.university.create({
       data: {
         ...rest,
         ...(courses && courses.length > 0 && { courses: { create: courses } }),
-        ...(scholarships && scholarships.length > 0 && { scholarships: { create: scholarships } }),
+        ...(scholarships &&
+          scholarships.length > 0 && {
+            scholarships: { create: scholarships },
+          }),
       },
       include: {
         country: { select: { id: true, name: true, code: true } },

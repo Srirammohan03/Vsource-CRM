@@ -1,19 +1,16 @@
 import { z } from "zod";
 
 // Helper — empty string / null / undefined → undefined (for numbers)
-const emptyToUndefinedNumber = z.preprocess(
-  (val) => {
-    if (val === "" || val === null || val === undefined) return undefined;
-    const num = Number(val);
-    return isNaN(num) ? undefined : num;
-  },
-  z.number().nonnegative("Value cannot be negative").optional()
-);
+const emptyToUndefinedNumber = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return undefined;
+  const num = Number(val);
+  return isNaN(num) ? undefined : num;
+}, z.number().nonnegative("Value cannot be negative").optional());
 
 // Helper — empty string / null / undefined → undefined (for strings)
 const emptyToUndefinedString = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
-  z.string().optional()
+  z.string().optional(),
 );
 
 export const courseSchema = z.object({
@@ -23,7 +20,14 @@ export const courseSchema = z.object({
 
   courseCode: emptyToUndefinedString,
 
-  degree: z.enum(["diploma", "bachelors", "masters", "phd", "mba", "certificate"]),
+  degree: z.enum([
+    "diploma",
+    "bachelors",
+    "masters",
+    "phd",
+    "mba",
+    "certificate",
+  ]),
 
   durationMonths: emptyToUndefinedNumber,
 
@@ -66,6 +70,8 @@ export const universitySchema = z.object({
 
   countryId: z.string().min(1, "Country is required"),
 
+  tier: z.enum(["T1", "T2", "T3", "T4"]).default("T4"),
+
   city: emptyToUndefinedString,
 
   state: emptyToUndefinedString,
@@ -90,8 +96,9 @@ export const universitySchema = z.object({
 
   // Allow empty or null email gracefully
   contactEmail: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
-    z.string().email("Invalid email format").optional()
+    (val) =>
+      val === "" || val === null || val === undefined ? undefined : val,
+    z.string().email("Invalid email format").optional(),
   ),
 
   contactPhone: emptyToUndefinedString,

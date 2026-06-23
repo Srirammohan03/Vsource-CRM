@@ -1,6 +1,8 @@
 // crm-frontend-next\app\types\university.ts
 export type UniversityStatus = "active" | "inactive" | "archived";
 
+export type UniversityTier = "T1" | "T2" | "T3" | "T4";
+
 export type DegreeType =
   | "diploma"
   | "bachelors"
@@ -58,6 +60,8 @@ export interface University {
   name: string;
 
   countryId: string;
+
+  tier: UniversityTier;
 
   country: {
     id: string;

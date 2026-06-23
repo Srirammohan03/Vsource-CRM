@@ -1,3 +1,4 @@
+// app\components\universities\university-card.tsx
 "use client";
 
 import { memo } from "react";
@@ -52,7 +53,12 @@ function UniversityCardComponent({
     inactive: "bg-amber-500/10 text-amber-600 border-amber-500/20",
     archived: "bg-red-500/10 text-red-600 border-red-500/20",
   };
-
+  const tierVariant: Record<string, string> = {
+    T1: "bg-purple-500/10 text-purple-700 border-purple-500/20",
+    T2: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+    T3: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+    T4: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  };
   return (
     <Card className="group h-full overflow-hidden rounded-2xl border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       <CardContent className="p-0">
@@ -78,7 +84,20 @@ function UniversityCardComponent({
               {university.name}
             </h3>
 
-            <p className="mt-1 text-sm text-muted-foreground">
+            <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
+              <Badge variant="outline" className={tierVariant[university.tier]}>
+                {university.tier}
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className={statusVariant[university.status]}
+              >
+                {university.status}
+              </Badge>
+            </div>
+
+            <p className="mt-2 text-sm text-muted-foreground">
               {university.city}, {university.country?.name}
             </p>
           </div>
@@ -106,8 +125,8 @@ function UniversityCardComponent({
               <p className="font-semibold">
                 {university.applicationFee
                   ? `${university.currency || "$"}${Number(
-                    university.applicationFee
-                  ).toLocaleString()}`
+                      university.applicationFee,
+                    ).toLocaleString()}`
                   : "Free"}
               </p>
             </div>

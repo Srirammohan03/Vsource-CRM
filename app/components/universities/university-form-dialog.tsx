@@ -65,6 +65,7 @@ function createDefaultValues(): UniversityFormValues {
   return {
     name: "",
     countryId: "",
+    tier: "T4",
     status: "active",
     courses: [],
     scholarships: [],
@@ -174,6 +175,8 @@ export function UniversityFormDialog({
       name: university.name ?? "",
       countryId,
       status: university.status ?? "active",
+
+      tier: university.tier ?? "T4",
 
       city: university.city ?? undefined,
       state: university.state ?? undefined,
@@ -726,6 +729,44 @@ export function UniversityFormDialog({
                 >
                   <div className="space-y-5">
                     <div className="grid items-start gap-5 md:grid-cols-2">
+                      <FormFieldContainer>
+                        <Label>University Tier</Label>
+
+                        <Select
+                          disabled={isSubmitting}
+                          value={form.watch("tier") || "T3"}
+                          onValueChange={(value) =>
+                            form.setValue("tier", value as "T1" | "T2" | "T3", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Tier" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            <SelectItem value="T1">
+                              T1 - Premium Universities
+                            </SelectItem>
+
+                            <SelectItem value="T2">
+                              T2 - High Ranking Universities
+                            </SelectItem>
+
+                            <SelectItem value="T3">
+                              T3 - Standard Universities
+                            </SelectItem>
+
+                            <SelectItem value="T4">
+                              T4 - Easy Admission Universities
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <FieldError message={errors.tier?.message} />
+                      </FormFieldContainer>
                       <FormFieldContainer>
                         <Label>Status</Label>
 

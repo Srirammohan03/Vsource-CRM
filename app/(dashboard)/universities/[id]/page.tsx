@@ -1,3 +1,4 @@
+// app\(dashboard)\universities\[id]\page.tsx
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -68,6 +69,7 @@ interface Scholarship {
 interface UniversityDetails {
   id: string;
   name: string;
+  tier?: "T1" | "T2" | "T3" | "T4";
   status?: string | null;
   logo?: string | null;
 
@@ -196,6 +198,12 @@ export default function UniversityDetailsPage() {
     archived:
       "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400",
   };
+  const tierStyles: Record<string, string> = {
+    T1: "border-purple-500/20 bg-purple-500/10 text-purple-700",
+    T2: "border-blue-500/20 bg-blue-500/10 text-blue-700",
+    T3: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
+    T4: "border-orange-500/20 bg-orange-500/10 text-orange-700",
+  };
 
   const location = [university.city, university.state, university.country?.name]
     .filter(Boolean)
@@ -290,6 +298,17 @@ export default function UniversityDetailsPage() {
 
             <div className="flex min-w-0 flex-col justify-center">
               <div className="mb-3 flex flex-wrap items-center gap-3">
+                {university.tier && (
+                  <Badge
+                    variant="outline"
+                    className={`rounded-full px-3 py-1 ${
+                      tierStyles[university.tier]
+                    }`}
+                  >
+                    {university.tier}
+                  </Badge>
+                )}
+
                 <Badge
                   variant="outline"
                   className={`rounded-full px-3 py-1 capitalize ${

@@ -281,6 +281,7 @@ export const UniversityScholarshipUpdateSchema =
 export const UniversityCreateSchema = z.object({
   name: z.string().min(1),
   countryId: uuid,
+  tier: z.enum(["T1", "T2", "T3", "T4"]).default("T4"),
   logo: optStr,
   website: optStr,
   address: optStr,
