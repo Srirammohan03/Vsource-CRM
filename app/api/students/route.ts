@@ -157,12 +157,25 @@ export async function GET(req: NextRequest) {
         documents: {
           select: {
             id: true,
+
             studentId: true,
+
+            documentCode: true,
             documentType: true,
-            fileName: true,
+
+            originalFileName: true,
+            storedFileName: true,
+
             fileUrl: true,
+
+            mimeType: true,
+            fileSize: true,
+
+            remarks: true,
+
             uploadedAt: true,
             createdAt: true,
+            updatedAt: true,
           },
 
           orderBy: {
