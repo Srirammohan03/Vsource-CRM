@@ -187,6 +187,7 @@ model Lead {
   preferredCountry String?
   preferredIntake  String?
   preferredCourse  String?
+  preferredTiers String[] @default([])
 
   greGmatScore           Float?
   quantitativeScore      Float?
@@ -354,6 +355,7 @@ model MbbsLead {
   preferredIntake     String?
   preferredUniversity String?
   preferredCourse     String?
+  preferredTiers String[] @default([])
 
   remarks String?
 
