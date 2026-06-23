@@ -37,11 +37,12 @@ import {
   useCourseDropdown,
   useUniversityDropdown,
 } from "@/hooks/student/applications/useUniversityDropdown";
+import { StudentBasicInfoDialog } from "@/components/student/StudentBasicInfoDialog";
 
 export default function Home() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useStudents();
-
+  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"students">("students");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
@@ -253,10 +254,6 @@ export default function Home() {
         if (!matchesSearch) return false;
       }
 
-      if (filterIntake !== "All" && student.intake !== filterIntake)
-        return false;
-      if (filterCountry !== "All" && student.country !== filterCountry)
-        return false;
       if (
         filterVisaStatus !== "All" &&
         student?.visaProfile?.visaStatus !== filterVisaStatus
@@ -294,18 +291,6 @@ export default function Home() {
         if (!hasMatchingUni) return false;
       }
 
-      if (
-        !isDateInFilter(
-          student?.admissionDate
-            ? new Date(student.admissionDate).toLocaleDateString("en-GB")
-            : "-",
-          filterDateType,
-          customStartDate,
-          customEndDate,
-        )
-      )
-        return false;
-
       return true;
     });
   }, [
@@ -331,8 +316,6 @@ export default function Home() {
       students.find((s: StudentRecord) => s.id === selectedStudentId) ?? null
     );
   }, [students, selectedStudentId]);
-
-  console.log("selectedStudent", selectedStudent);
 
   const handleSelectStudent = (id: string) => {
     setSelectedStudentId(id);
@@ -558,82 +541,7 @@ export default function Home() {
                           Counsellor: {selectedStudent?.counselor?.name ?? "-"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 flex items-center gap-1.5 font-medium">
-                        <MapPin className="h-3.5 w-3.5 text-red-600" />
-                        <span>
-                          Destination: {selectedStudent?.country ?? "-"}
-                        </span>{" "}
-                        •
-                        <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono">
-                          {selectedStudent?.intake ?? "-"}
-                        </span>
-                      </p>
                     </div>
-                  </div>
-
-                  {/* <div className="flex flex-col lg:items-end gap-1">
-                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider">
-                      Embassy Pipeline Node
-                    </span>
-                    <span className="bg-green-500/10 text-green-500 font-black px-4 py-1 border border-green-500/20 rounded-xl text-xs uppercase tracking-widest animate-pulse">
-                      {selectedStudent.currentStage}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      Passport Registration: {selectedStudent.passportNumber}
-                    </span>
-                  </div> */}
-                </div>
-
-                <div
-                  className={`p-6 rounded-3xl border shadow-md space-y-4 ${isDarkMode ? "bg-slate-900 border-slate-805" : "bg-white border-slate-100"}`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-widest block">
-                      Visa compliance pipeline stepper
-                    </span>
-                    <span className="text-[9.5px] text-slate-400 font-medium">
-                      Click any node block to force trigger stage update
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 relative py-2">
-                    {[
-                      "Lead Created",
-                      "Application Submitted",
-                      "Offer Received",
-                      "Deposit Paid",
-                      "Interview Completed",
-                      "CAS Received",
-                      "Visa Applied",
-                      "Visa Approved",
-                    ].map((step, index, arr) => {
-                      const activeIndex = arr.indexOf(
-                        selectedStudent?.currentStage ?? "-",
-                      );
-                      const isCompleted = index <= activeIndex;
-                      const isActive = index === activeIndex;
-
-                      return (
-                        <button
-                          key={step}
-                          onClick={() => {}}
-                          className={`p-3 rounded-2xl text-center border text-xs font-bold transition-all flex flex-col justify-between h-[85px] hover:scale-[1.03] overflow-hidden select-none cursor-pointer ${
-                            isActive
-                              ? "bg-red-600 text-white border-red-650 shadow-lg shadow-red-600/15"
-                              : isCompleted
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-250 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900"
-                                : "bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-950 dark:border-slate-850 dark:text-slate-500"
-                          }`}
-                        >
-                          <span className="text-[10px] font-black font-mono self-start text-inherit opacity-80">
-                            0{index + 1}
-                          </span>
-                          <p className="text-[10px] tracking-tight uppercase leading-tight font-black text-left">
-                            {step}
-                          </p>
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
 
@@ -713,84 +621,82 @@ export default function Home() {
                           <div className="flex items-center justify-between border-b pb-3 border-inherit">
                             <div>
                               <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                Profile Compliance Checklist
+                                Basic Information
                               </h4>
-                              <p className="text-xs font-bold text-red-650 text-red-600">
-                                All fields are editable using basic edit option
-                              </p>
                             </div>
-                            <button
-                              onClick={() => openEditModal(selectedStudent)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4.5 py-2 rounded-xl transition-all shadow-md shadow-red-600/10 cursor-pointer"
-                            >
-                              Edit Profile Records
-                            </button>
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => setBasicInfoOpen(true)}
+                                className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                              >
+                                Edit Basic Info
+                              </button>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
                               {
-                                label: "Student Identification ID",
+                                label: "Student Name",
                                 val: selectedStudent?.studentName,
                                 icon: User,
                               },
                               {
-                                label: "Assigned Adviser/Counsellor",
-                                val: selectedStudent.counselor?.name,
+                                label: "Assigned Counsellor",
+                                val: selectedStudent?.counselor?.name ?? "-",
                                 icon: Briefcase,
                               },
                               {
-                                label: "Admission Enrollment Date",
-                                val: selectedStudent.admissionDate
-                                  ? new Date(
-                                      selectedStudent.admissionDate,
-                                    )?.toLocaleDateString("en-IN")
-                                  : "-",
-                                icon: Calendar,
-                              },
-                              {
-                                label: "Degree Track Program",
-                                val: selectedStudent.applicationType,
-                                icon: GraduationCap,
-                              },
-                              {
-                                label: "Passport Registration ID",
-                                val: selectedStudent.passportNumber,
-                                icon: FileSignature,
-                              },
-                              {
-                                label: "Admissions Mobile Number",
-                                val: selectedStudent.mobileNumber,
+                                label: "Mobile Number",
+                                val: selectedStudent?.mobileNumber,
                                 icon: Globe2,
                               },
                               {
-                                label: "Registered Email Address",
+                                label: "Email Address",
                                 val: selectedStudent?.emailId,
                                 icon: FileText,
                               },
                               {
-                                label: "Target Country Location",
-                                val: selectedStudent.country,
-                                icon: MapPin,
-                              },
-                              {
-                                label: "Target Intake Cycle",
-                                val: selectedStudent.intake,
+                                label: "Date Of Birth",
+                                val: selectedStudent?.dob
+                                  ? new Date(
+                                      selectedStudent.dob,
+                                    ).toLocaleDateString("en-IN")
+                                  : "-",
                                 icon: Calendar,
                               },
                               {
-                                label: "XII English Score / Waiver Medium",
-                                val:
-                                  selectedStudent?.lead?.twelfthPercentage ||
-                                  "MOI Waiver Letter",
+                                label: "Gender",
+                                val: selectedStudent?.gender ?? "-",
+                                icon: User,
+                              },
+                              {
+                                label: "Application Date",
+                                val: selectedStudent?.applicationDate
+                                  ? new Date(
+                                      selectedStudent.applicationDate,
+                                    ).toLocaleDateString("en-IN")
+                                  : "-",
+                                icon: Calendar,
+                              },
+                              {
+                                label: "Current Stage",
+                                val: selectedStudent?.currentStage ?? "-",
+                                icon: GraduationCap,
+                              },
+                              {
+                                label: "Student Status",
+                                val: selectedStudent?.status ?? "-",
                                 icon: FileCheck2,
+                              },
+                              {
+                                label: "Branch",
+                                val: selectedStudent?.branch?.name ?? "-",
+                                icon: MapPin,
                               },
                             ].map((v, i) => {
                               const ItemIcon = v.icon;
-                              const value =
-                                (v.val as any) instanceof Date
-                                  ? v.val && v.val.toLocaleString()
-                                  : v.val;
+
                               return (
                                 <div
                                   key={i}
@@ -799,12 +705,14 @@ export default function Home() {
                                   <div className="p-2 bg-red-600/10 text-red-600 rounded-xl">
                                     <ItemIcon className="h-4.5 w-4.5" />
                                   </div>
+
                                   <div>
                                     <span className="text-[9px] uppercase font-black tracking-wider text-slate-400 block mb-0.5">
                                       {v.label}
                                     </span>
+
                                     <span className="text-xs font-extrabold text-slate-850 dark:text-slate-150">
-                                      {value}
+                                      {v.val || "-"}
                                     </span>
                                   </div>
                                 </div>
@@ -816,16 +724,6 @@ export default function Home() {
 
                       {detailTab === "documents" && (
                         <div className="space-y-4">
-                          <div className="pb-2 border-b border-inherit">
-                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">
-                              Interactive Document Management System
-                            </h4>
-                            <p className="text-xs text-slate-450 text-slate-400">
-                              Validate marksheet transcripts, visa stamps, or
-                              passport PDFs below.
-                            </p>
-                          </div>
-
                           {selectedStudent && (
                             <DMSSection
                               studentId={selectedStudent.id}
@@ -839,16 +737,6 @@ export default function Home() {
                       {detailTab === "applications" && (
                         <div className="space-y-6">
                           <div className="flex items-center justify-between pb-3 border-b border-inherit">
-                            <div>
-                              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                University Applications Pipeline
-                              </h4>
-                              <p className="text-xs text-slate-450 text-slate-450 text-slate-400">
-                                Manage multiple university files per applicant
-                                folder
-                              </p>
-                            </div>
-
                             <div className="flex items-center gap-2">
                               <div className="bg-slate-100 dark:bg-slate-950 p-1 rounded-xl flex gap-1">
                                 <button
@@ -963,7 +851,7 @@ export default function Home() {
 
                                 <div>
                                   <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                    Immigration Portal
+                                    Portal
                                   </label>
                                   <input
                                     type="text"
@@ -1664,6 +1552,14 @@ export default function Home() {
         isDarkMode={isDarkMode}
         studentToEdit={studentToEdit}
       />
+
+      {selectedStudent && (
+        <StudentBasicInfoDialog
+          open={basicInfoOpen}
+          onClose={() => setBasicInfoOpen(false)}
+          student={selectedStudent}
+        />
+      )}
     </div>
   );
 }

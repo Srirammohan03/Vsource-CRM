@@ -187,7 +187,7 @@ model Lead {
   preferredCountry String?
   preferredIntake  String?
   preferredCourse  String?
-  preferredTiers String[] @default([])
+  preferredTiers   String[] @default([])
 
   greGmatScore           Float?
   quantitativeScore      Float?
@@ -355,7 +355,7 @@ model MbbsLead {
   preferredIntake     String?
   preferredUniversity String?
   preferredCourse     String?
-  preferredTiers String[] @default([])
+  preferredTiers      String[] @default([])
 
   remarks String?
 
@@ -416,8 +416,8 @@ model Student {
 
   studentName String
 
-  mobileNumber String @unique
-  emailId      String @unique
+  mobileNumber String  @unique
+  emailId      String  @unique
   password     String?
 
   dob DateTime?
@@ -431,9 +431,7 @@ model Student {
 
   applications StudentApplication[]
 
-  loan StudentLoan?
-
-  visaProfile StudentVisaProfile?
+  visaLoanProfile StudentVisaLoanProfile?
 
   remarks StudentRemark[]
 
@@ -447,6 +445,7 @@ model Student {
   @@index([branchId])
   @@index([counselorId])
 }
+
 enum ApplicationStatus {
   draft
 
@@ -463,14 +462,29 @@ enum ApplicationStatus {
   withdrawn
 }
 
+enum OfferStatus {
+  not_received
+
+  conditional_offer
+
+  unconditional_offer
+
+  rejected
+
+  deferred
+
+  withdrawn
+}
+
 model StudentApplication {
   id String @id @default(uuid())
 
   studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  portal String?
+  // Master References
+  countryId String?
+  country   Country? @relation(fields: [countryId], references: [id])
 
   universityId String
   university   University @relation(fields: [universityId], references: [id])
@@ -478,66 +492,72 @@ model StudentApplication {
   courseId String
   course   UniversityCourse @relation(fields: [courseId], references: [id])
 
+  intakeId String?
+  intake   Intake? @relation(fields: [intakeId], references: [id])
+
+  // CRM Fields
+  portal String?
+
   applicationDate DateTime?
 
-  status ApplicationStatus
+  status ApplicationStatus @default(draft)
+
+  offerStatus OfferStatus @default(not_received)
+
+  // Snapshot Values
+  countryName    String?
+  universityName String?
+  courseName     String?
+  intakeName     String?
+
+  remarks String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([studentId])
+  @@index([countryId])
   @@index([universityId])
   @@index([courseId])
+  @@index([intakeId])
 }
 
-model StudentVisaProfile {
+model StudentVisaLoanProfile {
   id String @id @default(uuid())
 
-  studentId String @unique
-
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  depositStatus String?
+  studentId String  @unique
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   depositDeadlineDate DateTime?
+  depositStatus       String?
 
-  ihsPaymentStatus String?
-
-  interviewStatus String?
-
-  casStatus String?
+  ihsPaidStatus  String?
+  visaPaidStatus String?
 
   casDeadlineDate DateTime?
+  casStatus       String?
 
-  visaStatus String?
-
+  visaStatus          String?
   universityStartDate DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  fintechAssignee String?
+  nbfc            String?
 
-model StudentLoan {
-  id String @id @default(uuid())
-
-  studentId String @unique
-
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  assignee String?
-
-  nbfc String?
-
-  status String?
-
-  pfStatus String?
+  loanStatus String?
+  pfStatus   String?
 
   sanctionedAmount Decimal? @db.Decimal(12, 2)
 
+  disbursed       Boolean  @default(false)
   disbursedAmount Decimal? @db.Decimal(12, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([depositStatus])
+  @@index([casStatus])
+  @@index([visaStatus])
+  @@index([loanStatus])
 }
 
 model StudentRemark {
@@ -658,7 +678,8 @@ model Country {
 
   currency String?
 
-  universities University[]
+  universities        University[]
+  studentApplications StudentApplication[]
 
   status Boolean @default(true)
 
@@ -673,7 +694,8 @@ model Intake {
 
   status Boolean @default(true)
 
-  courses UniversityCourse[]
+  courses             UniversityCourse[]
+  studentApplications StudentApplication[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -711,6 +733,7 @@ model LeadUniversity {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 enum UniversityTier {
   T1
   T2
