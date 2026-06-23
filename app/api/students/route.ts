@@ -13,8 +13,6 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const branchId = searchParams.get("branchId");
     const counselorId = searchParams.get("counselorId");
-    const country = searchParams.get("country");
-    const intake = searchParams.get("intake");
     const visaStatus = searchParams.get("visaStatus");
     const loanStatus = searchParams.get("loanStatus");
     const casStatus = searchParams.get("casStatus");
@@ -29,30 +27,10 @@ export async function GET(req: NextRequest) {
       where.counselorId = counselorId;
     }
 
-    if (country) {
-      where.country = country;
-    }
-
-    if (intake) {
-      where.intake = intake;
-    }
-
     if (search) {
       where.OR = [
         {
           studentName: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          studentNumber: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          passportNumber: {
             contains: search,
             mode: "insensitive",
           },
@@ -72,30 +50,24 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // Visa + Loan Profile Filters
+    const visaLoanProfileFilter: Prisma.StudentVisaLoanProfileWhereInput = {};
+
     if (visaStatus) {
-      where.visaProfile = {
-        is: {
-          visaStatus,
-        },
-      };
+      visaLoanProfileFilter.visaStatus = visaStatus;
     }
 
     if (casStatus) {
-      where.visaProfile = {
-        is: {
-          ...(where.visaProfile && "is" in where.visaProfile
-            ? where.visaProfile.is
-            : {}),
-          casStatus,
-        },
-      };
+      visaLoanProfileFilter.casStatus = casStatus;
     }
 
     if (loanStatus) {
-      where.loan = {
-        is: {
-          status: loanStatus,
-        },
+      visaLoanProfileFilter.loanStatus = loanStatus;
+    }
+
+    if (Object.keys(visaLoanProfileFilter).length > 0) {
+      where.visaLoanProfile = {
+        is: visaLoanProfileFilter,
       };
     }
 
@@ -109,6 +81,7 @@ export async function GET(req: NextRequest) {
             bachelorsCourse: true,
           },
         },
+
         branch: {
           select: {
             id: true,
@@ -125,24 +98,61 @@ export async function GET(req: NextRequest) {
 
         applications: {
           select: {
-            university: {
-              select: { id: true, name: true },
-            },
-            course: {
-              select: { id: true, name: true },
-            },
-            applicationDate: true,
-            status: true,
+            id: true,
+
+            countryId: true,
+            countryName: true,
+
+            universityId: true,
+            universityName: true,
+
+            courseId: true,
+            courseName: true,
+
+            intakeId: true,
+            intakeName: true,
+
             portal: true,
+            applicationDate: true,
+
+            status: true,
+            offerStatus: true,
+
+            country: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+
+            university: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+
+            course: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+
+            intake: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
+
           orderBy: {
             createdAt: "desc",
           },
         },
 
-        visaProfile: true,
-
-        loan: true,
+        visaLoanProfile: true,
 
         documents: {
           select: {
@@ -154,6 +164,7 @@ export async function GET(req: NextRequest) {
             uploadedAt: true,
             createdAt: true,
           },
+
           orderBy: {
             uploadedAt: "desc",
           },

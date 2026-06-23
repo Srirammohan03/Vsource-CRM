@@ -3,29 +3,25 @@ import { Lead } from ".";
 export interface StudentRecord {
   id: string;
 
-  studentNumber: string;
-
   studentName: string;
 
-  mobileNumber?: string;
+  mobileNumber: string;
 
-  emailId?: string;
+  emailId: string;
 
-  passportNumber?: string;
+  password?: string;
 
-  country?: string;
+  dob?: string | Date;
 
-  intake?: string;
+  gender?: "male" | "female" | "others";
 
-  admissionDate?: string | Date;
-
-  applicationType?: string;
-
-  englishRequirement?: string;
+  applicationDate?: string | Date;
 
   currentStage?: string;
 
   status: string;
+
+  counselorId: string;
 
   branch?: {
     id: string;
@@ -112,4 +108,96 @@ export interface Remarks {
   id: string;
   note: string;
   createdAt: string | Date;
+}
+
+export type DocumentModule = "ADMISSION" | "LOAN" | "VISA";
+
+export type DocumentCategory =
+  | "PERSONAL"
+  | "ACADEMIC"
+  | "TEST_SCORE"
+  | "APPLICATION"
+  | "UNIVERSITY"
+  | "LOAN_STUDENT"
+  | "LOAN_PARENT"
+  | "LOAN_COLLATERAL"
+  | "VISA";
+
+export interface DocumentMasterItem {
+  id: string;
+  name: string;
+  code: string;
+  module: DocumentModule;
+  category: DocumentCategory;
+  isMandatory: boolean;
+  allowMultiple: boolean;
+  requiredCount: number;
+  sortOrder: number;
+  status: boolean;
+}
+
+export interface StudentDocumentItem {
+  id: string;
+  studentId: string;
+  documentMasterId: string;
+  fileName: string;
+  originalFileName: string;
+  fileUrl: string;
+  fileSize: number | null;
+  mimeType: string | null;
+  remarks: string | null;
+  verified: boolean;
+  verifiedById: string | null;
+  verifiedAt: string | null;
+  uploadedById: string | null;
+  uploadedAt: string;
+  createdAt: string;
+  documentMaster?: DocumentMasterItem;
+}
+
+export interface DocumentChecklistItem extends DocumentMasterItem {
+  uploadedCount: number;
+  isComplete: boolean;
+  latestDocument: StudentDocumentItem | null;
+  documents: StudentDocumentItem[];
+}
+
+export interface StudentDocumentSummary {
+  totalChecklistItems: number;
+  completedChecklistItems: number;
+  pendingChecklistItems: number;
+  totalRequiredUploads: number;
+  completedRequiredUploads: number;
+  mandatoryRequiredUploads: number;
+  mandatoryCompletedUploads: number;
+  percentage: number;
+}
+
+export interface StudentDocumentsResponse {
+  studentId: string;
+
+  studentName: string;
+
+  hasUploadedDocuments: boolean;
+
+  uploadedDocumentsCount: number;
+
+  emptyStateMessage: string | null;
+
+  summary: StudentDocumentSummary;
+
+  checklist: DocumentChecklistItem[];
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+}
+
+export interface UploadStudentDocumentVariables {
+  documentMasterId: string;
+  file: File;
+  remarks?: string;
+  onProgress?: (percentage: number) => void;
 }
