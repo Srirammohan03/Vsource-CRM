@@ -23,8 +23,8 @@ export async function PATCH(
       },
       data: {
         portal: body.portal,
-        universityName: body.universityName,
-        courseName: body.courseName,
+        universityId: body.universityId,
+        courseId: body.courseId,
         applicationDate: body.applicationDate
           ? new Date(body.applicationDate)
           : null,
