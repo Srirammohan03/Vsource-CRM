@@ -110,97 +110,58 @@ export interface Remarks {
   createdAt: string | Date;
 }
 
-export type DocumentModule = "ADMISSION" | "LOAN" | "VISA";
-
-export type DocumentCategory =
-  | "PERSONAL"
-  | "ACADEMIC"
-  | "TEST_SCORE"
-  | "APPLICATION"
-  | "UNIVERSITY"
-  | "LOAN_STUDENT"
-  | "LOAN_PARENT"
-  | "LOAN_COLLATERAL"
-  | "VISA";
-
-export interface DocumentMasterItem {
-  id: string;
-  name: string;
-  code: string;
-  module: DocumentModule;
-  category: DocumentCategory;
-  isMandatory: boolean;
-  allowMultiple: boolean;
-  requiredCount: number;
-  sortOrder: number;
-  status: boolean;
-}
-
-export interface StudentDocumentItem {
+export type StudentDocumentRecord = {
   id: string;
   studentId: string;
-  documentMasterId: string;
-  fileName: string;
+  documentCode: string;
+  documentType: string;
   originalFileName: string;
+  storedFileName: string;
   fileUrl: string;
-  fileSize: number | null;
-  mimeType: string | null;
-  remarks: string | null;
-  verified: boolean;
-  verifiedById: string | null;
-  verifiedAt: string | null;
-  uploadedById: string | null;
+  mimeType: string;
+  fileSize: number;
+  remarks?: string | null;
   uploadedAt: string;
   createdAt: string;
-  documentMaster?: DocumentMasterItem;
-}
+  updatedAt: string;
+};
 
-export interface DocumentChecklistItem extends DocumentMasterItem {
+export type StudentDocumentChecklistItem = {
+  code: string;
+  name: string;
+  category:
+    | "PERSONAL"
+    | "ACADEMIC"
+    | "TEST_SCORE"
+    | "APPLICATION"
+    | "UNIVERSITY"
+    | "LOAN_STUDENT"
+    | "LOAN_PARENT"
+    | "LOAN_COLLATERAL"
+    | "VISA";
+  module: "ADMISSION" | "LOAN" | "VISA";
+  requiredCount: number;
+  allowMultiple: boolean;
+  isMandatory: boolean;
   uploadedCount: number;
   isComplete: boolean;
-  latestDocument: StudentDocumentItem | null;
-  documents: StudentDocumentItem[];
-}
+  documents: StudentDocumentRecord[];
+};
 
-export interface StudentDocumentSummary {
+export type StudentDocumentSummary = {
   totalChecklistItems: number;
   completedChecklistItems: number;
   pendingChecklistItems: number;
   totalRequiredUploads: number;
   completedRequiredUploads: number;
-  mandatoryRequiredUploads: number;
-  mandatoryCompletedUploads: number;
   percentage: number;
-}
+};
 
-export interface StudentDocumentsResponse {
-  studentId: string;
-
-  studentName: string;
-
-  hasUploadedDocuments: boolean;
-
-  uploadedDocumentsCount: number;
-
-  emptyStateMessage: string | null;
-
+export type StudentDocumentsResponse = {
+  checklist: StudentDocumentChecklistItem[];
   summary: StudentDocumentSummary;
-
-  checklist: DocumentChecklistItem[];
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data: T;
-}
-
-export interface UploadStudentDocumentVariables {
-  documentMasterId: string;
-  file: File;
-  remarks?: string;
-  onProgress?: (percentage: number) => void;
-}
+  hasUploadedDocuments: boolean;
+};
 
 //! Visa
 export type StudentVisaLoanProfile = {

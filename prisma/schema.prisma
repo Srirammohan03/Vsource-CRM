@@ -582,18 +582,25 @@ model StudentDocument {
   id String @id @default(uuid())
 
   studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
+  documentCode String
   documentType String
 
-  fileName String
+  originalFileName String
+  storedFileName   String
+  fileUrl          String
+  mimeType         String
+  fileSize         Int
 
-  fileUrl String
+  remarks String? @db.Text
 
   uploadedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  createdAt DateTime @default(now())
+  @@index([studentId])
+  @@index([studentId, documentCode])
 }
 
 model Branch {

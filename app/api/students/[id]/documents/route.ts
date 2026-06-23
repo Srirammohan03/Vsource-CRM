@@ -1,138 +1,188 @@
-import { NextRequest, NextResponse } from "next/server";
-
-import { writeFile, mkdir } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import prisma from "@/lib/prisma";
-import { handleError, ok } from "@/lib/api-helpers";
+import { NextRequest, NextResponse } from "next/server";
+import db from "@/lib/prisma";
+import { STUDENT_DOCUMENT_CHECKLIST } from "@/lib/student-document-checklist";
+import {
+  buildStudentDocumentFileName,
+  validateStudentDocument,
+} from "@/lib/student-document-utils";
 
 export const runtime = "nodejs";
 
-// 1. GET: Fetch all documents for a specific student
+function errorResponse(message: string, status: number) {
+  return NextResponse.json({ success: false, message }, { status });
+}
+
 export async function GET(
-  req: NextRequest,
-  {
-    params,
-  }: {
-    params: Promise<{ id: string }>;
-  },
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: studentId } = await params;
 
-    if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Missing student identification parameter.",
+    const student = await db.student.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        documents: {
+          orderBy: { uploadedAt: "desc" },
         },
-        { status: 400 },
-      );
-    }
-    const documents = await prisma.studentDocument.findMany({
-      where: { id },
-      orderBy: { uploadedAt: "desc" },
+      },
     });
 
-    return ok(documents, "Documents fetched successfully");
+    if (!student) {
+      return errorResponse("Student not found", 404);
+    }
+
+    const checklist = STUDENT_DOCUMENT_CHECKLIST.map((item) => {
+      const documents = student.documents.filter(
+        (document) => document.documentCode === item.code,
+      );
+
+      return {
+        ...item,
+        isMandatory: true,
+        module: item.category.startsWith("LOAN") ? "LOAN" : "ADMISSION",
+        documents,
+        uploadedCount: documents.length,
+        isComplete: documents.length >= item.requiredCount,
+      };
+    });
+
+    const totalRequiredUploads = checklist.reduce(
+      (total, item) => total + item.requiredCount,
+      0,
+    );
+
+    const completedRequiredUploads = checklist.reduce(
+      (total, item) => total + Math.min(item.uploadedCount, item.requiredCount),
+      0,
+    );
+
+    const completedChecklistItems = checklist.filter(
+      (item) => item.isComplete,
+    ).length;
+
+    const summary = {
+      totalChecklistItems: checklist.length,
+      completedChecklistItems,
+      pendingChecklistItems: checklist.length - completedChecklistItems,
+      totalRequiredUploads,
+      completedRequiredUploads,
+      percentage:
+        totalRequiredUploads === 0
+          ? 0
+          : Math.round((completedRequiredUploads / totalRequiredUploads) * 100),
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        checklist,
+        summary,
+        hasUploadedDocuments: student.documents.length > 0,
+      },
+    });
   } catch (error) {
-    return handleError(error);
+    console.error("[student-documents:get]", error);
+    return errorResponse("Unable to load student documents", 500);
   }
 }
 
-// 2. POST: Upload and bind a new document
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
-    if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Missing student identification identifier.",
-        },
-        { status: 400 },
-      );
-    }
-
+    const { id: studentId } = await params;
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const documentType = formData.get("documentType") as string | null;
 
-    if (!file || !documentType) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Missing required form-data (file or documentType).",
-        },
-        { status: 400 },
-      );
+    const file = formData.get("file");
+    const documentCode = String(formData.get("documentCode") || "").trim();
+    const remarks = String(formData.get("remarks") || "").trim();
+
+    if (!(file instanceof File)) {
+      return errorResponse("Document file is required", 400);
     }
 
-    // Validate File Types
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "application/pdf",
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid type. Allowed: JPG, PNG, WEBP, or PDF.",
-        },
-        { status: 400 },
-      );
+    const checklistItem = STUDENT_DOCUMENT_CHECKLIST.find(
+      (item) => item.code === documentCode,
+    );
+
+    if (!checklistItem) {
+      return errorResponse("Invalid document type", 400);
     }
 
-    // Validate File Size (Max 5MB)
-    const maxSizeBytes = 5 * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "File exceeds safe threshold limit of 5MB.",
+    const student = await db.student.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        studentName: true,
+        branch: {
+          select: {
+            code: true,
+          },
         },
-        { status: 400 },
-      );
-    }
-
-    // Generate safe dynamic filenames
-    const originalExt = file.name.split(".").pop()?.toLowerCase() || "";
-    const validExts: Record<string, string> = {
-      "image/jpeg": "jpg",
-      "image/jpg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "application/pdf": "pdf",
-    };
-    const safeExt = validExts[file.type] || originalExt || "bin";
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
-
-    // Establish Target Upload Directories
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
-    // Write file to filesystem disk buffer array
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(uploadDir, filename), buffer);
-    const fileUrl = `/uploads/${filename}`;
-
-    // Save metadata record into database
-    const newDocument = await prisma.studentDocument.create({
-      data: {
-        studentId: id,
-        documentType,
-        fileName: file.name,
-        fileUrl: fileUrl,
       },
     });
 
-    return ok(newDocument, "Document registered and saved successfully.");
+    if (!student) {
+      return errorResponse("Student not found", 404);
+    }
+
+    const extension = validateStudentDocument(file);
+
+    const storedFileName = buildStudentDocumentFileName({
+      studentName: student.studentName,
+      documentName: checklistItem.name,
+      branchCode: student.branch?.code || "branch",
+      extension,
+    });
+
+    const uploadDirectory = path.join(
+      process.cwd(),
+      "public",
+      "upload",
+      "student",
+    );
+
+    await mkdir(uploadDirectory, { recursive: true });
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await writeFile(path.join(uploadDirectory, storedFileName), buffer, {
+      flag: "wx",
+    });
+
+    const document = await db.studentDocument.create({
+      data: {
+        studentId,
+        documentCode: checklistItem.code,
+        documentType: checklistItem.name,
+        originalFileName: file.name,
+        storedFileName,
+        fileUrl: `/upload/student/${storedFileName}`,
+        mimeType: file.type,
+        fileSize: file.size,
+        remarks: remarks || null,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: document,
+        message: "Document uploaded successfully",
+      },
+      { status: 201 },
+    );
   } catch (error) {
-    return handleError(error);
+    console.error("[student-documents:post]", error);
+
+    return errorResponse(
+      error instanceof Error ? error.message : "Document upload failed",
+      500,
+    );
   }
 }
