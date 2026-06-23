@@ -1,4 +1,4 @@
-// app\(dashboard)\applications-tracker\page.tsx
+// app\(dashboard)\master-tracker\page.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -11,10 +11,9 @@ import {
   FileText,
   CheckCircle2,
 } from "lucide-react";
-import { useApplicationTracker } from "@/hooks/application-tracker/useApplicationTracker";
 import { AnimatePresence, motion } from "framer-motion";
-import type { StudentRecord } from "@/types/student";
 import { useMasterTracker } from "@/hooks/application-tracker/useMasterTracker";
+import type { StudentRecord } from "@/types/student";
 
 const KANBAN_COLUMNS = [
   {
@@ -92,35 +91,50 @@ export default function ApplicationsTrackerPage() {
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   // Maps student current stage text to the correct Kanban Column ID
-  const mapStageToKanban = (stage: string): string => {
-    const val = (stage || "").toLowerCase().trim();
+  const mapStageToKanban = (item: any): string => {
+    // LEADS
+    if (item.recordType === "lead") {
+      if (!item.isConverted) {
+        return "Inquiry";
+      }
 
-    if (
-      val === "new" ||
-      val === "draft" ||
-      val === "contacted" ||
-      val === "qualified" ||
-      val === "lead created" ||
-      val === "inquiry"
-    )
       return "Inquiry";
+    }
 
-    if (val === "documents") return "Documents";
+    // STUDENTS
+
+    const docsCount = item.documents?.length ?? 0;
+    const appsCount = item.applications?.length ?? 0;
+
+    const visaStatus = item.visaProfile?.visaStatus?.toLowerCase() ?? "";
+
+    const hasOffer = item.applications?.some(
+      (app: any) =>
+        app.status === "conditional_offer" ||
+        app.status === "unconditional_offer",
+    );
+
+    if (visaStatus === "visa approved" || item.status === "enrolled") {
+      return "Enrolled";
+    }
 
     if (
-      val === "application submitted" ||
-      val === "applied" ||
-      val === "converted"
-    )
+      visaStatus.includes("applied") ||
+      visaStatus.includes("processing") ||
+      visaStatus.includes("approved")
+    ) {
+      return "Visa Process";
+    }
+
+    if (hasOffer) {
+      return "Offer Received";
+    }
+
+    if (appsCount > 0) {
       return "Applied";
+    }
 
-    if (val === "offer received") return "Offer Received";
-
-    if (val === "visa applied" || val === "visa process") return "Visa Process";
-
-    if (val === "visa approved" || val === "enrolled") return "Enrolled";
-
-    return "Inquiry";
+    return "Documents";
   };
 
   // Convert column key back to standard Stage Value
@@ -145,77 +159,68 @@ export default function ApplicationsTrackerPage() {
 
   // Colors as specified: yellow, white, green, last option red
   const getStudentColorThemeKey = (
-    student: StudentRecord,
+    item: any,
   ): "red" | "green" | "yellow" | "white" => {
-    const stage = (student.currentStage || "").toLowerCase().trim();
-    const visaStat = (student.visaProfile?.visaStatus || "")
-      .toLowerCase()
-      .trim();
-    const loanStat = (student.loan?.status || "").toLowerCase().trim();
-    const firstAppStat = (student.applications?.[0]?.status || "")
-      .toLowerCase()
-      .trim();
+    // LEADS
 
-    const isRed = (s: string) =>
-      [
-        "dropped",
-        "student dropped",
-        "rejected",
-        "visa rejected",
-        "file closed",
-        "cancelled",
-        "hold",
-        "drop",
-      ].includes(s) || s === "hold";
+    if (item.recordType === "lead") {
+      if (item.status === "converted") return "green";
 
-    const hasRejectedApp = student.applications?.some(
-      (app) => (app.status || "").toLowerCase() === "rejected",
-    );
-
-    if (
-      isRed(stage) ||
-      isRed(visaStat) ||
-      isRed(loanStat) ||
-      isRed(firstAppStat) ||
-      hasRejectedApp
-    ) {
-      return "red";
-    }
-
-    const isGreen = (s: string) =>
-      [
-        "enrolled",
-        "visa approved",
-        "visa approved / enrolled",
-        "approved",
-        "disbursed",
-        "completed",
-        "paid",
-        "sanctioned",
-      ].includes(s);
-
-    if (
-      stage === "enrolled" ||
-      stage === "visa approved" ||
-      isGreen(visaStat) ||
-      isGreen(stage)
-    ) {
-      return "green";
-    }
-
-    // For inquiry/documents check if files/documents are present -> makes it active "yellow" state
-    if (
-      stage === "lead created" ||
-      stage === "inquiry" ||
-      stage === "documents"
-    ) {
-      if (student.documents && student.documents.length > 0) {
+      if (item.status === "qualified" || item.status === "contacted")
         return "yellow";
-      }
+
       return "white";
     }
 
-    return "yellow";
+    // DOCUMENTS
+
+    const docsCount = item.documents?.length ?? 0;
+
+    const appsCount = item.applications?.length ?? 0;
+
+    const visaStatus = item.visaProfile?.visaStatus?.toLowerCase() ?? "";
+
+    if (visaStatus.includes("rejected")) {
+      return "red";
+    }
+
+    const stage = mapStageToKanban(item);
+
+    if (stage === "Documents") {
+      if (docsCount === 0) return "white";
+
+      if (docsCount < 5) return "yellow";
+
+      return "green";
+    }
+
+    if (stage === "Applied") {
+      if (appsCount === 0) return "white";
+
+      if (appsCount < 5) return "yellow";
+
+      return "green";
+    }
+
+    if (stage === "Offer Received") {
+      const hasUnconditional = item.applications?.some(
+        (a: any) => a.status === "unconditional_offer",
+      );
+
+      return hasUnconditional ? "green" : "yellow";
+    }
+
+    if (stage === "Visa Process") {
+      if (visaStatus.includes("approved")) return "green";
+
+      return "yellow";
+    }
+
+    if (stage === "Enrolled") {
+      return "green";
+    }
+
+    return "white";
   };
 
   // Beautiful styling colors featuring proper vibrant, cheerful yellow!
@@ -382,7 +387,7 @@ export default function ApplicationsTrackerPage() {
             Drag to Move
           </span>
           <span className="text-[10px] uppercase font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">
-            Total of {students.length} students
+            Total of {trackerData.length} records
           </span>
         </div>
       </div>
@@ -395,8 +400,7 @@ export default function ApplicationsTrackerPage() {
         {KANBAN_COLUMNS.map((col, colIndex) => {
           // Filter students for this column based on active global filters
           const columnStudents = trackerData.filter((student: any) => {
-            if (mapStageToKanban(student.currentStage ?? "") !== col.id)
-              return false;
+            if (mapStageToKanban(student) !== col.id) return false;
             if (filterIntake !== "All" && student.intake !== filterIntake)
               return false;
             if (filterCountry !== "All" && student.country !== filterCountry)

@@ -38,8 +38,8 @@ export const navigationItems = [
   },
   {
     moduleCode: "APPLICATIONS",
-    to: "/applications-tracker",
-    label: "Applications Tracker",
+    to: "/master-tracker",
+    label: "Master Tracker",
     icon: GraduationCap,
   },
   {
