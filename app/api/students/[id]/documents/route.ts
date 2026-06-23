@@ -7,6 +7,7 @@ import {
   buildStudentDocumentFileName,
   validateStudentDocument,
 } from "@/lib/student-document-utils";
+import { handleError } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 
@@ -85,8 +86,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("[student-documents:get]", error);
-    return errorResponse("Unable to load student documents", 500);
+    return handleError(error);
   }
 }
 
@@ -143,8 +143,8 @@ export async function POST(
     const uploadDirectory = path.join(
       process.cwd(),
       "public",
-      "upload",
-      "student",
+      "uploads",
+      "students",
     );
 
     await mkdir(uploadDirectory, { recursive: true });
@@ -162,7 +162,7 @@ export async function POST(
         documentType: checklistItem.name,
         originalFileName: file.name,
         storedFileName,
-        fileUrl: `/upload/student/${storedFileName}`,
+        fileUrl: `/uploads/students/${storedFileName}`,
         mimeType: file.type,
         fileSize: file.size,
         remarks: remarks || null,
@@ -180,9 +180,6 @@ export async function POST(
   } catch (error) {
     console.error("[student-documents:post]", error);
 
-    return errorResponse(
-      error instanceof Error ? error.message : "Document upload failed",
-      500,
-    );
+    return handleError(error);
   }
 }

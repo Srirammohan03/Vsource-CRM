@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { Eye, Edit, Trash2, Shield, ShieldOff } from "lucide-react";
 import { Student } from "./mockData";
-import { DocumentItem } from "./DMSSection";
 import { toast } from "sonner";
 import { useStudents } from "@/hooks/student/useStudents";
-import { StudentRecord } from "@/types/student";
+import { StudentDocumentRecord, StudentRecord } from "@/types/student";
 
 export interface LocalStudent extends Student {
   password?: string;
@@ -15,7 +14,7 @@ export interface LocalStudent extends Student {
   depositDeadlineDate?: string;
   casDeadlineDate?: string;
   univStartDate?: string;
-  documents: DocumentItem[];
+  documents: StudentDocumentRecord[];
 }
 
 interface StudentTableProps {
@@ -181,7 +180,6 @@ export function StudentTable({
               </th>
               <th className={`px-4 py-3 ${thBgClass}`}>DEPOSIT STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>IHS&VISA PAID STATUS</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>INTERVIEW STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>CAS DEADLINE DATE</th>
               <th className={`px-4 py-3 ${thBgClass}`}>CAS STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>VISA STATUS</th>
@@ -214,13 +212,11 @@ export function StudentTable({
               </tr>
             ) : (
               students.map((student: StudentRecord, idx: number) => {
-                const firstApp = student?.applications?.[0] ?? {
-                  portal: "-",
-                  applicationDate: null,
-                  universityName: "-",
-                  courseName: "-",
-                  status: "draft",
-                };
+                const firstApp = student?.applications?.[0];
+
+                const applicationStatus = firstApp?.status ?? "-";
+                const universityName = firstApp?.university?.name ?? "-";
+                const courseName = firstApp?.course?.name ?? "-";
 
                 const latestRemark = student?.remarks?.length
                   ? student.remarks[student.remarks.length - 1]?.note
@@ -374,9 +370,9 @@ export function StudentTable({
 
                     {/* 21. Deposit Deadline Date */}
                     <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaProfile?.depositDeadlineDate
+                      {student?.visaLoanProfile?.depositDeadlineDate
                         ? new Date(
-                            student.visaProfile.depositDeadlineDate,
+                            student.visaLoanProfile.depositDeadlineDate,
                           ).toLocaleDateString("en-GB")
                         : "-"}
                     </td>
@@ -384,35 +380,26 @@ export function StudentTable({
                     {/* 22. Deposit Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.depositStatus ?? "-")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.depositStatus ?? "-")}`}
                       >
-                        {student?.visaProfile?.depositStatus ?? "-"}
+                        {student?.visaLoanProfile?.depositStatus ?? "-"}
                       </span>
                     </td>
 
                     {/* 23. IHS & Visa Paid Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaProfile?.ihsPaymentStatus ?? "-")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaLoanProfile?.ihsPaidStatus ?? "-")}`}
                       >
-                        {student.visaProfile?.ihsPaymentStatus ?? "-"}
-                      </span>
-                    </td>
-
-                    {/* 24. Interview Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.interviewStatus ?? "-")}`}
-                      >
-                        {student?.visaProfile?.interviewStatus ?? "-"}
+                        {student.visaLoanProfile?.ihsPaidStatus ?? "-"}
                       </span>
                     </td>
 
                     {/* 25. CAS Deadline Date */}
                     <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaProfile?.casDeadlineDate
+                      {student?.visaLoanProfile?.casDeadlineDate
                         ? new Date(
-                            student.visaProfile.casDeadlineDate,
+                            student.visaLoanProfile.casDeadlineDate,
                           ).toLocaleDateString("en-GB")
                         : "-"}
                     </td>
@@ -420,66 +407,66 @@ export function StudentTable({
                     {/* 26. CAS Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.casStatus ?? "-")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.casStatus ?? "-")}`}
                       >
-                        {student?.visaProfile?.casStatus}
+                        {student?.visaLoanProfile?.casStatus}
                       </span>
                     </td>
 
                     {/* 27. Visa Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaProfile?.visaStatus ?? "-")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.visaStatus ?? "-")}`}
                       >
-                        {student?.visaProfile?.visaStatus}
+                        {student?.visaLoanProfile?.visaStatus}
                       </span>
                     </td>
 
                     {/* 28. Univ Start Date */}
                     <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaProfile?.universityStartDate
+                      {student?.visaLoanProfile?.universityStartDate
                         ? new Date(
-                            student.visaProfile.universityStartDate,
+                            student.visaLoanProfile.universityStartDate,
                           ).toLocaleDateString("en-GB")
                         : "-"}
                     </td>
 
                     {/* 29. Fintech Assignee */}
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-medium font-mono text-[11px]">
-                      {student?.loan?.assignee}
+                      {student?.visaLoanProfile?.fintechAssignee}
                     </td>
 
                     {/* 30. NBFC */}
                     <td className="px-4 py-3.5 text-slate-605 dark:text-slate-300 font-bold">
-                      {student.loan?.nbfc}
+                      {student.visaLoanProfile?.nbfc}
                     </td>
 
                     {/* 31. Loan Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.loan?.status ?? "-")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaLoanProfile?.loanStatus ?? "-")}`}
                       >
-                        {student.loan?.status}
+                        {student.visaLoanProfile?.loanStatus}
                       </span>
                     </td>
 
                     {/* 32. PF Status */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.loan?.pfStatus ?? "Pending")}`}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.pfStatus ?? "Pending")}`}
                       >
-                        {student.loan?.pfStatus || "Pending"}
+                        {student.visaLoanProfile?.pfStatus || "Pending"}
                       </span>
                     </td>
 
                     {/* 33. Sanctioned */}
                     <td className="px-4 py-3.5 font-black text-slate-805 dark:text-slate-300 font-mono">
-                      {student.loan?.sanctionedAmount}
+                      {student.visaLoanProfile?.sanctionedAmount}
                     </td>
 
                     {/* 34. Disbursed */}
                     <td className="px-4 py-3.5 font-bold text-emerald-600 font-mono">
-                      {student.loan?.disbursedAmount}
+                      {student.visaLoanProfile?.disbursedAmount}
                     </td>
 
                     {/* 35. Remarks timeline note */}

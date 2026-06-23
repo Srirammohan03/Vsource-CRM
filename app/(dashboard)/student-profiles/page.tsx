@@ -333,12 +333,31 @@ export default function Home() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                <button
-                  onClick={() => setSelectedStudentId(null)}
-                  className="inline-flex items-center gap-1.5 text-xs font-black text-red-600 hover:underline hover:scale-[1.01] transition-transform"
-                >
-                  ← Back
-                </button>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setSelectedStudentId(null)}
+                      className="inline-flex items-center gap-1.5 text-xs font-black text-red-600 hover:underline"
+                    >
+                      ← Back
+                    </button>
+
+                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
+
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                        {selectedStudent.studentName}
+                      </h2>
+
+                      <p className="text-xs text-slate-500">
+                        Counselor:{" "}
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {selectedStudent.counselor?.name ?? "Not Assigned"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="space-y-6">
                   {/* Horizontal Tabs */}
@@ -517,7 +536,7 @@ export default function Home() {
                               className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4.5 py-2 rounded-xl inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Plus className="h-4.5 w-4.5" />
-                              <span>Add Course </span>
+                              <span>Apply </span>
                             </button>
                           </div>
                         </div>
@@ -851,6 +870,7 @@ export default function Home() {
                           <button
                             type="submit"
                             className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer"
+                            disabled={createRemarkMutation.isPending}
                           >
                             Append Remark
                           </button>
