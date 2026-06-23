@@ -711,6 +711,11 @@ model LeadUniversity {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+enum UniversityTier {
+  T1
+  T2
+  T3
+}
 
 model University {
   id String @id @default(uuid())
@@ -719,6 +724,8 @@ model University {
 
   countryId String
   country   Country @relation(fields: [countryId], references: [id])
+
+  tier UniversityTier @default(T3)
 
   logo String?
 

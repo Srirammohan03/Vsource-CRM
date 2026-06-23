@@ -76,8 +76,8 @@ const items = [
   },
   {
     moduleCode: "APPLICATIONS",
-    to: "/applications-tracker",
-    label: "Applications Tracker",
+    to: "/master-tracker",
+    label: "Master Tracker",
     icon: FileText,
   },
   {
