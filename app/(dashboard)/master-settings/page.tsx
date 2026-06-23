@@ -30,28 +30,28 @@ import {
 
 const categories = [
   {
-    key: "countries",
-    label: "Countries",
+    key: "country",
+    label: "Country",
     endpoint: "/countries",
   },
   {
     key: "intakes",
-    label: "Intakes",
+    label: "Intake",
     endpoint: "/intakes",
   },
   {
     key: "lead-sources",
-    label: "Lead Sources",
+    label: "Lead Source",
     endpoint: "/lead-sources",
   },
   {
     key: "lead-degrees",
-    label: "Lead Degrees",
+    label: "Lead Degree",
     endpoint: "/lead-degrees",
   },
   {
     key: "lead-universities",
-    label: "Lead Universities",
+    label: "Lead Universitie",
     endpoint: "/lead-universities",
   },
 ];
@@ -201,7 +201,7 @@ export default function MasterSettings() {
                 className="flex-1 bg-background"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={`Add new ${current.label.slice(0, -1)}...`}
+                placeholder={`Add new ${current.label}...`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -319,14 +319,14 @@ export default function MasterSettings() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit {current.label.slice(0, -1)}</DialogTitle>
+            <DialogTitle>Edit {current.label}</DialogTitle>
           </DialogHeader>
 
           <div className="py-4">
             <Input
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              placeholder={`Enter ${current.label.slice(0, -1).toLowerCase()} name`}
+              placeholder={`Enter ${current.label.toLowerCase()} name`}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleEdit();
               }}

@@ -71,19 +71,19 @@ const items = [
   {
     moduleCode: "STUDENT_PROFILES",
     to: "/student-profiles",
-    label: "Visa Applications",
+    label: "Visa Application",
     icon: GraduationCap,
   },
   {
     moduleCode: "APPLICATIONS",
     to: "/master-tracker",
     label: "Master Tracker",
-    icon: FileText,
+    icon: FileText,   
   },
   {
     moduleCode: "PERFORMANCES",
     to: "/performances",
-    label: "Performances",
+    label: "Performance",
     icon: GraduationCap,
   },
   { moduleCode: "BRANCHES", to: "/branches", label: "Branches", icon: MapPin },
