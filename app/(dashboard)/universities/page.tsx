@@ -219,7 +219,7 @@ export default function UniversitiesPage() {
       />
 
       {/* Stats Summary Cards */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+      {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
           <p className="text-sm font-medium text-muted-foreground">
             Total Universities
@@ -253,7 +253,7 @@ export default function UniversitiesPage() {
             {shortlistedIds.length}
           </h3>
         </div>
-      </div>
+      </div> */}
 
       {/* Filter Toolbar Section */}
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm md:flex-row md:items-center">

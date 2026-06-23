@@ -139,6 +139,10 @@ export const LeadCreateSchema = z.object({
   preferredCountry: optStr,
   preferredIntake: optStr,
   preferredCourse: optStr,
+  preferredTiers: z
+    .array(z.enum(["T1", "T2", "T3", "T4"]))
+    .optional()
+    .default([]),
   greGmatScore: optFloat,
   quantitativeScore: optFloat,
   verbalScore: optFloat,
@@ -206,6 +210,10 @@ export const MbbsLeadCreateSchema = z.object({
   preferredIntake: optStr,
   preferredUniversity: optStr,
   preferredCourse: optStr,
+  preferredTiers: z
+    .array(z.enum(["T1", "T2", "T3", "T4"]))
+    .optional()
+    .default([]),
   remarks: optStr,
   assignedCounselorId: optUuid,
   status: MbbsLeadStatusEnum.default("new"),

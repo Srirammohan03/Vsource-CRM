@@ -1,7 +1,6 @@
-// crm-frontend-next\app\(dashboard)\leads\all\page.tsx
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { PageHeader, PageTransition } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Download, Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Eye } from "lucide-react";
 import type { Lead, LeadStatus } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,8 +26,7 @@ import { useAuth } from "@/store";
 import { MODULES } from "@/lib/module-codes";
 import LeadStatusDialog from "@/components/leads/LeadStatusDialog";
 
-// Production API URL fallback configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "NEXT_PUBLIC_API_URL";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 const statusStyle: Record<LeadStatus, string> = {
   draft:
@@ -50,7 +48,6 @@ const statusTabs: Array<LeadStatus | "all"> = [
   "lost",
 ];
 
-
 const branchOptions = [
   "Dilsukhnagar Branch",
   "Ameerpet Branch",
@@ -60,6 +57,16 @@ const branchOptions = [
   "Tirupathi Branch",
   "Bengaluru Branch",
 ];
+
+const formatDate = (value?: string | Date | null) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString();
+};
 
 export default function AllLeadsPage() {
   const router = useRouter();
@@ -72,13 +79,10 @@ export default function AllLeadsPage() {
   const [selectedCounselors, setSelectedCounselors] = useState<string[]>([]);
   const { canCreate, canUpdate, canDelete } = useAuth();
 
-  // Modals & Action States
   const [selected, setSelected] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [editingLeadStatus, setEditingLeadStatus] =
-  useState<Lead | null>(null);
+  const [editingLeadStatus, setEditingLeadStatus] = useState<Lead | null>(null);
   const [leadIdToDelete, setLeadIdToDelete] = useState<string | null>(null);
-
   const [leads, setLeads] = useState<Lead[]>([]);
 
   const uniqueSources = useMemo(() => {
@@ -87,8 +91,8 @@ export default function AllLeadsPage() {
         leads
           .map((lead) => lead.source)
           .filter(
-            (source): source is string =>
-              typeof source === "string" && source.trim().length > 0,
+            (item): item is string =>
+              typeof item === "string" && item.trim().length > 0,
           ),
       ),
     ];
@@ -97,15 +101,15 @@ export default function AllLeadsPage() {
   const filteredLeads = useMemo(() => {
     return leads
       .filter((item) => {
-        const q = query.toLowerCase();
+        const normalizedQuery = query.trim().toLowerCase();
 
         const matchQuery =
-          !q ||
-          item.studentName?.toLowerCase().includes(q) ||
-          item.emailId?.toLowerCase().includes(q) ||
-          item.mobileNumber?.includes(q) ||
-          item.id?.toLowerCase().includes(q) ||
-          item.leadNumber?.toLowerCase().includes(q);
+          !normalizedQuery ||
+          item.studentName?.toLowerCase().includes(normalizedQuery) ||
+          item.emailId?.toLowerCase().includes(normalizedQuery) ||
+          item.mobileNumber?.includes(normalizedQuery) ||
+          item.id?.toLowerCase().includes(normalizedQuery) ||
+          item.leadNumber?.toLowerCase().includes(normalizedQuery);
 
         const matchStatus = status === "all" || item.status === status;
         const matchBranch = branch === "all" || item.branch?.name === branch;
@@ -119,62 +123,83 @@ export default function AllLeadsPage() {
       );
   }, [leads, query, status, branch, source]);
 
-  useEffect(() => {
-    loadLeads();
-  }, []);
-
   const loadLeads = async () => {
     try {
       setIsLoading(true);
+
       const response = await fetch(`${API_BASE_URL}/leads`, {
         cache: "no-store",
         credentials: "include",
       });
-      const res = await response.json();
-      const data = res?.data ?? [];
-      console.log("first", data);
+
+      if (!response.ok) {
+        throw new Error("Unable to load leads");
+      }
+
+      const result = await response.json();
+      const data = result?.data ?? [];
+
       setLeads(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
+      setLeads([]);
       toast.error("Failed to load leads from the server");
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    void loadLeads();
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status, branch, source]);
+
   const pageSize = 10;
   const start = (page - 1) * pageSize;
   const pageLeads = filteredLeads.slice(start, start + pageSize);
   const pageCount = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
 
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
+
   const executeDeleteLead = async () => {
     if (!leadIdToDelete) return;
+
     try {
-      await fetch(`${API_BASE_URL}/leads/${leadIdToDelete}`, {
+      const response = await fetch(`${API_BASE_URL}/leads/${leadIdToDelete}`, {
         method: "DELETE",
         credentials: "include",
       });
+
+      if (!response.ok) {
+        throw new Error("Unable to delete lead");
+      }
 
       setLeads((current) =>
         current.filter((item) => item.id !== leadIdToDelete),
       );
       toast.success("Lead deleted successfully");
     } catch (error) {
-      setLeads((current) =>
-        current.filter((item) => item.id !== leadIdToDelete),
-      );
-      toast.success("Lead cleared from current session views");
+      console.error(error);
+      toast.error("Failed to delete lead");
     } finally {
       setLeadIdToDelete(null);
     }
   };
 
-  const handleUpdateLead = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateLead = async (event: FormEvent) => {
+    event.preventDefault();
+
     if (!editingLead) return;
 
     try {
-      await fetch(`${API_BASE_URL}/leads/${editingLead.id}`, {
+      const response = await fetch(`${API_BASE_URL}/leads/${editingLead.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -186,27 +211,22 @@ export default function AllLeadsPage() {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error("Unable to update lead");
+      }
+
       setLeads((current) =>
         current.map((item) =>
           item.id === editingLead.id ? editingLead : item,
         ),
       );
-      toast.success("Lead records synchronized successfully");
+      toast.success("Lead updated successfully");
       setEditingLead(null);
     } catch (error) {
-      setLeads((current) =>
-        current.map((item) =>
-          item.id === editingLead.id ? editingLead : item,
-        ),
-      );
-      toast.success("Lead changes saved locally");
-      setEditingLead(null);
+      console.error(error);
+      toast.error("Failed to update lead");
     }
   };
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, status, branch, source]);
 
   return (
     <PageTransition>
@@ -214,43 +234,36 @@ export default function AllLeadsPage() {
         title="All Leads"
         description="Manage every enquiry in the CRM with search, filters, export and status-driven navigation."
         actions={
-          <div className="flex flex-row items-center gap-2">
-            {/* <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast.success("Export started")}
-              className="whitespace-nowrap"
-            >
-              <Download className="size-4 mr-2" /> Export
-            </Button> */}
+          <div className="flex items-center gap-2">
             {canCreate(MODULES.MASTER_LEADS) && (
               <Button
                 size="sm"
                 onClick={() => router.push("/leads/add")}
                 className="whitespace-nowrap"
               >
-                <Plus className="size-4 mr-2" /> Add Lead
+                <Plus className="mr-2 size-4" />
+                Add Lead
               </Button>
             )}
           </div>
         }
       />
 
-      {/* Filter Control Board */}
-      <Card className="mb-6 shadow-sm border-border">
-        <CardContent className="grid gap-4 lg:grid-cols-[1.9fr_2.1fr] xl:grid-cols-[1.8fr_2.2fr] p-4 sm:p-5 min-w-0">
-          <div className="relative flex items-end w-full">
+      <Card className="mb-6 min-w-0 border-border shadow-sm">
+        <CardContent className="grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[1.9fr_2.1fr] xl:grid-cols-[1.8fr_2.2fr]">
+          <div className="relative flex w-full items-end">
             <div className="relative w-full">
-              <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="pl-10 w-full bg-background"
+                className="w-full bg-background pl-10"
                 placeholder="Search leads by name, email or ID"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
               />
             </div>
           </div>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <Label className="text-xs font-semibold tracking-wide text-muted-foreground">
                 Status
@@ -278,14 +291,12 @@ export default function AllLeadsPage() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid gap-1.5">
               <Label className="text-xs font-semibold tracking-wide text-muted-foreground">
                 Branch
               </Label>
-              <Select
-                value={branch}
-                onValueChange={(value) => setBranch(value)}
-              >
+              <Select value={branch} onValueChange={setBranch}>
                 <SelectTrigger className="w-full bg-background">
                   <SelectValue placeholder="Any branch" />
                 </SelectTrigger>
@@ -302,14 +313,12 @@ export default function AllLeadsPage() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid gap-1.5">
               <Label className="text-xs font-semibold tracking-wide text-muted-foreground">
                 Source
               </Label>
-              <Select
-                value={source}
-                onValueChange={(value) => setSource(value)}
-              >
+              <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="w-full bg-background">
                   <SelectValue placeholder="Any source" />
                 </SelectTrigger>
@@ -330,15 +339,14 @@ export default function AllLeadsPage() {
         </CardContent>
       </Card>
 
-      {/* Tabs Row Container - Uses hidden tracks to eliminate unwanted scrollbars while remaining accessible */}
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {statusTabs.map((tab) => (
           <Button
             key={tab}
             variant={tab === status ? "secondary" : "outline"}
             size="sm"
             onClick={() => setStatus(tab)}
-            className="whitespace-nowrap transition-all duration-200 shrink-0"
+            className="whitespace-nowrap transition-all duration-200"
           >
             {tab === "all"
               ? "All Leads"
@@ -347,9 +355,8 @@ export default function AllLeadsPage() {
         ))}
       </div>
 
-      {/* Responsive Lead Records Component Grid/Table Interface */}
-      <Card className="overflow-hidden border-border shadow-sm">
-        <CardContent className="p-0">
+      <Card className="w-full min-w-0 overflow-hidden border-border shadow-sm">
+        <CardContent className="min-w-0 p-0">
           {isLoading ? (
             <div className="space-y-4 p-5">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -358,150 +365,172 @@ export default function AllLeadsPage() {
             </div>
           ) : (
             <>
-              {/* Responsive Card Stack View (Visible on Mobile Viewports, Hides Table Scrollbars Completely) */}
-              <div className="md:hidden divide-y divide-border">
+              <div className="divide-y divide-border lg:hidden">
                 {pageLeads.length === 0 ? (
-                  <div className="py-12 text-center text-sm text-muted-foreground bg-background">
+                  <div className="bg-background py-12 text-center text-sm text-muted-foreground">
                     No leads match your filters.
                   </div>
                 ) : (
                   pageLeads.map((lead) => (
                     <div
                       key={lead.id || lead.leadNumber}
-                      className="p-4 space-y-3 bg-card hover:bg-secondary/10 transition-colors"
+                      className="space-y-3 bg-card p-4 transition-colors hover:bg-secondary/10"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-semibold text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded">
-                          {lead.leadNumber}
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="rounded bg-secondary/50 px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
+                          {lead.leadNumber || "—"}
                         </span>
                         <Badge
                           variant="outline"
-                          className={`capitalize tracking-wide font-semibold ${statusStyle[lead.status || "draft"]}`}
+                          className={`capitalize tracking-wide font-semibold ${
+                            statusStyle[lead.status || "draft"]
+                          }`}
                         >
-                          {lead.status}
+                          {lead.status || "draft"}
                         </Badge>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold text-foreground text-base">
+                        <h4 className="text-base font-semibold text-foreground">
                           {lead.studentName || "—"}
                         </h4>
-                        <p className="text-xs text-muted-foreground mt-0.5 space-x-1">
-                          <span>{lead.mobileNumber || "—"}</span>
+                        <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                          <span className="shrink-0">
+                            {lead.mobileNumber || "—"}
+                          </span>
                           {lead.emailId && (
                             <span className="text-border">|</span>
                           )}
-                          <span className="truncate max-w-[200px] inline-block align-bottom">
+                          <span className="min-w-0 truncate">
                             {lead.emailId || ""}
                           </span>
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60 text-xs">
-                        <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                      <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-2 text-xs">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Source
                           </p>
-                          <p>{lead.source || "—"}</p>
+                          <p className="truncate" title={lead.source || "—"}>
+                            {lead.source || "—"}
+                          </p>
                         </div>
 
-                        <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Country
                           </p>
-                          <p>{lead.preferredCountry || "—"}</p>
+                          <p
+                            className="truncate"
+                            title={lead.preferredCountry || "—"}
+                          >
+                            {lead.preferredCountry || "—"}
+                          </p>
                         </div>
 
-                        <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Branch
                           </p>
-                          <p>{lead.branch?.name || "—"}</p>
+                          <p
+                            className="truncate"
+                            title={lead.branch?.name || "—"}
+                          >
+                            {lead.branch?.name || "—"}
+                          </p>
                         </div>
 
-                        <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Counselor
                           </p>
-                          <div className="flex flex-wrap gap-2">
-                            {lead?.counselors?.length ? (
-                              lead?.counselors?.map((coun, idx) => (
-                                <Badge key={coun.counselor?.id || idx}>
-                                  {coun?.counselor?.name}
-                                  {coun.isPrimary && " (Primary)"}
+                          <div className="mt-1 flex min-w-0 flex-col items-start gap-1">
+                            {lead.counselors?.length ? (
+                              lead.counselors.map((counselor, index) => (
+                                <Badge
+                                  key={counselor.counselor?.id || index}
+                                  className="h-5 max-w-full px-2 text-[10px]"
+                                  title={counselor.counselor?.name || ""}
+                                >
+                                  <span className="truncate">
+                                    {counselor.counselor?.name || "—"}
+                                    {counselor.isPrimary ? " (Primary)" : ""}
+                                  </span>
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-sm text-muted-foreground">
+                              <span className="block max-w-full truncate text-xs text-muted-foreground">
                                 No counselors assigned
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                        <div className="col-span-2 min-w-0">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Email
                           </p>
                           <p className="break-all">{lead.emailId || "—"}</p>
                         </div>
 
                         <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Created Date
                           </p>
-                          <p>
-                            {lead.createdAt
-                              ? new Date(lead.createdAt).toLocaleDateString()
-                              : "—"}
-                          </p>
+                          <p>{formatDate(lead.createdAt)}</p>
                         </div>
 
                         <div>
-                          <p className="text-muted-foreground uppercase text-[10px]">
+                          <p className="text-[10px] uppercase text-muted-foreground">
                             Next Followup
                           </p>
-                          <p>
-                            {lead.nextFollowup
-                              ? new Date(lead.nextFollowup).toLocaleDateString()
-                              : "—"}
-                          </p>
+                          <p>{formatDate(lead.nextFollowup)}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/60">
+                      <div className="flex items-center justify-end gap-1 border-t border-border/60 pt-2">
                         <Button
                           size="icon"
                           variant="ghost"
                           className="size-8"
                           onClick={() => setSelected(lead)}
+                          aria-label="View lead"
+                          title="View lead"
                         >
                           <Eye className="size-4" />
                         </Button>
+
                         {canUpdate(MODULES.MASTER_LEADS) && (
                           <Button
                             size="icon"
                             variant="ghost"
                             className="size-8"
                             onClick={() => setEditingLead({ ...lead })}
+                            aria-label="Edit lead"
+                            title="Edit lead"
                           >
                             <Pencil className="size-4" />
                           </Button>
                         )}
+
                         {canUpdate(MODULES.MASTER_LEADS) && (
                           <Badge
-                          className="cursor-pointer"
-                          onClick={() => setEditingLeadStatus(lead)}
-                        >
-                          {lead.status}
-                        </Badge>
+                            className="cursor-pointer"
+                            onClick={() => setEditingLeadStatus(lead)}
+                          >
+                            {lead.status || "draft"}
+                          </Badge>
                         )}
+
                         {canDelete(MODULES.MASTER_LEADS) && (
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setLeadIdToDelete(lead.id)}
+                            aria-label="Delete lead"
+                            title="Delete lead"
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -512,55 +541,71 @@ export default function AllLeadsPage() {
                 )}
               </div>
 
-              {/* High-Fidelity Desktop Grid Interface (Visible on Medium screens and up) */}
-              <div className="hidden md:block overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                <table className="min-w-full text-sm">
+              <div className="hidden w-full min-w-0 lg:block">
+                <table className="w-full table-fixed border-collapse text-[12px] xl:text-[13px]">
+                  <colgroup>
+                    <col className="w-[5%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[6%]" />
+                    <col className="w-[9%]" />
+                    <col className="w-[15%]" />
+                    <col className="w-[7%]" />
+                    <col className="w-[7%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[7%]" />
+                  </colgroup>
+
                   <thead>
-                    <tr className="bg-secondary/30 text-left text-xs uppercase tracking-[0.16em] text-muted-foreground border-b border-border">
-                      <th className="px-4 py-3.5 align-middle font-semibold">
-                        Lead ID
+                    <tr className="border-b border-border bg-secondary/30 text-left text-[10px] uppercase leading-4 tracking-[0.08em] text-muted-foreground xl:text-[11px]">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
+                        <span className="block">S.no</span>
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
-                        Student Name
+                      <th className="px-2 py-3 font-semibold xl:px-3">
+                        <span className="block">Student</span>
+                        <span className="block">Name</span>
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Mobile
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
-                        Email
-                      </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">Email</th>
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Source
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Branch
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Counselor
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Country
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
+                      <th className="px-2 py-3 font-semibold xl:px-3">
                         Status
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
-                        Created Date
+                      <th className="px-2 py-3 font-semibold xl:px-3">
+                        <span className="block">Created</span>
+                        <span className="block">Date</span>
                       </th>
-                      <th className="px-4 py-3.5 align-middle font-semibold">
-                        Next Followup
+                      <th className="px-2 py-3 font-semibold xl:px-3">
+                        <span className="block">Next</span>
+                        <span className="block">Followup</span>
                       </th>
-                      <th className="px-4 py-3.5 align-middle text-right font-semibold">
+                      <th className="px-1 py-3 text-center font-semibold xl:px-2">
                         Actions
                       </th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {pageLeads.length === 0 ? (
                       <tr>
                         <td
                           colSpan={12}
-                          className="py-12 text-center text-sm text-muted-foreground bg-background/50"
+                          className="bg-background/50 py-12 text-center text-sm text-muted-foreground"
                         >
                           No leads match your filters.
                         </td>
@@ -569,102 +614,171 @@ export default function AllLeadsPage() {
                       pageLeads.map((lead) => (
                         <tr
                           key={lead.id || lead.leadNumber}
-                          className="border-b border-border hover:bg-secondary/40 transition-colors"
+                          className="border-b border-border transition-colors last:border-b-0 hover:bg-secondary/40"
                         >
-                          <td className="px-4 py-3.5 font-medium align-middle whitespace-nowrap">
-                            {lead.leadNumber}
+                          <td className="px-2 py-3 align-middle font-medium xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.leadNumber || "—"}
+                            >
+                              {lead.leadNumber || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle font-medium text-foreground whitespace-nowrap">
-                            {lead.studentName || "—"}
+
+                          <td className="px-2 py-3 align-middle font-medium text-foreground xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.studentName || "—"}
+                            >
+                              {lead.studentName || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
-                            {lead.mobileNumber || "—"}
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.mobileNumber || "—"}
+                            >
+                              {lead.mobileNumber || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle  text-muted-foreground max-w-[180px] truncate">
-                            {lead.emailId || "—"}
+
+                          <td className="px-2 py-3 align-middle text-muted-foreground xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.emailId || "—"}
+                            >
+                              {lead.emailId || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle max-w-[120px] truncate">
-                            {lead.source || "—"}
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.source || "—"}
+                            >
+                              {lead.source || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle max-w-[150px] truncate">
-                            {lead.branch?.name || "—"}
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.branch?.name || "—"}
+                            >
+                              {lead.branch?.name || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
-                            <div className="flex flex-wrap gap-2">
-                              {lead?.counselors?.length ? (
-                                lead?.counselors.map((coun, idx) => (
-                                  <Badge key={coun.counselor?.id || idx}>
-                                    {coun?.counselor?.name}
-                                    {coun.isPrimary && " (Primary)"}
+
+                          <td className="px-2 py-2.5 align-middle xl:px-3">
+                            <div className="flex min-w-0 flex-col items-start gap-1">
+                              {lead.counselors?.length ? (
+                                lead.counselors.map((counselor, index) => (
+                                  <Badge
+                                    key={counselor.counselor?.id || index}
+                                    className="h-5 max-w-full px-2 text-[10px] font-semibold leading-none"
+                                    title={counselor.counselor?.name || ""}
+                                  >
+                                    <span className="block max-w-full truncate">
+                                      {counselor.counselor?.name || "—"}
+                                      {counselor.isPrimary ? " (Primary)" : ""}
+                                    </span>
                                   </Badge>
                                 ))
                               ) : (
-                                <span className="text-sm text-muted-foreground">
+                                <span
+                                  className="block w-full truncate text-[11px] text-muted-foreground xl:text-xs"
+                                  title="No counselors assigned"
+                                >
                                   No counselors assigned
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
-                            {lead.preferredCountry || "—"}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle">
-                            <Badge
-                              variant="outline"
-                              className={`capitalize tracking-wide font-semibold whitespace-nowrap ${
-                                statusStyle[lead.status || "draft"]
-                              }`}
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <span
+                              className="block truncate"
+                              title={lead.preferredCountry || "—"}
                             >
-                              {lead.status}
-                            </Badge>
+                              {lead.preferredCountry || "—"}
+                            </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle  text-muted-foreground whitespace-nowrap">
-                            {lead.createdAt
-                              ? new Date(lead.createdAt).toLocaleDateString()
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
-                            {lead.nextFollowup
-                              ? new Date(lead.nextFollowup).toLocaleDateString()
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle text-right space-x-1 whitespace-nowrap">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-8"
-                              onClick={() => setSelected(lead)}
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                canUpdate(MODULES.MASTER_LEADS) &&
+                                setEditingLeadStatus(lead)
+                              }
+                              disabled={!canUpdate(MODULES.MASTER_LEADS)}
+                              className="max-w-full disabled:cursor-default"
                             >
-                              <Eye className="size-4" />
-                            </Button>
-                            {canUpdate(MODULES.MASTER_LEADS) && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="size-8"
-                                onClick={() => setEditingLead({ ...lead })}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                            )}
-                            {canUpdate(MODULES.MASTER_LEADS) && (
                               <Badge
-                              className="cursor-pointer"
-                              onClick={() => setEditingLeadStatus(lead)}
-                            >
-                              {lead.status}
-                            </Badge>
-                            )}
-                            {canDelete(MODULES.MASTER_LEADS) && (
+                                variant="outline"
+                                className={`h-6 max-w-full whitespace-nowrap px-2 text-[10px] font-semibold capitalize tracking-wide xl:text-[11px] ${
+                                  statusStyle[lead.status || "draft"]
+                                }`}
+                              >
+                                <span className="truncate">
+                                  {lead.status || "draft"}
+                                </span>
+                              </Badge>
+                            </button>
+                          </td>
+
+                          <td className="px-2 py-3 align-middle text-muted-foreground xl:px-3">
+                            <span className="block whitespace-nowrap">
+                              {formatDate(lead.createdAt)}
+                            </span>
+                          </td>
+
+                          <td className="px-2 py-3 align-middle xl:px-3">
+                            <span className="block whitespace-nowrap">
+                              {formatDate(lead.nextFollowup)}
+                            </span>
+                          </td>
+
+                          <td className="px-1 py-2.5 align-middle xl:px-2">
+                            <div className="flex items-center justify-center gap-0.5">
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => setLeadIdToDelete(lead.id)}
+                                className="size-7 shrink-0"
+                                onClick={() => setSelected(lead)}
+                                aria-label="View lead"
+                                title="View lead"
                               >
-                                <Trash2 className="size-4" />
+                                <Eye className="size-3.5" />
                               </Button>
-                            )}
+
+                              {canUpdate(MODULES.MASTER_LEADS) && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-7 shrink-0"
+                                  onClick={() => setEditingLead({ ...lead })}
+                                  aria-label="Edit lead"
+                                  title="Edit lead"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                              )}
+
+                              {canDelete(MODULES.MASTER_LEADS) && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-7 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => setLeadIdToDelete(lead.id)}
+                                  aria-label="Delete lead"
+                                  title="Delete lead"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -677,8 +791,7 @@ export default function AllLeadsPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination Footer */}
-      <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground px-1">
+      <div className="mt-4 flex flex-col gap-3 px-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <div className="text-center sm:text-left">
           Showing{" "}
           <span className="font-semibold text-foreground">
@@ -692,9 +805,9 @@ export default function AllLeadsPage() {
           <span className="font-semibold text-foreground">
             {filteredLeads.length}
           </span>{" "}
-          result
-          {filteredLeads.length === 1 ? "" : "s"}
+          result{filteredLeads.length === 1 ? "" : "s"}
         </div>
+
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -705,9 +818,11 @@ export default function AllLeadsPage() {
           >
             Previous
           </Button>
-          <span className="font-medium text-foreground text-xs sm:text-sm px-2 bg-secondary/40 py-1 rounded">
+
+          <span className="rounded bg-secondary/40 px-2 py-1 text-xs font-medium text-foreground sm:text-sm">
             Page {page} of {pageCount}
           </span>
+
           <Button
             variant="outline"
             size="sm"
@@ -723,11 +838,11 @@ export default function AllLeadsPage() {
       </div>
 
       <LeadStatusDialog
-  lead={editingLeadStatus}
-  open={!!editingLeadStatus}
-  onClose={() => setEditingLeadStatus(null)}
-  onSuccess={loadLeads}
-/>
+        lead={editingLeadStatus}
+        open={Boolean(editingLeadStatus)}
+        onClose={() => setEditingLeadStatus(null)}
+        onSuccess={loadLeads}
+      />
 
       <PageActions
         selected={selected as any}

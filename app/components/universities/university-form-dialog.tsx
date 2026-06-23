@@ -776,7 +776,7 @@ export function UniversityFormDialog({
                           onValueChange={(value) =>
                             form.setValue(
                               "status",
-                              value as "active" | "inactive" | "archived",
+                              value as "active" | "inactive",
                               {
                                 shouldDirty: true,
                                 shouldValidate: true,

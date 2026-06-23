@@ -50,6 +50,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/store";
 import { MODULES } from "@/lib/module-codes";
 import { RoutePermission } from "@/components/guards/RoutePermission";
+import { Badge } from "@/components/ui/badge";
 
 type DynamicOption = {
   id: string;
@@ -151,7 +152,7 @@ const mbbsFormSchema = z.object({
 
   preferredCountry: requiredText("Preferred country"),
   preferredIntake: optionalText,
-  // preferredUniversity: requiredText("Preferred university / college"),
+  preferredTiers: z.array(z.string()).optional().default([]),
   preferredCourse: requiredText("Preferred course"),
 
   remarks: optionalText,
@@ -181,7 +182,7 @@ const getDefaultValues = (): MbbsFormValues => ({
   mobileNumber: "",
   emailId: "",
   address: "",
-
+  preferredTiers: [],
   passportNumber: "",
   passportExpiryDate: "",
 
@@ -283,7 +284,7 @@ export default function MbbsForm() {
         readingScore: numberOrUndefined(values.readingScore),
         writingScore: numberOrUndefined(values.writingScore),
         speakingScore: numberOrUndefined(values.speakingScore),
-
+        preferredTiers: values.preferredTiers || [],
         status: "new",
       };
       const response = await fetch(`${API_BASE_URL}/mbbs-leads`, {
@@ -788,7 +789,74 @@ export default function MbbsForm() {
                         )}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Preferred University Tiers</Label>
 
+                      <Controller
+                        control={control}
+                        name="preferredTiers"
+                        defaultValue={[]}
+                        render={({ field }) => {
+                          const selected = field.value || [];
+
+                          const tiers = ["T1", "T2", "T3", "T4"];
+
+                          const addTier = (tier: string) => {
+                            if (!selected.includes(tier)) {
+                              field.onChange([...selected, tier]);
+                            }
+                          };
+
+                          const removeTier = (tier: string) => {
+                            field.onChange(
+                              selected.filter((item) => item !== tier),
+                            );
+                          };
+
+                          return (
+                            <div className="space-y-2">
+                              <Select onValueChange={addTier}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select University Tier(s)" />
+                                </SelectTrigger>
+
+                                <SelectContent>
+                                  {tiers
+                                    .filter((tier) => !selected.includes(tier))
+                                    .map((tier) => (
+                                      <SelectItem key={tier} value={tier}>
+                                        {tier}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+
+                              {selected.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {selected.map((tier) => (
+                                    <Badge
+                                      key={tier}
+                                      variant="secondary"
+                                      className="gap-1 px-3 py-1"
+                                    >
+                                      {tier}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => removeTier(tier)}
+                                        className="ml-1 text-xs"
+                                      >
+                                        ✕
+                                      </button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }}
+                      />
+                    </div>
                     <div className="space-y-2">
                       <RequiredLabel>Preferred Course</RequiredLabel>
 

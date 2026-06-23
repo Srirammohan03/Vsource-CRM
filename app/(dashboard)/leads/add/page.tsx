@@ -66,6 +66,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/store";
 import { RoutePermission } from "@/components/guards/RoutePermission";
 import { MODULES } from "@/lib/module-codes";
+import { Badge } from "@/components/ui/badge";
 
 const leadFormSchema = z.object({
   counsellingDate: z.string().optional(),
@@ -96,6 +97,7 @@ const leadFormSchema = z.object({
   preferredCountry: z.string().optional(),
   preferredIntake: z.string().optional(),
   preferredCourse: z.string().optional(),
+  preferredTiers: z.array(z.string()).optional().default([]),
   greGmatScore: z.number().optional(),
   quantitativeScore: z.number().optional(),
   verbalScore: z.number().optional(),
@@ -214,6 +216,7 @@ export default function AddLeadPage() {
 
   const onSubmit = async (values: LeadFormValues, continueFlow = false) => {
     try {
+      console.log("SUBMIT VALUES", values);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/leads`, {
         method: "POST",
         credentials: "include",
@@ -855,7 +858,7 @@ export default function AddLeadPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="space-y-6 p-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                       <div className="space-y-2">
                         <Label>Preferred Country</Label>
                         <Controller
@@ -911,7 +914,76 @@ export default function AddLeadPage() {
                           )}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Preferred University Tiers</Label>
 
+                        <Controller
+                          control={control}
+                          name="preferredTiers"
+                          defaultValue={[]}
+                          render={({ field }) => {
+                            const selected = field.value || [];
+
+                            const tiers = ["T1", "T2", "T3", "T4"];
+
+                            const addTier = (tier: string) => {
+                              if (!selected.includes(tier)) {
+                                field.onChange([...selected, tier]);
+                              }
+                            };
+
+                            const removeTier = (tier: string) => {
+                              field.onChange(
+                                selected.filter((item) => item !== tier),
+                              );
+                            };
+
+                            return (
+                              <div className="space-y-2">
+                                <Select onValueChange={addTier}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select University Tier(s)" />
+                                  </SelectTrigger>
+
+                                  <SelectContent>
+                                    {tiers
+                                      .filter(
+                                        (tier) => !selected.includes(tier),
+                                      )
+                                      .map((tier) => (
+                                        <SelectItem key={tier} value={tier}>
+                                          {tier}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+
+                                {selected.length > 0 && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {selected.map((tier) => (
+                                      <Badge
+                                        key={tier}
+                                        variant="secondary"
+                                        className="gap-1 px-3 py-1"
+                                      >
+                                        {tier}
+
+                                        <button
+                                          type="button"
+                                          onClick={() => removeTier(tier)}
+                                          className="ml-1 text-xs"
+                                        >
+                                          ✕
+                                        </button>
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }}
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label>Preferred Course</Label>
                         <Input
@@ -921,13 +993,13 @@ export default function AddLeadPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 pt-2">
+                    <div className="space-y-2">
                       <Label className="flex items-center">
                         <Briefcase className="mr-2 h-4 w-4" /> Work Experience
                       </Label>
                       <Textarea
                         placeholder="Details of current or past employment..."
-                        rows={3}
+                        rows={2}
                         {...register("workExperience")}
                       />
                     </div>

@@ -73,7 +73,7 @@ interface LeadRecord {
   preferredCountry?: string;
   preferredIntake?: string;
   preferredCourse?: string;
-
+  preferredTiers?: string[];
   tenthPercentage?: number;
   tenthYearOfPassing?: number;
 
@@ -258,7 +258,7 @@ export default function PageActions(props: PageActionsProps) {
                   {selected.studentName}
                 </SheetTitle>
                 <SheetDescription>
-                  Lead Number: {selected.leadNumber}
+                  Serial Number: {selected.leadNumber}
                 </SheetDescription>
               </SheetHeader>
 
@@ -417,6 +417,25 @@ export default function PageActions(props: PageActionsProps) {
                       label="Preferred Intake"
                       value={selected.preferredIntake}
                     />
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Preferred Tiers
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {selected.preferredTiers?.length ? (
+                          selected.preferredTiers.map((tier) => (
+                            <Badge key={tier} variant="secondary">
+                              {tier}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Not Selected
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <DetailItem
                       label="Preferred Course"
                       value={selected.preferredCourse}
@@ -481,8 +500,7 @@ export default function PageActions(props: PageActionsProps) {
                     Modify Lead Parameters
                   </SheetTitle>
                   <SheetDescription>
-                    Synchronize profile record variables for Identification
-                    Number:{" "}
+                    Synchronize profile record variables for Serial Number:{" "}
                     <span className="font-mono text-foreground font-semibold">
                       {editingLead.leadNumber}
                     </span>
@@ -824,7 +842,42 @@ export default function PageActions(props: PageActionsProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label className="text-sm font-medium">
+                      Preferred University Tiers
+                    </Label>
 
+                    <div className="flex flex-wrap gap-2">
+                      {["T1", "T2", "T3", "T4"].map((tier) => {
+                        const selectedTier =
+                          editingLead.preferredTiers?.includes(tier);
+
+                        return (
+                          <Button
+                            key={tier}
+                            type="button"
+                            size="sm"
+                            variant={selectedTier ? "default" : "outline"}
+                            onClick={() =>
+                              setEditingLead({
+                                ...editingLead,
+                                preferredTiers: selectedTier
+                                  ? editingLead.preferredTiers?.filter(
+                                      (t) => t !== tier,
+                                    )
+                                  : [
+                                      ...(editingLead.preferredTiers || []),
+                                      tier,
+                                    ],
+                              })
+                            }
+                          >
+                            {tier}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   {/* Lead Source */}
                   <div className="grid gap-1.5 sm:col-span-2">
                     <Label

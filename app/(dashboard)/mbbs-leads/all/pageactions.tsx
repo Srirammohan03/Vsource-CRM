@@ -44,7 +44,7 @@ interface MbbsLeadRecord {
   leadNumber: string;
 
   counsellingDate?: string | null;
-
+  preferredTiers?: string[];
   studentName?: string;
   fatherName?: string;
   mobileNumber?: string;
@@ -245,7 +245,7 @@ export default function PageActions(props: PageActionsProps) {
                   {selected.studentName}
                 </SheetTitle>
                 <SheetDescription>
-                  Lead Number: {selected.leadNumber}
+                  Serial Number: {selected.leadNumber}
                 </SheetDescription>
               </SheetHeader>
 
@@ -346,6 +346,25 @@ export default function PageActions(props: PageActionsProps) {
                       label="Preferred Intake"
                       value={selected.preferredIntake}
                     />
+
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Preferred Tiers
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {selected.preferredTiers?.length ? (
+                          selected.preferredTiers.map((tier) => (
+                            <Badge key={tier} variant="secondary">
+                              {tier}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm">-</span>
+                        )}
+                      </div>
+                    </div>
+
                     <DetailItem
                       label="Counselling Date"
                       value={
@@ -410,8 +429,7 @@ export default function PageActions(props: PageActionsProps) {
                     Modify Lead Parameters
                   </SheetTitle>
                   <SheetDescription>
-                    Synchronize profile record variables for Identification
-                    Number:{" "}
+                    Synchronize profile record variables for Serial Number:{" "}
                     <span className="font-mono text-foreground font-semibold">
                       {editingLead.leadNumber}
                     </span>
@@ -948,26 +966,41 @@ export default function PageActions(props: PageActionsProps) {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Preferred University */}
-                  <div className="grid gap-1.5">
-                    <Label
-                      htmlFor="edit-university"
-                      className="text-sm font-medium"
-                    >
-                      Preferred University
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label className="text-sm font-medium">
+                      Preferred University Tiers
                     </Label>
-                    <Input
-                      id="edit-university"
-                      className="bg-background"
-                      value={editingLead.preferredUniversity || ""}
-                      onChange={(e) =>
-                        setEditingLead({
-                          ...editingLead,
-                          preferredUniversity: e.target.value,
-                        })
-                      }
-                    />
+
+                    <div className="flex flex-wrap gap-2">
+                      {["T1", "T2", "T3", "T4"].map((tier) => {
+                        const selected =
+                          editingLead.preferredTiers?.includes(tier);
+
+                        return (
+                          <Button
+                            key={tier}
+                            type="button"
+                            variant={selected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() =>
+                              setEditingLead({
+                                ...editingLead,
+                                preferredTiers: selected
+                                  ? editingLead.preferredTiers?.filter(
+                                      (t) => t !== tier,
+                                    )
+                                  : [
+                                      ...(editingLead.preferredTiers || []),
+                                      tier,
+                                    ],
+                              })
+                            }
+                          >
+                            {tier}
+                          </Button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Preferred Course */}
