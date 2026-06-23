@@ -1,4 +1,4 @@
-// crm-frontend-next\app\lib\master-settings.ts
+// lib\master-settings.ts
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -21,15 +21,28 @@ export interface LeadSource {
   name: string;
   status: boolean;
 }
+export const updateMaster = async (
+  endpoint: string,
+  id: string,
+  name: string,
+) => {
+  const { data } = await axios.put(
+    `${API_URL}${endpoint}/${id}`,
+    {
+      name,
+    },
+    {
+      withCredentials: true,
+    },
+  );
 
+  return data?.data;
+};
 export const getCountries = async () => {
   try {
-    const { data } = await axios.get(
-      `${API_URL}/countries?status=true`,
-      {
-        withCredentials: true,
-      },
-    );
+    const { data } = await axios.get(`${API_URL}/countries?status=true`, {
+      withCredentials: true,
+    });
 
     return data?.data || [];
   } catch (error) {
@@ -39,23 +52,17 @@ export const getCountries = async () => {
 };
 
 export const getIntakes = async () => {
-  const { data } = await axios.get(
-    `${API_URL}/intakes?status=true`,
-    {
-      withCredentials: true,
-    },
-  );
+  const { data } = await axios.get(`${API_URL}/intakes?status=true`, {
+    withCredentials: true,
+  });
 
   return data?.data || [];
 };
 
 export const getLeadSources = async () => {
-  const { data } = await axios.get(
-    `${API_URL}/lead-sources?status=true`,
-    {
-      withCredentials: true,
-    },
-  );
+  const { data } = await axios.get(`${API_URL}/lead-sources?status=true`, {
+    withCredentials: true,
+  });
 
   return data?.data || [];
 };

@@ -469,91 +469,105 @@ export default function ApplicationsTrackerPage() {
                     return (
                       <div
                         key={student.id}
-                        draggable={true}
+                        draggable
                         onDragStart={(e) => handleDragStart(e, student.id)}
                         onClick={() => onSelectStudent(student.id)}
-                        className={`p-5 rounded-[22px] border transition-all duration-300 relative flex flex-col justify-between cursor-pointer active:scale-[0.985] group shadow-sm ${colorClass}`}
+                        className={`relative p-5 rounded-[24px] border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer overflow-hidden ${colorClass}`}
                       >
+                        {/* Header */}
                         <div>
-                          {/* Top row: grip + student name */}
-                          <div className="flex justify-between items-start gap-2 mb-2.5">
+                          <div className="flex items-start justify-between gap-3">
                             <div
-                              className="flex items-center gap-1.5 min-w-0"
+                              className="flex items-center gap-2 min-w-0"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="text-slate-400 cursor-grab active:cursor-grabbing hover:text-slate-600 transition-colors p-0.5">
+                              <div className="text-slate-400 cursor-grab hover:text-slate-600 transition-colors">
                                 <GripVertical className="h-4 w-4" />
                               </div>
-                              <h5
-                                onClick={() => onSelectStudent(student.id)}
-                                className="font-extrabold text-[#000000] dark:text-white text-xs hover:underline truncate cursor-pointer min-w-0 select-text"
-                              >
-                                {student.studentName}
-                              </h5>
-                              <span
-                                className={`text-[8px] px-2 py-1 rounded-full font-bold ${
-                                  student.recordType === "lead"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-green-100 text-green-700"
-                                }`}
-                              >
-                                {student.recordType === "lead"
-                                  ? "LEAD"
-                                  : "STUDENT"}
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h5
+                                    onClick={() => onSelectStudent(student.id)}
+                                    className="font-bold text-sm truncate cursor-pointer hover:underline"
+                                  >
+                                    {student.studentName}
+                                  </h5>
+
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      student.recordType === "lead"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-green-100 text-green-700"
+                                    }`}
+                                  >
+                                    {student.recordType === "lead"
+                                      ? "LEAD"
+                                      : "STUDENT"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="px-2 py-1 rounded-full bg-white/60 dark:bg-slate-800/60">
+                              <span className="text-[10px] font-bold uppercase text-slate-500">
+                                {(student.country ?? "---").substring(0, 2)}
                               </span>
                             </div>
-                            <span className="text-[8px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-mono flex-shrink-0">
-                              {(student.country ?? "---").substring(0, 3)}
-                            </span>
                           </div>
 
-                          {/* University details row */}
-                          <div className="mb-3.5 pl-6 min-w-0">
-                            <p className="text-[11px] font-extrabold text-slate-800 dark:text-slate-205 line-clamp-1">
+                          {/* University */}
+                          <div className="mt-5">
+                            <h4 className="font-bold text-sm line-clamp-1">
                               {activeApp?.universityName ||
                                 "University of York"}
-                            </p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                            </h4>
+
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                               {activeApp?.courseName || "No course selected"}
                             </p>
                           </div>
 
-                          {/* Progress bar visualizer */}
-                          <div className="mb-3.5 pl-6">
-                            <div className="flex items-center justify-between text-[9px] font-black text-slate-400 mb-1 leading-none">
-                              <span>Compliance & Checklists</span>
-                              <span className="font-mono">
+                          {/* Progress */}
+                          <div className="mt-5">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-semibold text-slate-500">
+                                Compliance & Checklists
+                              </span>
+
+                              <span className="text-[11px] font-bold">
                                 {progressPercent}%
                               </span>
                             </div>
-                            <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+
+                            <div className="w-full h-2 rounded-full bg-slate-200/70 dark:bg-slate-800 overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-300 ${progressColor}`}
+                                className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
                                 style={{ width: `${progressPercent}%` }}
                               />
                             </div>
                           </div>
                         </div>
 
-                        {/* Footer details + actionable handoffs */}
-                        <div className="pl-6">
-                          <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50 dark:border-slate-800/40 text-[9px] font-bold">
-                            <span className="font-mono text-slate-400 dark:text-slate-400">
-                              {student.intake}
+                        {/* Footer */}
+                        <div className="mt-5 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {student.intake || "Fall 2026"}
                             </span>
-                            <span className="bg-red-500/10 dark:bg-red-500/25 text-red-600 dark:text-red-400 font-black px-2 py-0.5 rounded-md text-[8px] font-mono">
-                              {student.counselor?.name}
+
+                            <span className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold">
+                              {student.counselor?.name || "Unassigned"}
                             </span>
                           </div>
 
-                          {/* Interaction controls using easy-to-read terms */}
-                          <div className="mt-3.5 flex items-center justify-between gap-2">
+                          <div className="flex gap-2 mt-4">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onSelectStudent(student.id);
                               }}
-                              className="text-[9px] font-black bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-1 px-3 rounded-xl transition-all cursor-pointer"
+                              className="flex-1 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold transition-all"
                             >
                               View Details
                             </button>
@@ -569,7 +583,7 @@ export default function ApplicationsTrackerPage() {
                                     toStage: KANBAN_COLUMNS[colIndex + 1].id,
                                   });
                                 }}
-                                className="text-[9.5px] font-black bg-rose-600 hover:bg-rose-700 text-white py-1 px-3 rounded-xl shadow-xs transition-all flex items-center gap-0.5 cursor-pointer"
+                                className="flex-1 h-9 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all"
                               >
                                 Next Step →
                               </button>

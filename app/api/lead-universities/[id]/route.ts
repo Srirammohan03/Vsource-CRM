@@ -3,62 +3,69 @@
 import { NextRequest } from "next/server";
 import db from "@/lib/prisma";
 import { handleError, notFound, ok } from "@/lib/api-helpers";
+import { LeadUniversityCreateSchema } from "@/lib/schemas";
 
 interface RouteContext {
-    params: Promise<{
-        id: string;
-    }>;
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-export async function PATCH(
-    req: NextRequest,
-    { params }: RouteContext,
-) {
-    try {
-        const { id } = await params;
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
+  try {
+    const { id } = await params;
 
-        const body = await req.json();
+    const body = await req.json();
 
-        const university = await db.leadUniversity.update({
-            where: { id },
-            data: {
-                status: body.status,
-            },
-        });
+    const university = await db.leadUniversity.update({
+      where: { id },
+      data: {
+        status: body.status,
+      },
+    });
 
-        return ok(
-            university,
-            "Lead university status updated successfully",
-        );
-    } catch (err) {
-        return handleError(err);
-    }
+    return ok(university, "Lead university status updated successfully");
+  } catch (err) {
+    return handleError(err);
+  }
 }
+export async function PUT(req: NextRequest, { params }: RouteContext) {
+  try {
+    const { id } = await params;
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: RouteContext,
-) {
-    try {
-        const { id } = await params;
+    const body = LeadUniversityCreateSchema.partial().parse(await req.json());
 
-        const university = await db.leadUniversity.findUnique({
-            where: { id },
-        });
+    const university = await db.leadUniversity.update({
+      where: { id },
+      data: body,
+    });
 
-        if (!university) {
-            return notFound("Lead University");
-        }
+    return ok(university, "Lead university updated successfully");
+  } catch (err) {
+    return handleError(err);
+  }
+}
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  try {
+    const { id } = await params;
 
-        await db.leadUniversity.delete({
-            where: { id },
-        });
+    const university = await db.leadUniversity.findUnique({
+      where: { id },
+    });
 
-        return Response.json({
-            success: true,
-            message: "Lead university deleted successfully",
-        });
-    } catch (err) {
-        return handleError(err);
+    if (!university) {
+      return notFound("Lead University");
     }
+
+    await db.leadUniversity.delete({
+      where: { id },
+    });
+
+    return Response.json({
+      success: true,
+      message: "Lead university deleted successfully",
+    });
+  } catch (err) {
+    return handleError(err);
+  }
 }

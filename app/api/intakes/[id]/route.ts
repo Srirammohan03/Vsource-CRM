@@ -11,7 +11,6 @@ import { ok, notFound, noContent, handleError } from "@/lib/api-helpers";
 import { IntakeUpdateSchema } from "@/lib/schemas";
 import prisma from "@/lib/prisma";
 
-
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
@@ -40,8 +39,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
+
     const body = IntakeUpdateSchema.parse(await req.json());
-    const intake = await prisma.intake.update({ where: { id }, data: body });
+
+    const intake = await prisma.intake.update({
+      where: { id },
+      data: body,
+    });
+
     return ok(intake, "Intake updated successfully");
   } catch (err) {
     return handleError(err);

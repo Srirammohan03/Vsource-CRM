@@ -333,7 +333,6 @@ export const IntakeCreateSchema = z.object({
 });
 
 export const IntakeUpdateSchema = IntakeCreateSchema.partial();
-
 // ---------------------------------------------------------------------------
 // Lead Sources, Degrees, Universities
 // ---------------------------------------------------------------------------
