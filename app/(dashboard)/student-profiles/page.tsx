@@ -28,7 +28,6 @@ import { useCreateStudentApplication } from "@/hooks/student/useCreateStudentApp
 import { useUpdateStudentApplication } from "@/hooks/student/useUpdateStudentApplication";
 import { useDeleteStudentApplication } from "@/hooks/student/useDeleteStudentApplication";
 import { useCreateStudentRemark } from "@/hooks/student/useCreateStudentRemark";
-import { useUpdateStudent } from "@/hooks/student/useUpdateStudent";
 import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { STUDENTKEY } from "@/services/student/query-key";
@@ -38,6 +37,7 @@ import {
   useUniversityDropdown,
 } from "@/hooks/student/applications/useUniversityDropdown";
 import { StudentBasicInfoDialog } from "@/components/student/StudentBasicInfoDialog";
+import { StudentVisaLoanProfileSection } from "@/components/student/StudentVisaLoanProfileForm";
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -49,26 +49,11 @@ export default function Home() {
   );
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [detailTab, setDetailTab] = useState<
-    "info" | "documents" | "applications" | "finance" | "visa" | "remarks"
+    "info" | "documents" | "applications" | "visaLoan" | "remarks"
   >("info");
 
   const [globalSearch, setGlobalSearch] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
-
-  const [filterCounsellor, setFilterCounsellor] = useState<string>("All");
-  const [filterIntake, setFilterIntake] = useState<string>("All");
-  const [filterCountry, setFilterCountry] = useState<string>("All");
-  const [filterVisaStatus, setFilterVisaStatus] = useState<string>("All");
-  const [filterLoanStatus, setFilterLoanStatus] = useState<string>("All");
-  const [filterCasStatus, setFilterCasStatus] = useState<string>("All");
-  const [filterNbfc, setFilterNbfc] = useState<string>("All");
-  const [filterFintechAssignee, setFilterFintechAssignee] =
-    useState<string>("All");
-  const [filterAppStatus, setFilterAppStatus] = useState<string>("All");
-  const [filterUniversity, setFilterUniversity] = useState<string>("All");
-  const [filterDateType, setFilterDateType] = useState<string>("All");
-  const [customStartDate, setCustomStartDate] = useState<string>("");
-  const [customEndDate, setCustomEndDate] = useState<string>("");
 
   const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
   const [studentToEdit, setStudentToEdit] = useState<StudentRecord | null>(
@@ -82,14 +67,6 @@ export default function Home() {
   const [appDate, setAppDate] = useState<string>("");
   const [appIntake, setAppIntake] = useState<string>("Sep 2026");
   const [appStatus, setAppStatus] = useState<string>("Pending");
-
-  const [visaForm, setVisaForm] = useState({
-    depositStatus: "",
-    ihsPaymentStatus: "",
-    interviewStatus: "",
-    casStatus: "",
-    visaStatus: "",
-  });
 
   const [newRemarkText, setNewRemarkText] = useState<string>("");
   const [selectedUniversityId, setSelectedUniversityId] = useState("");
@@ -126,23 +103,6 @@ export default function Home() {
   const updateApplicationMutation = useUpdateStudentApplication();
   const deleteApplicationMutation = useDeleteStudentApplication();
   const createRemarkMutation = useCreateStudentRemark();
-  const updateStudentMutation = useUpdateStudent();
-
-  const resetFilters = () => {
-    setFilterCounsellor("All");
-    setFilterIntake("All");
-    setFilterCountry("All");
-    setFilterVisaStatus("All");
-    setFilterLoanStatus("All");
-    setFilterCasStatus("All");
-    setFilterNbfc("All");
-    setFilterFintechAssignee("All");
-    setFilterAppStatus("All");
-    setFilterUniversity("All");
-    setFilterDateType("All");
-    setCustomStartDate("");
-    setCustomEndDate("");
-  };
 
   const parseStudentAdmissionDate = (dateStr: string): Date => {
     const parts = dateStr.split("-");
@@ -170,80 +130,6 @@ export default function Home() {
     return new Date(year, month, day);
   };
 
-  const isDateInFilter = (
-    studentDateStr: string,
-    filterType: string,
-    customStart: string,
-    customEnd: string,
-  ): boolean => {
-    if (filterType === "All") return true;
-    const studentDate = parseStudentAdmissionDate(studentDateStr);
-    const sTime = studentDate.getTime();
-
-    switch (filterType) {
-      case "Today": {
-        const target = new Date(2026, 5, 15);
-        return (
-          studentDate.getFullYear() === target.getFullYear() &&
-          studentDate.getMonth() === target.getMonth() &&
-          studentDate.getDate() === target.getDate()
-        );
-      }
-      case "Yesterday": {
-        const target = new Date(2026, 5, 14);
-        return (
-          studentDate.getFullYear() === target.getFullYear() &&
-          studentDate.getMonth() === target.getMonth() &&
-          studentDate.getDate() === target.getDate()
-        );
-      }
-      case "Last 7 Days": {
-        const minDate = new Date(2026, 5, 9);
-        const maxDate = new Date(2026, 5, 15, 23, 59, 59);
-        return sTime >= minDate.getTime() && sTime <= maxDate.getTime();
-      }
-      case "Last 30 Days": {
-        const minDate = new Date(2026, 4, 16);
-        const maxDate = new Date(2026, 5, 15, 23, 59, 59);
-        return sTime >= minDate.getTime() && sTime <= maxDate.getTime();
-      }
-      case "This Month": {
-        return (
-          studentDate.getFullYear() === 2026 && studentDate.getMonth() === 5
-        );
-      }
-      case "Last Month": {
-        return (
-          studentDate.getFullYear() === 2026 && studentDate.getMonth() === 4
-        );
-      }
-      case "This Quarter": {
-        return (
-          studentDate.getFullYear() === 2026 &&
-          [3, 4, 5].includes(studentDate.getMonth())
-        );
-      }
-      case "Last Quarter": {
-        return (
-          studentDate.getFullYear() === 2026 &&
-          [0, 1, 2].includes(studentDate.getMonth())
-        );
-      }
-      case "This Year": {
-        return studentDate.getFullYear() === 2026;
-      }
-      case "Custom Date": {
-        if (!customStart) return true;
-        const start = new Date(customStart);
-        const end = customEnd ? new Date(customEnd) : new Date(2026, 5, 15);
-        end.setHours(23, 59, 59, 999);
-        return sTime >= start.getTime() && sTime <= end.getTime();
-      }
-      default:
-        return true;
-    }
-  };
-
   const filteredStudents = useMemo(() => {
     return students.filter((student: StudentRecord) => {
       if (globalSearch.trim() !== "") {
@@ -254,62 +140,9 @@ export default function Home() {
         if (!matchesSearch) return false;
       }
 
-      if (
-        filterVisaStatus !== "All" &&
-        student?.visaProfile?.visaStatus !== filterVisaStatus
-      )
-        return false;
-      if (
-        filterLoanStatus !== "All" &&
-        student?.loan?.status !== filterLoanStatus
-      )
-        return false;
-      if (
-        filterCasStatus !== "All" &&
-        student?.visaProfile?.casStatus !== filterCasStatus
-      )
-        return false;
-      if (filterNbfc !== "All" && student?.loan?.nbfc !== filterNbfc)
-        return false;
-      if (
-        filterFintechAssignee !== "All" &&
-        student?.loan?.assignee !== filterFintechAssignee
-      )
-        return false;
-
-      if (filterAppStatus !== "All") {
-        const hasMatchingApp = student.applications.some(
-          (app) => app.status === filterAppStatus,
-        );
-        if (!hasMatchingApp) return false;
-      }
-
-      if (filterUniversity !== "All") {
-        const hasMatchingUni = student.applications.some(
-          (app) => app.university?.name === filterUniversity,
-        );
-        if (!hasMatchingUni) return false;
-      }
-
       return true;
     });
-  }, [
-    students,
-    globalSearch,
-    filterCounsellor,
-    filterIntake,
-    filterCountry,
-    filterVisaStatus,
-    filterLoanStatus,
-    filterCasStatus,
-    filterNbfc,
-    filterFintechAssignee,
-    filterAppStatus,
-    filterUniversity,
-    filterDateType,
-    customStartDate,
-    customEndDate,
-  ]);
+  }, [students, globalSearch]);
 
   const selectedStudent = useMemo<StudentRecord | null>(() => {
     return (
@@ -350,24 +183,6 @@ export default function Home() {
         toast.error("Failed to delete student records.");
       }
     }
-  };
-
-  const handleTableStatusChange = async (
-    studentId: string,
-    field: string,
-    value: string,
-  ) => {
-    if (!selectedStudent) return;
-
-    await updateStudentMutation.mutateAsync({
-      id: studentId,
-      payload: {
-        visaProfile: {
-          ...selectedStudent.visaProfile,
-          [field]: value,
-        },
-      },
-    });
   };
 
   const handleAddRemark = async (e: React.FormEvent) => {
@@ -470,45 +285,12 @@ export default function Home() {
     await deleteApplicationMutation.mutateAsync(appId);
   };
 
-  const handleSaveFinancesTab = async (e: React.FormEvent, finPayload: any) => {
-    e.preventDefault();
-
-    if (!selectedStudent) return;
-
-    try {
-      await updateStudentMutation.mutateAsync({
-        id: selectedStudent.id,
-        payload: {
-          loan: finPayload,
-        },
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   return (
     <div
       className={`${isDarkMode ? "dark" : ""} flex min-h-screen bg-background text-foreground transition-colors duration-200`}
     >
       <div className="grow flex flex-col min-w-0 min-h-screen">
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5">
-            <div>
-              <span className="text-red-601 font-black tracking-widest text-[10px] uppercase text-red-600 block">
-                Consultancy CRM Management Panel
-              </span>
-              <h2 className="text-xl font-black uppercase tracking-tight">
-                {selectedStudentId
-                  ? "Active Case Folio Verification"
-                  : `${currentView} Control Desk`}
-              </h2>
-            </div>
-            <div className="text-xs text-slate-400 font-mono">
-              Last Sync: 15-Jun-2026 21:59 UTC
-            </div>
-          </div>
-
           <AnimatePresence mode="wait">
             {selectedStudentId && selectedStudent ? (
               <motion.div
@@ -522,28 +304,8 @@ export default function Home() {
                   onClick={() => setSelectedStudentId(null)}
                   className="inline-flex items-center gap-1.5 text-xs font-black text-red-600 hover:underline hover:scale-[1.01] transition-transform"
                 >
-                  ← Return to Master Profiles Directory
+                  ← Back
                 </button>
-
-                <div
-                  className={`p-6 rounded-3xl border shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-red-605 from-red-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-2xl font-black">
-                      {selectedStudent?.studentName?.charAt(0) ?? "-"}
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="text-lg font-black text-slate-805 dark:text-slate-100">
-                          {selectedStudent.studentName ?? "-"}
-                        </h3>
-                        <span className="bg-red-600/10 text-red-600 dark:text-red-400 font-bold px-2.5 py-0.5 rounded-full text-[9px] tracking-wide uppercase">
-                          Counsellor: {selectedStudent?.counselor?.name ?? "-"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                   <div className="space-y-1.5 lg:col-span-1">
@@ -570,16 +332,10 @@ export default function Home() {
                         color: "text-emerald-500",
                       },
                       {
-                        key: "finance",
-                        label: "Finance & Lending NBFC",
+                        key: "visaLoan",
+                        label: "Visa & Loan Profile",
                         icon: CreditCard,
                         color: "text-amber-500",
-                      },
-                      {
-                        key: "visa",
-                        label: "Visa Stamp Stepper",
-                        icon: FileCheck2,
-                        color: "text-purple-500",
                       },
                       {
                         key: "remarks",
@@ -1080,369 +836,12 @@ export default function Home() {
                         </div>
                       )}
 
-                      {detailTab === "finance" && (
-                        <div className="space-y-6">
-                          <div className="pb-3 border-b border-inherit">
-                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">
-                              Financial & Borrowing Ledger
-                            </h4>
-                            <p className="text-xs text-slate-400">
-                              Manage Lending NBFC credits, processing fee
-                              waivers, and sanctioned payouts.
-                            </p>
-                          </div>
-
-                          <form
-                            onSubmit={(e) => {
-                              const form = e.currentTarget;
-                              const payload = {
-                                assignee: (
-                                  form.elements.namedItem(
-                                    "assignee",
-                                  ) as HTMLInputElement
-                                ).value,
-                                nbfc: (
-                                  form.elements.namedItem(
-                                    "nbfc",
-                                  ) as HTMLSelectElement
-                                ).value,
-                                status: (
-                                  form.elements.namedItem(
-                                    "status",
-                                  ) as HTMLSelectElement
-                                ).value,
-                                pfStatus: (
-                                  form.elements.namedItem(
-                                    "pfStatus",
-                                  ) as HTMLSelectElement
-                                ).value,
-                                sanctionedAmount: (
-                                  form.elements.namedItem(
-                                    "sanctioned",
-                                  ) as HTMLInputElement
-                                ).value,
-                                disbursedAmount: (
-                                  form.elements.namedItem(
-                                    "disbursed",
-                                  ) as HTMLInputElement
-                                ).value,
-                              };
-                              handleSaveFinancesTab(e, payload);
-                            }}
-                            className="space-y-4 text-xs"
-                          >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Fintech Assignee Representative
-                                </label>
-                                <input
-                                  type="text"
-                                  name="assignee"
-                                  defaultValue={
-                                    selectedStudent?.loan?.assignee ?? "-"
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                  required
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Lending NBFC Partner
-                                </label>
-                                <select
-                                  name="nbfc"
-                                  defaultValue={
-                                    selectedStudent?.loan?.nbfc ?? "-"
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-650 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                >
-                                  {[
-                                    "Poonawalla",
-                                    "Credila",
-                                    "Avanse",
-                                    "ICICI",
-                                    "HDFC Credila",
-                                    "Self Funding",
-                                    "Other",
-                                  ].map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-1">
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Loan Status
-                                </label>
-                                <select
-                                  name="status"
-                                  defaultValue={
-                                    selectedStudent?.loan?.status ?? "-"
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                >
-                                  {[
-                                    "Pending",
-                                    "Under Review",
-                                    "Approved",
-                                    "Rejected",
-                                    "Sanctioned",
-                                    "Disbursed",
-                                  ].map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Processing Fee Status
-                                </label>
-                                <select
-                                  name="pfStatus"
-                                  defaultValue={
-                                    selectedStudent?.loan?.pfStatus || "Pending"
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                >
-                                  {[
-                                    "Paid",
-                                    "Pending",
-                                    "Waived",
-                                    "Not Applicable",
-                                  ].map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Sanctioned Amount
-                                </label>
-                                <input
-                                  type="text"
-                                  name="sanctioned"
-                                  defaultValue={
-                                    selectedStudent?.loan?.sanctionedAmount
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                  required
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1.5 block">
-                                  Released Disbursement
-                                </label>
-                                <input
-                                  type="text"
-                                  name="disbursed"
-                                  defaultValue={
-                                    selectedStudent?.loan?.disbursedAmount
-                                  }
-                                  className={`w-full px-3.5 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}
-                                  required
-                                />
-                              </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-inherit flex justify-end">
-                              <button
-                                type="submit"
-                                className="bg-red-655 bg-red-600 hover:bg-red-700 text-white text-xs font-black px-6 py-2.5 rounded-xl uppercase tracking-wider shadow"
-                              >
-                                Save
-                              </button>
-                            </div>
-                          </form>
-                        </div>
-                      )}
-
-                      {detailTab === "visa" && (
-                        <div className="space-y-6">
-                          <div className="pb-3 border-b border-inherit">
-                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">
-                              Immigration Milestones Checklist
-                            </h4>
-                            <p className="text-xs text-slate-400">
-                              Alter key embassy timeline metrics. Changes
-                              refresh progress bars instantly.
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                            <div>
-                              <label className="text-[9px] uppercase font-bold text-slate-450 block mb-1.5">
-                                Deposit Payment Status
-                              </label>
-                              <select
-                                value={
-                                  selectedStudent?.visaProfile?.depositStatus
-                                }
-                                onChange={(e) =>
-                                  handleTableStatusChange(
-                                    selectedStudent.id,
-                                    "depositStatus",
-                                    e.target.value,
-                                  )
-                                }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
-                              >
-                                {[
-                                  "Deposit Paid",
-                                  "Deposit Not Paid",
-                                  "Paid",
-                                  "Pending",
-                                  "Waived",
-                                ].map((opt) => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[9px] uppercase font-bold text-slate-450 block mb-1.5">
-                                IHS Charge Status
-                              </label>
-                              <select
-                                value={
-                                  selectedStudent?.visaProfile?.ihsPaymentStatus
-                                }
-                                onChange={(e) =>
-                                  handleTableStatusChange(
-                                    selectedStudent.id,
-                                    "ihsPaymentStatus",
-                                    e.target.value,
-                                  )
-                                }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
-                              >
-                                {["Paid", "Pending", "Not Required"].map(
-                                  (opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ),
-                                )}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[9px] uppercase font-bold text-slate-450 block mb-1.5">
-                                Embassy Interview
-                              </label>
-                              <select
-                                value={
-                                  selectedStudent?.visaProfile?.interviewStatus
-                                }
-                                onChange={(e) =>
-                                  handleTableStatusChange(
-                                    selectedStudent.id,
-                                    "interviewStatus",
-                                    e.target.value,
-                                  )
-                                }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
-                              >
-                                {["Completed", "Pending", "Waived"].map(
-                                  (opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ),
-                                )}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[9px] uppercase font-bold text-slate-450 block mb-1.5">
-                                CAS Issue Status
-                              </label>
-                              <select
-                                value={selectedStudent?.visaProfile?.casStatus}
-                                onChange={(e) =>
-                                  handleTableStatusChange(
-                                    selectedStudent.id,
-                                    "casStatus",
-                                    e.target.value,
-                                  )
-                                }
-                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
-                              >
-                                {[
-                                  "CAS Received",
-                                  "CAS Under Review",
-                                  "CAS Not Applied",
-                                  "Received",
-                                  "Pending",
-                                  "Not Required",
-                                ].map((opt) => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <label className="text-[9px] uppercase font-bold text-slate-450 block mb-1.5">
-                                Official Visa Stamp Decision
-                              </label>
-                              <select
-                                value={selectedStudent?.visaProfile?.visaStatus}
-                                onChange={(e) => {
-                                  setVisaForm((prev) => ({
-                                    ...prev,
-                                    visaStatus: e.target.value,
-                                  }));
-                                  handleTableStatusChange(
-                                    selectedStudent.id,
-                                    "visaStatus",
-                                    e.target.value,
-                                  );
-                                }}
-                                className={`w-full px-3.5 py-2 rounded-xl border ${isDarkMode ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-202"}`}
-                              >
-                                {[
-                                  "Visa Approved",
-                                  "Visa Applied",
-                                  "Visa Decision Pending",
-                                  "Visa Rejected",
-                                  "Draft Pending",
-                                  "Approved",
-                                  "Applied",
-                                  "Decision Pending",
-                                  "Rejected",
-                                ].map((opt) => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="p-4 bg-emerald-500/10 border border-emerald-550/20 text-xs rounded-2xl flex items-center gap-3">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                            <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                              Embassy milestone fields saved back to case file.
-                              Dynamic pipeline is in sync.
-                            </p>
-                          </div>
-                        </div>
+                      {detailTab === "visaLoan" && (
+                        <StudentVisaLoanProfileSection
+                          key={selectedStudent.id}
+                          studentId={selectedStudent.id}
+                          isDarkMode={isDarkMode}
+                        />
                       )}
 
                       {detailTab === "remarks" && (
@@ -1536,7 +935,6 @@ export default function Home() {
                       onSelectStudent={handleSelectStudent}
                       onEditStudent={openEditModal}
                       onDeleteStudent={handleDeleteStudent}
-                      onStatusChange={handleTableStatusChange}
                     />
                   </motion.div>
                 )}

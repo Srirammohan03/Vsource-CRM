@@ -23,7 +23,6 @@ interface StudentTableProps {
   onSelectStudent: (id: string) => void;
   onEditStudent: (student: any) => void;
   onDeleteStudent: (id: string) => void;
-  onStatusChange: (id: string, field: string, value: any) => void;
 }
 
 export function StudentTable({
@@ -31,7 +30,6 @@ export function StudentTable({
   onSelectStudent,
   onEditStudent,
   onDeleteStudent,
-  onStatusChange,
 }: StudentTableProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<
     Record<string, boolean>
@@ -162,7 +160,6 @@ export function StudentTable({
               </th>
               <th className={`px-4 py-3 ${thBgClass}`}>COUNSELLOR NAME</th>
               <th className={`px-4 py-3 ${thBgClass}`}>DATE OF ADMISSION</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>TYPE OF APPLICATION</th>
               <th className={`px-4 py-3 ${thBgClass}`}>PASSPORT NO</th>
               <th className={`px-4 py-3 ${thBgClass}`}>MOBILE NUMBER</th>
               <th className={`px-4 py-3 ${thBgClass}`}>EMAIL ID</th>
@@ -241,7 +238,7 @@ export function StudentTable({
 
                     {/* 2. Student unique ID (Sticky left-12) */}
                     <td className="px-3 py-3.5 font-mono text-[11px] font-black tracking-wider text-slate-500 bg-white dark:bg-slate-900 sticky left-12 z-10 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] w-20">
-                      {student?.studentNumber ?? "-"}
+                      {student?.studentName ?? "-"}
                     </td>
 
                     {/* 3. Student Name (Sticky left-32) */}
@@ -259,21 +256,16 @@ export function StudentTable({
 
                     {/* 5. Date of Admission */}
                     <td className="px-4 py-3.5 text-slate-500 font-semibold font-mono text-[11px]">
-                      {student?.admissionDate
-                        ? new Date(student.admissionDate).toLocaleDateString(
+                      {student?.applicationDate
+                        ? new Date(student.applicationDate).toLocaleDateString(
                             "en-GB",
                           )
                         : "-"}
                     </td>
 
-                    {/* 6. Type of Application */}
-                    <td className="px-4 py-3.5 text-slate-550 dark:text-slate-400 font-semibold">
-                      {student?.applicationType || "Undergrad"}
-                    </td>
-
                     {/* 7. Passport Number */}
                     <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                      {student?.passportNumber ?? "-"}
+                      {student?.lead?.passport ?? "-"}
                     </td>
 
                     {/* 8. Mobile Number */}
@@ -312,13 +304,13 @@ export function StudentTable({
 
                     {/* 11. Country */}
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-350">
-                      {student.country}
+                      {student.lead?.preferredCountry}
                     </td>
 
                     {/* 12. Intake */}
                     <td className="px-4 py-3.5 text-center font-bold">
                       <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px]">
-                        {student.intake}
+                        {student.lead?.preferredIntake}
                       </span>
                     </td>
 

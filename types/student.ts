@@ -201,3 +201,46 @@ export interface UploadStudentDocumentVariables {
   remarks?: string;
   onProgress?: (percentage: number) => void;
 }
+
+//! Visa
+export type StudentVisaLoanProfile = {
+  id?: string;
+  studentId?: string;
+  depositDeadlineDate?: string | null;
+  depositStatus?: string | null;
+  ihsPaidStatus?: string | null;
+  visaPaidStatus?: string | null;
+  casDeadlineDate?: string | null;
+  casStatus?: string | null;
+  visaStatus?: string | null;
+  universityStartDate?: string | null;
+  fintechAssignee?: string | null;
+  nbfc?: string | null;
+  loanStatus?: string | null;
+  pfStatus?: string | null;
+  appliedAmount?: string | number | null;
+  sanctionedAmount?: string | number | null;
+  disbursed?: boolean;
+  disbursedAmount?: string | number | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type StudentVisaLoanProfilePayload = {
+  depositDeadlineDate: string | null;
+  depositStatus: string | null;
+  ihsPaidStatus: string | null;
+  visaPaidStatus: string | null;
+  casDeadlineDate: string | null;
+  casStatus: string | null;
+  visaStatus: string | null;
+  universityStartDate: string | null;
+  fintechAssignee: string | null;
+  nbfc: string | null;
+  loanStatus: string | null;
+  pfStatus: string | null;
+  appliedAmount: number | null;
+  sanctionedAmount: number | null;
+  disbursed: boolean;
+  disbursedAmount: number | null;
+};

@@ -546,6 +546,8 @@ model StudentVisaLoanProfile {
   loanStatus String?
   pfStatus   String?
 
+  appliedAmount Decimal? @db.Decimal(12, 2)
+
   sanctionedAmount Decimal? @db.Decimal(12, 2)
 
   disbursed       Boolean  @default(false)
