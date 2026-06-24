@@ -35,45 +35,11 @@ export interface StudentRecord {
 
   applications: Applications[];
 
-  visaProfile?: {
-    depositStatus?: string;
-    depositDeadlineDate?: string | Date;
-
-    ihsPaymentStatus?: string;
-
-    interviewStatus?: string;
-
-    casStatus?: string;
-    casDeadlineDate?: string | Date;
-
-    visaStatus?: string;
-
-    universityStartDate?: string | Date;
-  } | null;
-
-  loan?: {
-    assignee?: string;
-
-    nbfc?: string;
-
-    status?: string;
-
-    pfStatus?: string;
-
-    sanctionedAmount?: string;
-
-    disbursedAmount?: string;
-  } | null;
+  visaLoanProfile?: StudentVisaLoanProfile;
 
   remarks?: Remarks[];
 
-  documents?: {
-    id: string;
-    name: string;
-    fileUrl: string;
-    category?: string;
-    uploadedAt: string | Date;
-  }[];
+  documents?: StudentDocumentRecord[];
 
   lead?: Lead;
 

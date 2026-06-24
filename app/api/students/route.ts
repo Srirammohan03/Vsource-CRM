@@ -79,6 +79,10 @@ export async function GET(req: NextRequest) {
           select: {
             twelfthPercentage: true,
             bachelorsCourse: true,
+            passport: true,
+            preferredCountry: true,
+            preferredCourse: true,
+            preferredIntake: true,
           },
         },
 
@@ -187,7 +191,6 @@ export async function GET(req: NextRequest) {
           orderBy: {
             createdAt: "desc",
           },
-          take: 1,
         },
       },
 
