@@ -236,14 +236,6 @@ export default function Home() {
     }
   };
 
-  const selectedUniversity = universities?.find(
-    (u: any) => u.id === selectedUniversityId,
-  );
-
-  if (!selectedUniversity) {
-    toast.error("Please select a university");
-    return;
-  }
 
   const tabProgressMap: Record<string, StudentModuleKey> = {
     info: "basic_information",
