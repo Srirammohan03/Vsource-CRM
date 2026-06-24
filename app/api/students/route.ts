@@ -77,12 +77,14 @@ export async function GET(req: NextRequest) {
       include: {
         lead: {
           select: {
-            twelfthPercentage: true,
-            bachelorsCourse: true,
             passport: true,
             preferredCountry: true,
-            preferredCourse: true,
             preferredIntake: true,
+            preferredCourse: true,
+            preferredTiers: true,
+            bachelorsCourse: true,
+            twelfthPercentage: true,
+            twelfthYearOfPassing: true,
           },
         },
 

@@ -1,3 +1,4 @@
+// types\student.ts
 import { Lead } from ".";
 
 export interface StudentRecord {
@@ -19,7 +20,11 @@ export interface StudentRecord {
 
   currentStage?: string;
 
-  status: string;
+  status: "active" | "inactive";
+
+  moi?: string;
+
+  undergraduate?: "pursuing" | "graduate";
 
   counselorId: string;
 
@@ -55,6 +60,9 @@ export interface Applications {
   universityId: string;
   courseId: string;
 
+  countryId?: string;
+  intakeId?: string;
+
   university?: {
     id: string;
     name: string;
@@ -66,6 +74,8 @@ export interface Applications {
   };
 
   status: string;
+
+  offerStatus?: string;
 
   applicationDate?: string | Date;
 }

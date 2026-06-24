@@ -30,7 +30,7 @@ export interface Lead {
   studentName?: string;
   mobileNumber?: string;
   emailId?: string;
-  password?:string;
+  password?: string;
 
   place?: string;
   passport?: string;
@@ -55,7 +55,7 @@ export interface Lead {
   preferredCountry?: string;
   preferredIntake?: string;
   preferredCourse?: string;
-
+  preferredTiers?: string[];
   tenthPercentage?: number;
   tenthYearOfPassing?: number;
 

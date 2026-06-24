@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { handleError, ok } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
-
+import { UniversityTier } from "@/generated/prisma/enums";
 export async function GET(req: NextRequest) {
   try {
     const studentId = req.nextUrl.searchParams.get("studentId");
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         lead: {
           select: {
             preferredCountry: true,
+            preferredTiers: true,
           },
         },
       },
@@ -30,20 +31,33 @@ export async function GET(req: NextRequest) {
     }
 
     const preferredCountry = student.lead?.preferredCountry;
+    const preferredTiers =
+      (student.lead?.preferredTiers as UniversityTier[]) || [];
 
     const universities = await prisma.university.findMany({
       where: {
         status: "active",
+
         ...(preferredCountry && {
           country: {
             name: preferredCountry,
           },
         }),
+
+        ...(preferredTiers.length > 0 && {
+          tier: {
+            in: preferredTiers,
+          },
+        }),
       },
+
       select: {
         id: true,
         name: true,
+        countryId: true,
+        tier: true,
       },
+
       orderBy: {
         name: "asc",
       },

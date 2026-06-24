@@ -33,14 +33,21 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const { courseId } = await params;
+
     const body = UniversityCourseUpdateSchema.parse(await req.json());
+
+    console.log("COURSE ID:", courseId);
+    console.log("UPDATE BODY:", body);
+
     const course = await db.universityCourse.update({
       where: { id: courseId },
       data: body,
       include: { intake: true },
     });
+
     return ok(course, "Course updated successfully");
   } catch (err) {
+    console.error(err);
     return handleError(err);
   }
 }

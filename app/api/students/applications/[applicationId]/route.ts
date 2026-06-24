@@ -1,4 +1,4 @@
-// app\api\students\[id]\applications\[applicationId]\route.ts
+// app\api\students\applications\[applicationId]\route.ts
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
