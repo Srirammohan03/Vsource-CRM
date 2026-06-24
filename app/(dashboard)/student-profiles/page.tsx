@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { DMSSection } from "./DMSSection";
 import { StudentTable } from "./StudentTable";
-import { AddEditModal } from "./AddEditModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStudents } from "@/hooks/student/useStudents";
 import { Applications, Remarks, StudentRecord } from "@/types/student";
@@ -88,7 +87,6 @@ export default function Home() {
   const [globalSearch, setGlobalSearch] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
 
-  const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
   const [studentToEdit, setStudentToEdit] = useState<StudentRecord | null>(
     null,
   );
@@ -189,16 +187,6 @@ export default function Home() {
     setDetailTab("info");
     setGlobalSearch("");
     setShowSearchResults(false);
-  };
-
-  const openEditModal = (student: StudentRecord) => {
-    setStudentToEdit(student);
-    setIsAddEditOpen(true);
-  };
-
-  const openAddModal = () => {
-    setStudentToEdit(null);
-    setIsAddEditOpen(true);
   };
 
   const handleDeleteStudent = async (id: string) => {
@@ -920,7 +908,6 @@ export default function Home() {
                     <StudentTable
                       isDarkMode={isDarkMode}
                       onSelectStudent={handleSelectStudent}
-                      onEditStudent={openEditModal}
                       onDeleteStudent={handleDeleteStudent}
                     />
                   </motion.div>
@@ -930,13 +917,6 @@ export default function Home() {
           </AnimatePresence>
         </main>
       </div>
-
-      <AddEditModal
-        isOpen={isAddEditOpen}
-        onClose={() => setIsAddEditOpen(false)}
-        isDarkMode={isDarkMode}
-        studentToEdit={studentToEdit}
-      />
 
       {selectedStudent && (
         <StudentBasicInfoDialog

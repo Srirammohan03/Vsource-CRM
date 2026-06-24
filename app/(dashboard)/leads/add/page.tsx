@@ -97,7 +97,7 @@ const leadFormSchema = z.object({
   preferredCountry: z.string().optional(),
   preferredIntake: z.string().optional(),
   preferredCourse: z.string().optional(),
-  preferredTiers: z.array(z.string()).optional().default([]),
+  preferredTiers: z.array(z.string()).default([]),
   greGmatScore: z.number().optional(),
   quantitativeScore: z.number().optional(),
   verbalScore: z.number().optional(),

@@ -71,7 +71,8 @@ export default function ApplicationsTrackerPage() {
   const leads = data?.leads ?? [];
   const isDarkMode = false;
 
-  const onSelectStudent = (id: string) => {
+  const onSelectStudent = (id?: string) => {
+    if (!id) return;
     console.log(id);
   };
 
@@ -148,10 +149,12 @@ export default function ApplicationsTrackerPage() {
     student: StudentRecord,
   ): "red" | "green" | "yellow" | "white" => {
     const stage = (student.currentStage || "").toLowerCase().trim();
-    const visaStat = (student.visaProfile?.visaStatus || "")
+    const visaStat = (student.visaLoanProfile?.visaStatus || "")
       .toLowerCase()
       .trim();
-    const loanStat = (student.loan?.status || "").toLowerCase().trim();
+    const loanStat = (student.visaLoanProfile?.loanStatus || "")
+      .toLowerCase()
+      .trim();
     const firstAppStat = (student.applications?.[0]?.status || "")
       .toLowerCase()
       .trim();
@@ -264,7 +267,8 @@ export default function ApplicationsTrackerPage() {
   };
 
   // Drag handles and verification
-  const handleDragStart = (e: React.DragEvent, studentId: string) => {
+  const handleDragStart = (e: React.DragEvent, studentId?: string) => {
+    if (!studentId) return;
     e.dataTransfer.setData("studentId", studentId);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -281,7 +285,7 @@ export default function ApplicationsTrackerPage() {
     const student = students.find((s) => s.id === studentId);
     if (!student) return;
 
-    const currentStageName = mapStageToKanban(student.currentStage);
+    const currentStageName = mapStageToKanban(student.currentStage ?? "");
     const KANBAN_ORDER = [
       "Inquiry",
       "Documents",
@@ -313,6 +317,7 @@ export default function ApplicationsTrackerPage() {
 
     // Logical single step forward
     if (targetIndex === currentIndex + 1) {
+      if (!student.id) return;
       setMoveConfirm({
         studentId: student.id,
         studentName: student.studentName,
@@ -327,26 +332,26 @@ export default function ApplicationsTrackerPage() {
     const { studentId, toStage, fromStage } = moveConfirm;
     const nextStageValue = mapKanbanToStageValue(toStage);
 
-    StudentRecord((prev) => {
-      return prev.map((s) => {
-        if (s.id === studentId) {
-          const nowLabel = new Date().toLocaleDateString(undefined, {
-            day: "numeric",
-            month: "short",
-          });
-          const newRemark = {
-            date: nowLabel,
-            note: `Moved candidate status from ${fromStage} to ${toStage}`,
-          };
-          return {
-            ...s,
-            currentStage: nextStageValue as any,
-            remarks: [newRemark, ...(s.remarks || [])],
-          };
-        }
-        return s;
-      });
-    });
+    // StudentRecord((prev:any) => {
+    //   return prev.map((s:StudentRecord) => {
+    //     if (s.id === studentId) {
+    //       const nowLabel = new Date().toLocaleDateString(undefined, {
+    //         day: "numeric",
+    //         month: "short",
+    //       });
+    //       const newRemark = {
+    //         date: nowLabel,
+    //         note: `Moved candidate status from ${fromStage} to ${toStage}`,
+    //       };
+    //       return {
+    //         ...s,
+    //         currentStage: nextStageValue as any,
+    //         remarks: [newRemark, ...(s.remarks || [])],
+    //       };
+    //     }
+    //     return s;
+    //   });
+    // });
 
     setMoveConfirm(null);
   };
@@ -356,7 +361,7 @@ export default function ApplicationsTrackerPage() {
       recordType: "student",
     })),
 
-    ...leads.map((lead) => ({
+    ...leads.map((lead: any) => ({
       ...lead,
       recordType: "lead",
       currentStage: lead.status || "Lead Created",
@@ -465,9 +470,13 @@ export default function ApplicationsTrackerPage() {
                     return (
                       <div
                         key={student.id}
-                        draggable={true}
-                        onDragStart={(e) => handleDragStart(e, student.id)}
-                        onClick={() => onSelectStudent(student.id)}
+                        draggable={Boolean(student.id)}
+                        onDragStart={(e) =>
+                          student.id && handleDragStart(e, student.id)
+                        }
+                        onClick={() =>
+                          student.id && onSelectStudent(student.id)
+                        }
                         className={`p-5 rounded-[22px] border transition-all duration-300 relative flex flex-col justify-between cursor-pointer active:scale-[0.985] group shadow-sm ${colorClass}`}
                       >
                         <div>
@@ -481,7 +490,9 @@ export default function ApplicationsTrackerPage() {
                                 <GripVertical className="h-4 w-4" />
                               </div>
                               <h5
-                                onClick={() => onSelectStudent(student.id)}
+                                onClick={() =>
+                                  student.id && onSelectStudent(student.id)
+                                }
                                 className="font-extrabold text-[#000000] dark:text-white text-xs hover:underline truncate cursor-pointer min-w-0 select-text"
                               >
                                 {student.studentName}
