@@ -1,4 +1,4 @@
-// app\api\students\[id]\applications\route.ts
+//app\api\students\[id]\applications\route.ts
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -72,7 +72,15 @@ export async function POST(
         name: true,
       },
     });
+    const applicationCount = await prisma.studentApplication.count({
+      where: {
+        studentId,
+      },
+    });
 
+    if (applicationCount >= 5) {
+      throw new Error("Maximum 5 university applications allowed per student");
+    }
     const application = await prisma.studentApplication.create({
       data: {
         studentId,
