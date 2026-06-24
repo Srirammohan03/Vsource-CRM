@@ -21,7 +21,7 @@ import { DMSSection } from "./DMSSection";
 import { StudentTable } from "./StudentTable";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStudents } from "@/hooks/student/useStudents";
-import { Applications, Remarks, StudentRecord } from "@/types/student";
+import { Remarks, StudentRecord } from "@/types/student";
 import { useCreateStudentApplication } from "@/hooks/student/useCreateStudentApplication";
 import { useUpdateStudentApplication } from "@/hooks/student/useUpdateStudentApplication";
 import { useDeleteStudentApplication } from "@/hooks/student/useDeleteStudentApplication";
@@ -236,70 +236,14 @@ export default function Home() {
     }
   };
 
-  const handleTriggerAddApp = () => {
-    setEditingAppId(null);
-    setAppPortal("Direct");
-    setAppDate(formatDateForInput(new Date()));
-    setSelectedUniversityId("");
-    setSelectedCourseId("");
-    setAppStatus("Pending");
-    setShowAddAppForm(true);
-  };
-
-  const applicationStatusLabels: Record<string, string> = {
-    draft: "Draft",
-    applied: "Applied",
-    under_review: "Pending",
-    conditional_offer: "Conditional Offer",
-    unconditional_offer: "Unconditional Offer",
-    rejected: "Rejected",
-    withdrawn: "Deferred",
-  };
-
   const selectedUniversity = universities?.find(
     (u: any) => u.id === selectedUniversityId,
   );
-
-  const selectedCourse = courses?.find((c: any) => c.id === selectedCourseId);
 
   if (!selectedUniversity) {
     toast.error("Please select a university");
     return;
   }
-  const payload = {
-    countryId: selectedUniversity.countryId,
-
-    universityId: selectedUniversityId,
-
-    courseId: selectedCourseId,
-
-    intakeId: selectedCourse?.intakeId ?? null,
-
-    portal: appPortal,
-
-    applicationDate: appDate ? new Date(appDate).toISOString() : null,
-
-    status:
-      applicationStatusMap[appStatus as keyof typeof applicationStatusMap] ??
-      "draft",
-
-    offerStatus: appOfferStatus,
-  };
-
-  const handleTriggerEditApp = (app: Applications) => {
-    if (!app?.id) {
-      toast.error("Application ID is missing");
-      return;
-    }
-
-    setEditingAppId(app.id);
-    setAppPortal(app?.portal ?? "");
-    setAppDate(formatDateForInput(app?.applicationDate));
-    setSelectedUniversityId(app?.universityId ?? "");
-    setSelectedCourseId(app?.courseId ?? "");
-    setAppStatus(applicationStatusLabels[app?.status ?? "draft"] ?? "Draft");
-    setShowAddAppForm(true);
-  };
 
   const tabProgressMap: Record<string, StudentModuleKey> = {
     info: "basic_information",
@@ -316,99 +260,6 @@ export default function Home() {
     return (
       moduleProgress.find((item) => item.module === moduleKey)?.progress ?? 0
     );
-  };
-
-  const handleSaveUniversityAppForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedStudentId) return;
-
-    const applicationStatusMap = {
-      Draft: "draft",
-      Applied: "applied",
-      Pending: "under_review",
-      "Offer Received": "conditional_offer",
-      "Priority Offer Received": "conditional_offer",
-      "Conditional Offer": "conditional_offer",
-      "Unconditional Offer": "unconditional_offer",
-      Rejected: "rejected",
-      Deferred: "withdrawn",
-    };
-
-    if (!selectedUniversityId) {
-      toast.error("Select a university");
-      return;
-    }
-
-    if (!selectedCourseId) {
-      toast.error("Select a course");
-      return;
-    }
-
-    const parsedApplicationDate = appDate
-      ? new Date(`${appDate}T00:00:00`)
-      : null;
-
-    if (
-      parsedApplicationDate &&
-      Number.isNaN(parsedApplicationDate.getTime())
-    ) {
-      toast.error("Enter a valid application date");
-      return;
-    }
-
-    const payload = {
-      portal: appPortal.trim(),
-      universityId: selectedUniversityId,
-      courseId: selectedCourseId,
-      applicationDate: parsedApplicationDate
-        ? parsedApplicationDate.toISOString()
-        : null,
-      status:
-        applicationStatusMap[appStatus as keyof typeof applicationStatusMap] ??
-        "draft",
-    };
-
-    try {
-      if (editingAppId) {
-        await updateApplicationMutation.mutateAsync({
-          applicationId: editingAppId,
-          payload,
-        });
-        toast.success("Application updated successfully");
-      } else {
-        await createApplicationMutation.mutateAsync({
-          studentId: selectedStudentId,
-          payload,
-        });
-        toast.success("Application created successfully");
-      }
-
-      setShowAddAppForm(false);
-      setEditingAppId(null);
-    } catch (caughtError) {
-      toast.error(
-        getErrorMessage(caughtError, "Failed to save university application"),
-      );
-    }
-  };
-
-  const handleDeleteUniversityApp = async (appId?: string) => {
-    if (!appId) {
-      toast.error("Application ID is missing");
-      return;
-    }
-
-    if (!confirm("Delete application?")) return;
-
-    try {
-      await deleteApplicationMutation.mutateAsync(appId);
-      toast.success("Application deleted successfully");
-    } catch (caughtError) {
-      toast.error(
-        getErrorMessage(caughtError, "Failed to delete university application"),
-      );
-    }
   };
 
   if (isLoading) {
