@@ -116,44 +116,49 @@ const optionalNumberText = (
 
 const mbbsFormSchema = z.object({
   branchId: requiredText("Branch"),
-  counsellingDate: requiredText("Date"),
+
+  counsellingDate: optionalText,
 
   studentName: requiredText("Student name"),
+
   fatherName: optionalText,
+
   mobileNumber: z
     .string()
     .trim()
     .min(1, "Mobile number is required")
     .regex(/^[0-9]{10}$/, "Mobile number must be exactly 10 digits"),
+
   emailId: z
     .string()
     .trim()
     .min(1, "Email ID is required")
     .email("Invalid email address"),
-  address: requiredText("Address"),
+
+  address: optionalText,
 
   passportNumber: optionalText,
   passportExpiryDate: optionalText,
 
   source: optionalText,
 
-  twelfthCollegeName: requiredText("12th college name"),
-  twelfthMarks: requiredNumberText("12th marks"),
-  neetMarks: requiredNumberText("NEET marks", 0, 720),
+  twelfthCollegeName: optionalText,
+  twelfthMarks: optionalNumberText("12th marks"),
+  neetMarks: optionalNumberText("NEET marks", 0, 720),
 
-  state: requiredText("State"),
-  city: requiredText("City"),
+  state: optionalText,
+  city: optionalText,
 
-  ept: requiredText("EPT"),
+  ept: optionalText,
   listeningScore: optionalNumberText("Listening score"),
   readingScore: optionalNumberText("Reading score"),
   writingScore: optionalNumberText("Writing score"),
   speakingScore: optionalNumberText("Speaking score"),
 
-  preferredCountry: requiredText("Preferred country"),
+  preferredCountry: optionalText,
   preferredIntake: optionalText,
-  preferredTiers: z.array(z.string()).optional().default([]),
-  preferredCourse: requiredText("Preferred course"),
+  preferredTiers: z.array(z.string()).optional(),
+  preferredCourse: optionalText,
 
   remarks: optionalText,
   status: optionalText,
@@ -172,10 +177,20 @@ const eptOptions = [
   "Not Applicable",
   "Yet to Write",
 ];
+const getCurrentDateTimeLocal = () => {
+  const now = new Date();
 
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 const getDefaultValues = (): MbbsFormValues => ({
   branchId: "",
-  counsellingDate: getTodayDate(),
+  counsellingDate: getCurrentDateTimeLocal(),
 
   studentName: "",
   fatherName: "",
@@ -384,15 +399,13 @@ export default function MbbsForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <RequiredLabel htmlFor="counsellingDate">
-                        Date
-                      </RequiredLabel>
+                      <Label htmlFor="counsellingDate">Application Date</Label>
                       <Input
                         id="counsellingDate"
-                        type="date"
+                        type="datetime-local"
+                        defaultValue={new Date().toISOString().slice(0, 16)}
                         {...register("counsellingDate")}
                       />
-                      <FormError message={errors.counsellingDate?.message} />
                     </div>
 
                     <div className="space-y-2">
@@ -447,11 +460,11 @@ export default function MbbsForm() {
                     </div>
 
                     <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                      <RequiredLabel htmlFor="address">Address</RequiredLabel>
+                      <Label htmlFor="address">Address</Label>
                       <Textarea
                         id="address"
                         placeholder="Enter full address"
-                        rows={3}
+                        rows={2}
                         {...register("address")}
                       />
                       <FormError message={errors.address?.message} />
@@ -527,9 +540,9 @@ export default function MbbsForm() {
                 <AccordionContent className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-2 md:col-span-2">
-                      <RequiredLabel htmlFor="twelfthCollegeName">
+                      <Label htmlFor="twelfthCollegeName">
                         12th College Name
-                      </RequiredLabel>
+                      </Label>
                       <Input
                         id="twelfthCollegeName"
                         placeholder="Enter 12th college name"
@@ -539,9 +552,7 @@ export default function MbbsForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <RequiredLabel htmlFor="twelfthMarks">
-                        12th Marks
-                      </RequiredLabel>
+                      <Label htmlFor="twelfthMarks">12th Marks</Label>
                       <Input
                         id="twelfthMarks"
                         type="number"
@@ -568,7 +579,7 @@ export default function MbbsForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <RequiredLabel htmlFor="state">State</RequiredLabel>
+                      <Label htmlFor="state">State</Label>
                       <Input
                         id="state"
                         placeholder="ex: Telangana"
@@ -578,7 +589,7 @@ export default function MbbsForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <RequiredLabel htmlFor="city">City</RequiredLabel>
+                      <Label htmlFor="city">City</Label>
                       <Input
                         id="city"
                         placeholder="ex: Hyderabad"
@@ -603,8 +614,7 @@ export default function MbbsForm() {
                 <AccordionContent className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-2">
-                      <RequiredLabel>EPT</RequiredLabel>
-
+                      <Label>EPT</Label>
                       <Controller
                         control={control}
                         name="ept"
@@ -710,7 +720,7 @@ export default function MbbsForm() {
                 <AccordionContent className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-2">
-                      <RequiredLabel>Preferred Country</RequiredLabel>
+                      <Label>Preferred Country</Label>
                       <Controller
                         control={control}
                         name="preferredCountry"
@@ -858,8 +868,8 @@ export default function MbbsForm() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <RequiredLabel>Preferred Course</RequiredLabel>
-
+                      {" "}
+                      <Label>Preferred Course</Label>
                       <Controller
                         control={control}
                         name="preferredCourse"
@@ -882,7 +892,6 @@ export default function MbbsForm() {
                           </Select>
                         )}
                       />
-
                       <FormError message={errors.preferredCourse?.message} />
                     </div>
                   </div>

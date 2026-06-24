@@ -327,31 +327,32 @@ export default function ApplicationsTrackerPage() {
     }
   };
 
-  const confirmMove = () => {
+  const confirmMove = async () => {
     if (!moveConfirm) return;
-    const { studentId, toStage, fromStage } = moveConfirm;
+
+    const { studentId, toStage } = moveConfirm;
+
     const nextStageValue = mapKanbanToStageValue(toStage);
 
-    StudentRecord((prev) => {
-      return prev.map((s) => {
-        if (s.id === studentId) {
-          const nowLabel = new Date().toLocaleDateString(undefined, {
-            day: "numeric",
-            month: "short",
-          });
-          const newRemark = {
-            date: nowLabel,
-            note: `Moved candidate status from ${fromStage} to ${toStage}`,
-          };
-          return {
-            ...s,
-            currentStage: nextStageValue as any,
-            remarks: [newRemark, ...(s.remarks || [])],
-          };
-        }
-        return s;
-      });
-    });
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/students/${studentId}/stage`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            currentStage: nextStageValue,
+          }),
+        },
+      );
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    }
 
     setMoveConfirm(null);
   };
@@ -361,7 +362,7 @@ export default function ApplicationsTrackerPage() {
       recordType: "student",
     })),
 
-    ...leads.map((lead) => ({
+    ...leads.map((lead: any) => ({
       ...lead,
       recordType: "lead",
       currentStage: lead.status || "Lead Created",

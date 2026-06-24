@@ -713,7 +713,7 @@ export default function AllLeadsPage() {
                                 setEditingLeadStatus(lead)
                               }
                               disabled={!canUpdate(MODULES.MASTER_LEADS)}
-                              className="max-w-full disabled:cursor-default"
+                              className="max-w-full disabled:cursor-default cursor-pointer"
                             >
                               <Badge
                                 variant="outline"

@@ -97,7 +97,7 @@ const leadFormSchema = z.object({
   preferredCountry: z.string().optional(),
   preferredIntake: z.string().optional(),
   preferredCourse: z.string().optional(),
-  preferredTiers: z.array(z.string()).default([]),
+  preferredTiers: z.array(z.string()).optional(),
   greGmatScore: z.number().optional(),
   quantitativeScore: z.number().optional(),
   verbalScore: z.number().optional(),
@@ -171,7 +171,17 @@ export default function AddLeadPage() {
       return data?.data || [];
     },
   });
+  const getCurrentDateTimeLocal = () => {
+    const now = new Date();
 
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
   const {
     register,
     control,
@@ -181,7 +191,7 @@ export default function AddLeadPage() {
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
-      counsellingDate: new Date().toISOString().split("T")[0],
+      counsellingDate: getCurrentDateTimeLocal(),
       studentName: "",
       mobileNumber: "",
       emailId: "",
@@ -189,6 +199,7 @@ export default function AddLeadPage() {
       passport: "",
       source: "",
       branchId: "",
+      preferredTiers: [],
       status: "draft",
     },
   });
@@ -312,11 +323,12 @@ export default function AddLeadPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="counsellingDate">
-                          Counselling Date
+                          Application Date
                         </Label>
                         <Input
                           id="counsellingDate"
-                          type="date"
+                          type="datetime-local"
+                          defaultValue={new Date().toISOString().slice(0, 16)}
                           {...register("counsellingDate")}
                         />
                       </div>

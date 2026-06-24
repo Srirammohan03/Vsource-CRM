@@ -49,13 +49,9 @@ export async function PATCH(
         });
 
         if (!existingStudent) {
-          const studentCount = await tx.student.count();
 
           await tx.student.create({
             data: {
-              studentNumber: `STU${String(
-                studentCount + 1
-              ).padStart(5, "0")}`,
 
               leadId: lead.id,
 
@@ -67,21 +63,9 @@ export async function PATCH(
 
               studentName: lead.studentName ?? "",
 
-              mobileNumber: lead.mobileNumber,
+              mobileNumber: lead.mobileNumber ?? "",
 
-              emailId: lead.emailId,
-
-              passportNumber: lead.passport,
-
-              country: lead.preferredCountry,
-
-              intake: lead.preferredIntake,
-
-              applicationType: lead.preferredCourse,
-
-              admissionDate: new Date(),
-
-              currentStage: "application_started",
+              emailId: lead.emailId ?? "",
             },
           });
         }

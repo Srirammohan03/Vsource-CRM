@@ -22,7 +22,7 @@ const ConvertSchema = z.object({
 export async function POST(req: NextRequest, { params }: Ctx) {
   try {
     const { id: leadId } = await params;
-    const { studentNumber, counselorId } = ConvertSchema.parse(
+    const { counselorId } = ConvertSchema.parse(
       await req.json(),
     );
 
@@ -45,15 +45,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         // Create student record
         const student = await tx.student.create({
           data: {
-            studentNumber,
             leadId,
             branchId: lead.branchId,
             counselorId: counselorId ?? undefined,
             studentName: lead.studentName ?? "",
-            mobileNumber: lead.mobileNumber ?? undefined,
-            emailId: lead.emailId ?? undefined,
+            mobileNumber: lead.mobileNumber ?? "",
+            emailId: lead.emailId ?? "",
 
-            country: lead.preferredCountry ?? undefined,
           },
         });
 
