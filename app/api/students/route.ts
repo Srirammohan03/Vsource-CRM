@@ -5,9 +5,17 @@ import { NextRequest } from "next/server";
 import db from "@/lib/prisma";
 import { ok, handleError } from "@/lib/api-helpers";
 import { Prisma } from "@/generated/prisma/client";
+import { getAuthorizedUser } from "@/lib/rbac";
+import { MODULES, PERMISSIONS } from "@/lib/module-codes";
 
 export async function GET(req: NextRequest) {
   try {
+    const currentUser = await getAuthorizedUser(
+      req,
+      MODULES.STUDENT_PROFILES,
+      PERMISSIONS.READ,
+    );
+
     const { searchParams } = new URL(req.url);
 
     const search = searchParams.get("search");
@@ -69,6 +77,14 @@ export async function GET(req: NextRequest) {
       where.visaLoanProfile = {
         is: visaLoanProfileFilter,
       };
+    }
+
+    if (currentUser.role.name === "Counsellor") {
+      where.AND = [
+        {
+          OR: [{ counselorId: currentUser.id }],
+        },
+      ];
     }
 
     const students = await db.student.findMany({
@@ -159,6 +175,7 @@ export async function GET(req: NextRequest) {
         },
 
         visaLoanProfile: true,
+        moduleProgress: true,
 
         documents: {
           select: {

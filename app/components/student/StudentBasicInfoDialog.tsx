@@ -49,11 +49,13 @@ export function StudentBasicInfoDialog({ open, onClose, student }: Props) {
       emailId: "",
       password: "",
       dob: "",
+      moi: "",
+      undergraduate: undefined,
       gender: undefined,
       applicationDate: "",
       counselorId: "",
       currentStage: "",
-      status: "",
+      status: undefined,
     },
   });
 
@@ -78,7 +80,11 @@ export function StudentBasicInfoDialog({ open, onClose, student }: Props) {
 
       currentStage: student.currentStage ?? "",
 
-      status: student.status ?? "",
+      status: student.status ?? undefined,
+
+      moi: student.moi ?? "",
+
+      undergraduate: student.undergraduate ?? undefined,
     });
   }, [student, form]);
 
@@ -204,6 +210,63 @@ export function StudentBasicInfoDialog({ open, onClose, student }: Props) {
                   <FormControl>
                     <Input type="date" {...field} value={field.value ?? ""} />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="moi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>MOI</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Medium of Instruction"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Student Status</FormLabel>
+
+                  <select
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    className="w-full h-10 rounded-md border px-3"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">in Active</option>
+                  </select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="undergraduate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Undergraduate Status</FormLabel>
+
+                  <select
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    className="w-full h-10 rounded-md border px-3"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="pursuing">Pursuing</option>
+                    <option value="graduate">Graduate</option>
+                  </select>
                 </FormItem>
               )}
             />

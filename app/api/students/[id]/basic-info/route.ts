@@ -25,6 +25,10 @@ export async function PATCH(
 
       gender: body.gender || null,
 
+      moi: body.moi?.trim() || null,
+
+      undergraduate: body.undergraduate || null,
+
       applicationDate: body.applicationDate
         ? new Date(body.applicationDate)
         : null,

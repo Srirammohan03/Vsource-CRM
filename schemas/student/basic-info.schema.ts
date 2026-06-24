@@ -11,6 +11,9 @@ export const updateStudentBasicInfoSchema = z.object({
 
   dob: z.string().optional(),
 
+  undergraduate: z.enum(["pursuing", "graduate"]).optional(),
+  moi: z.string().optional(),
+
   gender: z.enum(["male", "female", "others"]).optional(),
 
   applicationDate: z.string().optional(),
@@ -19,7 +22,7 @@ export const updateStudentBasicInfoSchema = z.object({
 
   currentStage: z.string().optional(),
 
-  status: z.string().optional(),
+  status: z.enum(["active", "inactive"]).optional(),
 });
 
 export type UpdateStudentBasicInfoForm = z.infer<

@@ -146,7 +146,7 @@ export default function PageActions(props: PageActionsProps) {
   } = props;
   const [branches, setBranches] = useState<Branch[]>([]);
 
-  const { data: counselors } = useCounselors();
+  const { data: counselors = [] } = useCounselors(editingLead?.branchId);
 
   const { data: intakes = [], isLoading: intakeLoad } = useQuery({
     queryKey: ["intake"],
@@ -691,13 +691,19 @@ export default function PageActions(props: PageActionsProps) {
                       value={editingLead.branch?.id || ""}
                       onValueChange={(val) => {
                         const targetBranch = branches.find((b) => b.id === val);
+
                         setEditingLead({
                           ...editingLead,
                           branchId: targetBranch?.id ?? "",
                           branch: targetBranch
-                            ? { id: targetBranch.id, name: targetBranch.name }
+                            ? {
+                                id: targetBranch.id,
+                                name: targetBranch.name,
+                              }
                             : undefined,
                         });
+
+                        setSelectedCounselors([]);
                       }}
                     >
                       <SelectTrigger
@@ -723,34 +729,40 @@ export default function PageActions(props: PageActionsProps) {
                     </Label>
 
                     <div className="border rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
-                      {counselors.map(
-                        (counselor: { id: string; name: string }) => (
-                          <label
-                            key={counselor.id}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedCounselors.includes(
-                                counselor.id,
-                              )}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedCounselors((prev) => [
-                                    ...prev,
-                                    counselor.id,
-                                  ]);
-                                } else {
-                                  setSelectedCounselors((prev) =>
-                                    prev.filter((id) => id !== counselor.id),
-                                  );
-                                }
-                              }}
-                            />
+                      {counselors.length > 0 ? (
+                        counselors.map(
+                          (counselor: { id: string; name: string }) => (
+                            <label
+                              key={counselor.id}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedCounselors.includes(
+                                  counselor.id,
+                                )}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedCounselors((prev) => [
+                                      ...prev,
+                                      counselor.id,
+                                    ]);
+                                  } else {
+                                    setSelectedCounselors((prev) =>
+                                      prev.filter((id) => id !== counselor.id),
+                                    );
+                                  }
+                                }}
+                              />
 
-                            <span>{counselor.name}</span>
-                          </label>
-                        ),
+                              <span>{counselor.name}</span>
+                            </label>
+                          ),
+                        )
+                      ) : (
+                        <div className="py-4 text-center text-sm text-muted-foreground">
+                          No counselors available for the selected branch
+                        </div>
                       )}
                     </div>
                   </div>

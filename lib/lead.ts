@@ -1,18 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-export const useCounselors = () => {
+export const useCounselors = (branchId?: string) => {
   return useQuery({
-    queryKey: ["counselors"],
+    queryKey: ["branch-counselors", branchId],
+
+    enabled: !!branchId,
+
     queryFn: async () => {
       const { data } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/counselors`,
+        `${process.env.NEXT_PUBLIC_API_URL}/branches/${branchId}/counselors`,
         {
           withCredentials: true,
         },
       );
 
-      return data?.data || [];
+      return data?.data ?? [];
     },
   });
 };

@@ -126,12 +126,7 @@ enum MbbsLeadStatus {
 
 enum StudentStatus {
   active
-  visa_process
-  loan_process
-  admitted
-  enrolled
-  completed
-  dropped
+  inactive
 }
 
 enum LeadType {
@@ -402,6 +397,11 @@ enum GenderType {
   others
 }
 
+enum Undergraduate {
+  pursuing
+  graduate
+}
+
 model Student {
   id String @id @default(uuid())
 
@@ -419,6 +419,10 @@ model Student {
   mobileNumber String  @unique
   emailId      String  @unique
   password     String?
+
+  undergraduate Undergraduate?
+
+  moi String?
 
   dob DateTime?
 
@@ -438,6 +442,8 @@ model Student {
   timeline StudentTimeline[]
 
   documents StudentDocument[]
+
+  moduleProgress StudentModuleProgress[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -601,6 +607,39 @@ model StudentDocument {
 
   @@index([studentId])
   @@index([studentId, documentCode])
+}
+
+enum StudentModuleType {
+  basic_information
+  documents
+  university_applications
+  visa_process
+}
+
+enum StudentModuleStatus {
+  pending
+  started
+  in_progress
+  need_corrections
+  completed
+}
+
+model StudentModuleProgress {
+  id String @id @default(uuid())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  module   StudentModuleType
+  status   StudentModuleStatus @default(pending)
+  progress Int                 @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, module])
+  @@index([studentId])
+  @@index([status])
 }
 
 model Branch {

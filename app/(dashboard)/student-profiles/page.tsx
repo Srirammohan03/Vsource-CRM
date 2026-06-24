@@ -6,7 +6,6 @@ import {
   CreditCard,
   FileCheck2,
   Plus,
-  ChevronRight,
   User,
   MapPin,
   Calendar,
@@ -37,6 +36,13 @@ import {
 } from "@/hooks/student/applications/useUniversityDropdown";
 import { StudentBasicInfoDialog } from "@/components/student/StudentBasicInfoDialog";
 import { StudentVisaLoanProfileSection } from "@/components/student/StudentVisaLoanProfileForm";
+import { StudentModuleProgressDialog } from "@/components/student/StudentModuleProgressDialog";
+import {
+  StudentModuleKey,
+  useStudentModuleProgress,
+} from "@/hooks/student/useStudentModuleProgress";
+import { Progress } from "@/components/ui/progress";
+import StudentApplicationsSection from "@/components/student/StudentApplicationsSection";
 
 const tabs = [
   {
@@ -73,30 +79,24 @@ const tabs = [
 
 export default function Home() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useStudents();
+  const { data, isLoading, isError, error } = useStudents();
   const [basicInfoOpen, setBasicInfoOpen] = useState(false);
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"students">("students");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   );
+  const [appOfferStatus, setAppOfferStatus] = useState("not_received");
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [detailTab, setDetailTab] = useState<
     "info" | "documents" | "applications" | "visaLoan" | "remarks"
   >("info");
-
-  const [globalSearch, setGlobalSearch] = useState<string>("");
-  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
-
-  const [studentToEdit, setStudentToEdit] = useState<StudentRecord | null>(
-    null,
-  );
 
   const [appLayout, setAppLayout] = useState<"cards" | "table">("cards");
   const [showAddAppForm, setShowAddAppForm] = useState<boolean>(false);
   const [editingAppId, setEditingAppId] = useState<string | null>(null);
   const [appPortal, setAppPortal] = useState<string>("GVOC");
   const [appDate, setAppDate] = useState<string>("");
-  const [appIntake, setAppIntake] = useState<string>("Sep 2026");
   const [appStatus, setAppStatus] = useState<string>("Pending");
 
   const [newRemarkText, setNewRemarkText] = useState<string>("");
@@ -105,11 +105,40 @@ export default function Home() {
 
   const { data: universities, isLoading: isUniversitiesLoad } =
     useUniversityDropdown(selectedStudentId ? selectedStudentId : "");
-  const { data: courses, isLoading: isCourseLoad } =
-    useCourseDropdown(selectedUniversityId);
+  const { data: courses = [] } = useCourseDropdown(selectedStudentId || "");
 
-  const students = useMemo(() => {
-    return data?.data ?? [];
+  const universityOptions = Array.isArray(universities) ? universities : [];
+  const courseOptions = Array.isArray(courses) ? courses : [];
+
+  const { data: moduleProgress = [], isLoading: isModuleProgressLoading } =
+    useStudentModuleProgress(selectedStudentId || "");
+
+  const tabModuleMap: Partial<Record<typeof detailTab, StudentModuleKey>> = {
+    info: "basic_information",
+    documents: "documents",
+    applications: "university_applications",
+    visaLoan: "visa_process",
+  };
+
+  const activeModule = tabModuleMap[detailTab];
+  const safeModuleProgress = Array.isArray(moduleProgress)
+    ? moduleProgress
+    : [];
+
+  const activeModuleProgress = activeModule
+    ? safeModuleProgress.find((item) => item?.module === activeModule)
+    : undefined;
+
+  const activeProgressValue = Math.min(
+    100,
+    Math.max(0, Number(activeModuleProgress?.progress) || 0),
+  );
+
+  const activeTabLabel =
+    tabs.find((tab) => tab.key === detailTab)?.label ?? "Module";
+
+  const students = useMemo<StudentRecord[]>(() => {
+    return Array.isArray(data?.data) ? data.data : [];
   }, [data]);
 
   useEffect(() => {
@@ -135,45 +164,30 @@ export default function Home() {
   const deleteApplicationMutation = useDeleteStudentApplication();
   const createRemarkMutation = useCreateStudentRemark();
 
-  const parseStudentAdmissionDate = (dateStr: string): Date => {
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return new Date();
-    const day = parseInt(parts[0], 10);
-    const year = parseInt(parts[2], 10);
-    const mNames: Record<string, number> = {
-      jan: 0,
-      feb: 1,
-      mar: 2,
-      apr: 3,
-      may: 4,
-      jun: 5,
-      jul: 6,
-      aug: 7,
-      sep: 8,
-      oct: 9,
-      nov: 10,
-      dec: 11,
-    };
-    const month =
-      mNames[parts[1].toLowerCase()] !== undefined
-        ? mNames[parts[1].toLowerCase()]
-        : 5;
-    return new Date(year, month, day);
+  const formatDateForDisplay = (value?: string | Date | null) => {
+    if (!value) return "Not provided";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? "Not provided"
+      : date.toLocaleDateString("en-GB");
   };
 
-  const filteredStudents = useMemo(() => {
-    return students.filter((student: StudentRecord) => {
-      if (globalSearch.trim() !== "") {
-        const q = globalSearch?.toLowerCase();
-        const matchesSearch =
-          student?.studentName?.toLowerCase()?.includes(q) ||
-          student?.emailId?.toLowerCase().includes(q);
-        if (!matchesSearch) return false;
-      }
+  const formatDateForInput = (value?: string | Date | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
-      return true;
-    });
-  }, [students, globalSearch]);
+  const getErrorMessage = (caughtError: unknown, fallback: string) => {
+    if (caughtError instanceof Error && caughtError.message) {
+      return caughtError.message;
+    }
+    return fallback;
+  };
 
   const selectedStudent = useMemo<StudentRecord | null>(() => {
     return (
@@ -185,8 +199,6 @@ export default function Home() {
     setSelectedStudentId(id);
     setCurrentView("students");
     setDetailTab("info");
-    setGlobalSearch("");
-    setShowSearchResults(false);
   };
 
   const handleDeleteStudent = async (id: string) => {
@@ -200,8 +212,10 @@ export default function Home() {
         toast.success("Student records deleted successfully.");
         queryClient.invalidateQueries({ queryKey: STUDENTKEY.all });
         if (selectedStudentId === id) setSelectedStudentId(null);
-      } catch (error) {
-        toast.error("Failed to delete student records.");
+      } catch (caughtError) {
+        toast.error(
+          getErrorMessage(caughtError, "Failed to delete student records."),
+        );
       }
     }
   };
@@ -217,35 +231,91 @@ export default function Home() {
         note: newRemarkText.trim(),
       });
       setNewRemarkText("");
-    } catch (error) {
-      console.error(error);
+    } catch (caughtError) {
+      toast.error(getErrorMessage(caughtError, "Failed to add remark"));
     }
   };
 
   const handleTriggerAddApp = () => {
     setEditingAppId(null);
     setAppPortal("Direct");
-    setAppDate("15-Jun-2026");
+    setAppDate(formatDateForInput(new Date()));
     setSelectedUniversityId("");
     setSelectedCourseId("");
-    setAppIntake("Sep 2026");
     setAppStatus("Pending");
     setShowAddAppForm(true);
   };
 
+  const applicationStatusLabels: Record<string, string> = {
+    draft: "Draft",
+    applied: "Applied",
+    under_review: "Pending",
+    conditional_offer: "Conditional Offer",
+    unconditional_offer: "Unconditional Offer",
+    rejected: "Rejected",
+    withdrawn: "Deferred",
+  };
+
+  const selectedUniversity = universities?.find(
+    (u: any) => u.id === selectedUniversityId,
+  );
+
+  const selectedCourse = courses?.find((c: any) => c.id === selectedCourseId);
+
+  if (!selectedUniversity) {
+    toast.error("Please select a university");
+    return;
+  }
+  const payload = {
+    countryId: selectedUniversity.countryId,
+
+    universityId: selectedUniversityId,
+
+    courseId: selectedCourseId,
+
+    intakeId: selectedCourse?.intakeId ?? null,
+
+    portal: appPortal,
+
+    applicationDate: appDate ? new Date(appDate).toISOString() : null,
+
+    status:
+      applicationStatusMap[appStatus as keyof typeof applicationStatusMap] ??
+      "draft",
+
+    offerStatus: appOfferStatus,
+  };
+
   const handleTriggerEditApp = (app: Applications) => {
-    setEditingAppId(app.id || "1");
-    setAppPortal(app?.portal ?? "-");
-    setAppDate(
-      app?.applicationDate
-        ? new Date(app.applicationDate).toLocaleDateString("en-GB")
-        : "-",
-    );
-    setSelectedUniversityId(app.universityId);
-    setSelectedCourseId(app.courseId);
-    setAppIntake("Sep 2026");
-    setAppStatus(app?.status);
+    if (!app?.id) {
+      toast.error("Application ID is missing");
+      return;
+    }
+
+    setEditingAppId(app.id);
+    setAppPortal(app?.portal ?? "");
+    setAppDate(formatDateForInput(app?.applicationDate));
+    setSelectedUniversityId(app?.universityId ?? "");
+    setSelectedCourseId(app?.courseId ?? "");
+    setAppStatus(applicationStatusLabels[app?.status ?? "draft"] ?? "Draft");
     setShowAddAppForm(true);
+  };
+
+  const tabProgressMap: Record<string, StudentModuleKey> = {
+    info: "basic_information",
+    documents: "documents",
+    applications: "university_applications",
+    visaLoan: "visa_process",
+  };
+
+  const getTabProgress = (tabKey: string) => {
+    const moduleKey = tabProgressMap[tabKey];
+
+    if (!moduleKey) return null;
+
+    return (
+      moduleProgress.find((item) => item.module === moduleKey)?.progress ?? 0
+    );
   };
 
   const handleSaveUniversityAppForm = async (e: React.FormEvent) => {
@@ -275,36 +345,94 @@ export default function Home() {
       return;
     }
 
+    const parsedApplicationDate = appDate
+      ? new Date(`${appDate}T00:00:00`)
+      : null;
+
+    if (
+      parsedApplicationDate &&
+      Number.isNaN(parsedApplicationDate.getTime())
+    ) {
+      toast.error("Enter a valid application date");
+      return;
+    }
+
     const payload = {
-      portal: appPortal,
+      portal: appPortal.trim(),
       universityId: selectedUniversityId,
       courseId: selectedCourseId,
-      applicationDate: appDate ? new Date(appDate).toISOString() : null,
+      applicationDate: parsedApplicationDate
+        ? parsedApplicationDate.toISOString()
+        : null,
       status:
         applicationStatusMap[appStatus as keyof typeof applicationStatusMap] ??
         "draft",
     };
 
-    if (editingAppId) {
-      await updateApplicationMutation.mutateAsync({
-        applicationId: editingAppId,
-        payload,
-      });
-    } else {
-      await createApplicationMutation.mutateAsync({
-        studentId: selectedStudentId,
-        payload,
-      });
+    try {
+      if (editingAppId) {
+        await updateApplicationMutation.mutateAsync({
+          applicationId: editingAppId,
+          payload,
+        });
+        toast.success("Application updated successfully");
+      } else {
+        await createApplicationMutation.mutateAsync({
+          studentId: selectedStudentId,
+          payload,
+        });
+        toast.success("Application created successfully");
+      }
+
+      setShowAddAppForm(false);
+      setEditingAppId(null);
+    } catch (caughtError) {
+      toast.error(
+        getErrorMessage(caughtError, "Failed to save university application"),
+      );
+    }
+  };
+
+  const handleDeleteUniversityApp = async (appId?: string) => {
+    if (!appId) {
+      toast.error("Application ID is missing");
+      return;
     }
 
-    setShowAddAppForm(false);
-    setEditingAppId(null);
+    if (!confirm("Delete application?")) return;
+
+    try {
+      await deleteApplicationMutation.mutateAsync(appId);
+      toast.success("Application deleted successfully");
+    } catch (caughtError) {
+      toast.error(
+        getErrorMessage(caughtError, "Failed to delete university application"),
+      );
+    }
   };
 
-  const handleDeleteUniversityApp = async (appId: string) => {
-    if (!confirm("Delete application?")) return;
-    await deleteApplicationMutation.mutateAsync(appId);
-  };
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-sm font-semibold text-slate-500">
+        Loading students...
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <h2 className="text-base font-black text-rose-700">
+            Unable to load students
+          </h2>
+          <p className="mt-2 text-sm text-rose-600">
+            {getErrorMessage(error, "Please refresh the page and try again.")}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -334,7 +462,7 @@ export default function Home() {
 
                     <div>
                       <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                        {selectedStudent.studentName}
+                        {selectedStudent?.studentName ?? "Unnamed Student"}
                       </h2>
 
                       <p className="text-xs text-slate-500">
@@ -352,9 +480,11 @@ export default function Home() {
 
                   <div className="overflow-x-auto">
                     <div className="flex gap-2 min-w-max">
-                      {tabs.map((tab) => {
+                      {tabs.map((tab: any) => {
                         const Icon = tab.icon;
                         const isSelected = detailTab === tab.key;
+
+                        const progress = getTabProgress(tab.key);
                         return (
                           <button
                             key={tab.key}
@@ -367,6 +497,18 @@ export default function Home() {
                           >
                             <Icon className="h-4 w-4" />
                             {tab.label}
+
+                            {progress !== null && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                  isSelected
+                                    ? "bg-white/20 text-white"
+                                    : "bg-red-100 text-red-600"
+                                }`}
+                              >
+                                {progress}%
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -380,6 +522,41 @@ export default function Home() {
                         : "bg-white border-slate-100"
                     }`}
                   >
+                    {activeModule && (
+                      <div className="mb-6 flex flex-col gap-3 border-b border-inherit pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Module Progress
+                              </p>
+                              <p className="text-xs font-bold capitalize text-slate-700 dark:text-slate-200">
+                                {isModuleProgressLoading
+                                  ? "Loading..."
+                                  : (
+                                      activeModuleProgress?.status ?? "pending"
+                                    ).replaceAll("_", " ")}
+                              </p>
+                            </div>
+                            <span className="text-sm font-black text-red-600">
+                              {activeProgressValue}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={activeProgressValue}
+                            className="h-2"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setProgressDialogOpen(true)}
+                          className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700"
+                        >
+                          Update Progress
+                        </button>
+                      </div>
+                    )}
                     {detailTab === "info" && (
                       <div className="space-y-6">
                         <div className="flex items-center justify-between border-b pb-3 border-inherit">
@@ -421,12 +598,18 @@ export default function Home() {
                               icon: FileText,
                             },
                             {
+                              label: "Password",
+                              val: selectedStudent?.password,
+                              icon: FileText,
+                            },
+                            {
+                              label: "Course",
+                              val: selectedStudent?.lead?.bachelorsCourse,
+                              icon: FileText,
+                            },
+                            {
                               label: "Date Of Birth",
-                              val: selectedStudent?.dob
-                                ? new Date(
-                                    selectedStudent.dob,
-                                  ).toLocaleDateString("en-IN")
-                                : "-",
+                              val: formatDateForDisplay(selectedStudent?.dob),
                               icon: Calendar,
                             },
                             {
@@ -436,16 +619,14 @@ export default function Home() {
                             },
                             {
                               label: "Application Date",
-                              val: selectedStudent?.applicationDate
-                                ? new Date(
-                                    selectedStudent.applicationDate,
-                                  ).toLocaleDateString("en-IN")
-                                : "-",
+                              val: formatDateForDisplay(
+                                selectedStudent?.applicationDate,
+                              ),
                               icon: Calendar,
                             },
                             {
-                              label: "Current Stage",
-                              val: selectedStudent?.currentStage ?? "-",
+                              label: "MOI",
+                              val: selectedStudent?.moi ?? "-",
                               icon: GraduationCap,
                             },
                             {
@@ -476,7 +657,7 @@ export default function Home() {
                                   </span>
 
                                   <span className="text-xs font-extrabold text-slate-850 dark:text-slate-150">
-                                    {v.val || "-"}
+                                    {v.val || "Not provided"}
                                   </span>
                                 </div>
                               </div>
@@ -491,7 +672,9 @@ export default function Home() {
                         {selectedStudent && (
                           <DMSSection
                             studentId={selectedStudent.id}
-                            studentName={selectedStudent.studentName}
+                            studentName={
+                              selectedStudent?.studentName ?? "Unnamed Student"
+                            }
                             isDarkMode={isDarkMode}
                           />
                         )}
@@ -499,338 +682,27 @@ export default function Home() {
                     )}
 
                     {detailTab === "applications" && (
-                      <div className="space-y-6">
-                        <div className="flex items-center justify-between pb-3 border-b border-inherit">
-                          <div className="flex items-center gap-2">
-                            <div className="bg-slate-100 dark:bg-slate-950 p-1 rounded-xl flex gap-1">
-                              <button
-                                onClick={() => setAppLayout("cards")}
-                                className={`p-1.5 rounded-lg text-xs ${appLayout === "cards" ? "bg-red-600 text-white" : "text-slate-400"}`}
-                                title="Render applications as Cards"
-                              >
-                                <LayoutGrid className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => setAppLayout("table")}
-                                className={`p-1.5 rounded-lg text-xs ${appLayout === "table" ? "bg-red-600 text-white" : "text-slate-400"}`}
-                                title="Render applications into a list table"
-                              >
-                                <TableProperties className="h-4 w-4" />
-                              </button>
-                            </div>
-
-                            <button
-                              onClick={handleTriggerAddApp}
-                              className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4.5 py-2 rounded-xl inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Plus className="h-4.5 w-4.5" />
-                              <span>Apply </span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {showAddAppForm && (
-                          <form
-                            onSubmit={handleSaveUniversityAppForm}
-                            className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-850 animate-fadeIn space-y-3"
-                          >
-                            <h5 className="font-extrabold text-xs uppercase tracking-wider text-slate-405 mb-2 text-red-600">
-                              {editingAppId
-                                ? "Update University Application"
-                                : "Register New University Target"}
-                            </h5>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                  University
-                                </label>
-
-                                <select
-                                  value={selectedUniversityId}
-                                  onChange={(e) => {
-                                    setSelectedUniversityId(e.target.value);
-                                    setSelectedCourseId("");
-                                  }}
-                                  className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
-                                    isDarkMode
-                                      ? "bg-slate-900 border-slate-800"
-                                      : "bg-white border-slate-200"
-                                  }`}
-                                >
-                                  <option value="">Select University</option>
-
-                                  {isUniversitiesLoad ? (
-                                    <option value="option">
-                                      Universities Loading...
-                                    </option>
-                                  ) : (
-                                    universities?.map((university: any) => (
-                                      <option
-                                        key={university.id}
-                                        value={university.id}
-                                      >
-                                        {university.name}
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                  Course
-                                </label>
-
-                                <select
-                                  value={selectedCourseId}
-                                  onChange={(e) =>
-                                    setSelectedCourseId(e.target.value)
-                                  }
-                                  disabled={!selectedUniversityId}
-                                  className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
-                                    isDarkMode
-                                      ? "bg-slate-900 border-slate-800"
-                                      : "bg-white border-slate-200"
-                                  }`}
-                                >
-                                  <option value="">Select Course</option>
-
-                                  {isCourseLoad ? (
-                                    <option value="option">
-                                      Universities Loading...
-                                    </option>
-                                  ) : (
-                                    courses?.map((course: any) => (
-                                      <option key={course.id} value={course.id}>
-                                        {course.name}
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                  Portal
-                                </label>
-                                <input
-                                  type="text"
-                                  value={appPortal}
-                                  onChange={(e) => setAppPortal(e.target.value)}
-                                  placeholder="e.g. GVOC / Centurus / Direct"
-                                  className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
-                                  required
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                  Application Date
-                                </label>
-                                <input
-                                  type="date"
-                                  value={appDate}
-                                  onChange={(e) => setAppDate(e.target.value)}
-                                  className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">
-                                  Application Status
-                                </label>
-                                <select
-                                  value={appStatus}
-                                  onChange={(e) => setAppStatus(e.target.value)}
-                                  className={`w-full px-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
-                                >
-                                  {[
-                                    "Draft",
-                                    "Applied",
-                                    "Pending",
-                                    "Offer Received",
-                                    "Priority Offer Received",
-                                    "Conditional Offer",
-                                    "Unconditional Offer",
-                                    "Rejected",
-                                    "Deferred",
-                                  ].map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div className="flex items-end justify-end gap-2 pt-5">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowAddAppForm(false)}
-                                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-850"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  disabled={
-                                    createApplicationMutation.isPending ||
-                                    updateApplicationMutation.isPending
-                                  }
-                                  type="submit"
-                                  className="px-4 py-1.5 bg-red-655 bg-red-600 text-white rounded-xl text-xs font-black shadow"
-                                >
-                                  {createApplicationMutation.isPending ||
-                                  updateApplicationMutation.isPending
-                                    ? "Saving..."
-                                    : "Save Entry"}
-                                </button>
-                              </div>
-                            </div>
-                          </form>
-                        )}
-
-                        {selectedStudent.applications.length === 0 ? (
-                          <p className="text-center py-12 text-slate-400">
-                            No registered university applications on file. Add
-                            one above.
-                          </p>
-                        ) : appLayout === "cards" ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedStudent.applications.map(
-                              (app: Applications, i: number) => (
-                                <div
-                                  key={app.id || i}
-                                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-100 dark:border-slate-850 flex flex-col justify-between whitespace-normal"
-                                >
-                                  <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                      <span className="bg-red-600 text-white font-black text-[8px] py-0.5 px-2 rounded-full font-mono uppercase tracking-widest">
-                                        {app.portal}
-                                      </span>
-                                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-extrabold text-[9px] py-0.5 px-2 rounded-md">
-                                        {app?.status}
-                                      </span>
-                                    </div>
-                                    <h5 className="font-extrabold text-sm mb-1">
-                                      {app?.university?.name ?? "-"}
-                                    </h5>
-                                    <p className="text-[11px] text-slate-400 font-medium mb-4">
-                                      {app.course?.name ?? "-"}
-                                    </p>
-                                  </div>
-
-                                  <div className="flex items-center justify-between pt-3 border-t border-slate-200/50 dark:border-slate-805/50 text-[10px] text-slate-400">
-                                    <span>
-                                      Date Filed:{" "}
-                                      {app?.applicationDate
-                                        ? new Date(
-                                            app?.applicationDate,
-                                          ).toLocaleDateString("en-GB")
-                                        : "-"}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleTriggerEditApp(app)
-                                        }
-                                        className="text-red-600 hover:underline font-bold"
-                                      >
-                                        Edit
-                                      </button>
-                                      <span className="text-slate-300">|</span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleDeleteUniversityApp(
-                                            app.id || "",
-                                          )
-                                        }
-                                        className="text-rose-500 hover:underline font-bold"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-850">
-                            <table className="w-full text-xs text-left border-collapse">
-                              <thead className="bg-slate-100 dark:bg-slate-950 text-[9px] uppercase font-black text-slate-400 tracking-wider">
-                                <tr>
-                                  <th className="px-4 py-2.5">Portal</th>
-                                  <th className="px-4 py-2.5">University</th>
-                                  <th className="px-4 py-2.5">
-                                    Course Program
-                                  </th>
-                                  <th className="px-4 py-2.5">Date Applied</th>
-                                  <th className="px-4 py-2.5">Status</th>
-                                  <th className="px-4 py-2.5 text-right">
-                                    Actions
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {selectedStudent.applications.map(
-                                  (app: Applications, i: number) => (
-                                    <tr
-                                      key={app.id || i}
-                                      className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850"
-                                    >
-                                      <td className="px-4 py-3 font-mono font-bold text-red-650 text-red-600">
-                                        {app.portal}
-                                      </td>
-                                      <td className="px-4 py-3 font-bold">
-                                        {app.university?.name ?? "-"}
-                                      </td>
-                                      <td className="px-4 py-3 text-slate-500">
-                                        {app.course?.name ?? "-"}
-                                      </td>
-                                      <td className="px-4 py-3 text-slate-400">
-                                        {app?.applicationDate
-                                          ? new Date(
-                                              app?.applicationDate,
-                                            ).toLocaleDateString("en-GB")
-                                          : "-"}
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <span className="bg-slate-100 dark:bg-slate-850 text-[10px] font-black px-2 py-0.5 rounded">
-                                          {app?.status}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-3 text-right space-x-1.5">
-                                        <button
-                                          onClick={() =>
-                                            handleTriggerEditApp(app)
-                                          }
-                                          className="text-red-600 font-bold"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            handleDeleteUniversityApp(
-                                              app.id || "",
-                                            )
-                                          }
-                                          className="text-rose-500 font-bold"
-                                        >
-                                          Delete
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ),
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
+                      <StudentApplicationsSection
+                        student={selectedStudent}
+                        isDarkMode={isDarkMode}
+                        onCreate={async (payload) => {
+                          await createApplicationMutation.mutateAsync({
+                            studentId: selectedStudent.id,
+                            payload,
+                          });
+                        }}
+                        onUpdate={async (applicationId, payload) => {
+                          await updateApplicationMutation.mutateAsync({
+                            applicationId,
+                            payload,
+                          });
+                        }}
+                        onDelete={async (applicationId) => {
+                          await deleteApplicationMutation.mutateAsync(
+                            applicationId,
+                          );
+                        }}
+                      />
                     )}
 
                     {detailTab === "visaLoan" && (
@@ -865,7 +737,10 @@ export default function Home() {
                         </form>
 
                         <div className="space-y-4 max-h-[300px] overflow-y-auto pr-3">
-                          {(selectedStudent?.remarks || [])
+                          {(Array.isArray(selectedStudent?.remarks)
+                            ? selectedStudent.remarks
+                            : []
+                          )
                             .slice()
                             .reverse()
                             .map((rem: Remarks, i: number) => (
@@ -876,16 +751,12 @@ export default function Home() {
                                 <span className="absolute left-[-5px] top-1.5 h-2 w-2 rounded-full bg-red-600" />
                                 <div className="text-[10px] flex items-center justify-between text-slate-400 mb-1 font-bold">
                                   <span className="font-mono bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded">
-                                    {rem?.createdAt
-                                      ? new Date(
-                                          rem?.createdAt,
-                                        ).toLocaleDateString("en-GB")
-                                      : "-"}
+                                    {formatDateForDisplay(rem?.createdAt)}
                                   </span>
                                   <span>Logged by Agent</span>
                                 </div>
                                 <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
-                                  {rem.note}
+                                  {rem?.note ?? "No remark provided"}
                                 </p>
                               </div>
                             ))}
@@ -917,6 +788,17 @@ export default function Home() {
           </AnimatePresence>
         </main>
       </div>
+
+      {selectedStudent && activeModule && (
+        <StudentModuleProgressDialog
+          open={progressDialogOpen}
+          onOpenChange={setProgressDialogOpen}
+          studentId={selectedStudent.id}
+          module={activeModule}
+          moduleLabel={activeTabLabel}
+          currentProgress={activeModuleProgress}
+        />
+      )}
 
       {selectedStudent && (
         <StudentBasicInfoDialog

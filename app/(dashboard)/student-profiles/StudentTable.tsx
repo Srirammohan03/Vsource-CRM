@@ -1,21 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Eye, Trash2, Shield, ShieldOff } from "lucide-react";
-import { Student } from "./mockData";
+import { useEffect, useState } from "react";
+import { Eye, Shield, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStudents } from "@/hooks/student/useStudents";
-import { StudentDocumentRecord, StudentRecord } from "@/types/student";
-
-export interface LocalStudent extends Student {
-  password?: string;
-  twelfthEnglishMoi?: string;
-  pursuingGraduate?: "Pursuing" | "Graduate";
-  depositDeadlineDate?: string;
-  casDeadlineDate?: string;
-  univStartDate?: string;
-  documents: StudentDocumentRecord[];
-}
+import { StudentRecord } from "@/types/student";
 
 interface StudentTableProps {
   isDarkMode: boolean;
@@ -34,22 +23,52 @@ export function StudentTable({
 
   const { data, isLoading, isError, error } = useStudents();
 
-  const students = data?.data ?? [];
+  const students = Array.isArray(data?.data) ? data.data : [];
+
+  const getText = (
+    value: string | number | null | undefined,
+    fallback = "-",
+  ) => {
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text.length > 0 ? text : fallback;
+  };
+
+  const getDate = (value: string | Date | null | undefined) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("en-GB");
+  };
+
+  const getAmount = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined || value === "") return "-";
+
+    const amount = Number(value);
+
+    if (Number.isNaN(amount)) return getText(value);
+
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const togglePassword = (studentId: string) => {
-    setVisiblePasswords((prev) => ({
-      ...prev,
-      [studentId]: !prev[studentId],
+    setVisiblePasswords((previous) => ({
+      ...previous,
+      [studentId]: !previous[studentId],
     }));
   };
 
-  // Student Progress Color Logic (Mandated by Prompt Guidelines)
-  const getCellColorClass = (val: string) => {
-    if (!val)
-      return "bg-white text-slate-800 border-slate-100 dark:bg-slate-900 dark:text-slate-205";
-    const s = val.toLowerCase().trim();
+  const getCellColorClass = (value?: string | null) => {
+    const status = getText(value, "").toLowerCase().trim();
 
-    // GREEN (Deposit Paid, CAS Received, Visa Approved, Loan Sanctioned, Disbursed, Approved, Paid, Completed, Waived, Received)
+    if (!status || status === "-") {
+      return "bg-white text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800";
+    }
+
     if (
       [
         "deposit paid",
@@ -63,14 +82,12 @@ export function StudentTable({
         "completed",
         "waived",
         "received",
-      ].includes(s) ||
-      s === "disbursed" ||
-      s === "sanctioned"
+        "sanctioned",
+      ].includes(status)
     ) {
-      return "bg-emerald-100 text-emerald-800 border-emerald-250 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800";
+      return "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800";
     }
 
-    // RED (Application Rejected, Student Dropped, Visa Rejected, File Closed, Rejected, Dropped, Cancelled, Hold, Paused, Deferred)
     if (
       [
         "application rejected",
@@ -83,12 +100,11 @@ export function StudentTable({
         "paused",
         "deferred",
         "student requested hold",
-      ].includes(s)
+      ].includes(status)
     ) {
-      return "bg-rose-150 text-rose-950 border-rose-250 dark:bg-rose-955/35 dark:text-rose-300 dark:border-rose-900";
+      return "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900";
     }
 
-    // YELLOW (University Decision Pending, CAS Under Review, Visa Decision Pending, Applied, Under Review, Decision Pending, Intake Change, Waiting for Documents)
     if (
       [
         "university decision pending",
@@ -100,31 +116,45 @@ export function StudentTable({
         "pending",
         "waiting for documents",
         "intake change requested",
-      ].includes(s) ||
-      (s.includes("pending") && !s.includes("not")) ||
-      s.includes("review")
+      ].includes(status) ||
+      (status.includes("pending") && !status.includes("not")) ||
+      status.includes("review")
     ) {
-      return "bg-yellow-300 text-yellow-950 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-300 dark:border-yellow-800";
+      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-800";
     }
 
-    // WHITE (Application Not Submitted, CAS Not Applied, Deposit Not Paid, Draft, Draft Pending, Not Required, Not Applied)
     return "bg-white text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800";
   };
 
   useEffect(() => {
-    if (isError) {
-      toast.error(
-        (error as any)?.response?.data?.message ??
-          (error as Error)?.message ??
-          "Failed to load students",
-      );
-    }
+    if (!isError) return;
+
+    const message =
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message ??
+      (error instanceof Error ? error.message : null) ??
+      "Failed to load students";
+
+    toast.error(message);
   }, [isError, error]);
 
   if (isLoading) {
     return (
-      <div className="h-64 flex items-center justify-center">
+      <div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
         Loading students...
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center rounded-3xl border border-rose-200 bg-white px-6 text-center dark:border-rose-900 dark:bg-slate-900">
+        <p className="text-sm font-bold text-rose-600 dark:text-rose-400">
+          Unable to load students
+        </p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Please refresh the page or try again later.
+        </p>
       </div>
     );
   }
@@ -135,23 +165,22 @@ export function StudentTable({
 
   return (
     <div className="space-y-4" id="student-module-master-table">
-      <div className="overflow-auto max-h-[70vh] rounded-3xl border border-slate-200/85 dark:border-slate-850 bg-white dark:bg-slate-900 shadow-sm relative">
-        <table className="w-full text-left text-xs border-collapse relative animate-fade-in">
-          {/* Header row with precise columns defined by User */}
-          <thead className="text-[10px] uppercase font-black tracking-wider border-b whitespace-nowrap select-none sticky top-0 z-30">
+      <div className="relative max-h-[70vh] overflow-auto rounded-3xl border border-slate-200/85 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <table className="relative w-full border-collapse text-left text-xs">
+          <thead className="sticky top-0 z-30 select-none whitespace-nowrap border-b text-[10px] font-black uppercase tracking-wider">
             <tr>
               <th
-                className={`px-3 py-3 text-center sticky top-0 left-0 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-12 ${thBgClass}`}
+                className={`sticky left-0 top-0 z-[40] w-12 border-r px-3 py-3 text-center shadow-[2px_0_5px_rgba(0,0,0,0.05)] ${thBgClass}`}
               >
                 SNO
               </th>
               <th
-                className={`px-3 py-3 sticky top-0 left-12 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-20 ${thBgClass}`}
+                className={`sticky left-12 top-0 z-[40] w-20 border-r px-3 py-3 shadow-[2px_0_5px_rgba(0,0,0,0.05)] ${thBgClass}`}
               >
                 STUD ID
               </th>
               <th
-                className={`px-3 py-3 sticky top-0 left-32 z-[40] border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)] w-40 min-w-[160px] ${thBgClass}`}
+                className={`sticky left-32 top-0 z-[40] w-40 min-w-[160px] border-r px-3 py-3 shadow-[2px_0_5px_rgba(0,0,0,0.05)] ${thBgClass}`}
               >
                 STUDENT NAME
               </th>
@@ -164,20 +193,16 @@ export function StudentTable({
               <th className={`px-4 py-3 ${thBgClass}`}>COUNTRY</th>
               <th className={`px-4 py-3 text-center ${thBgClass}`}>INTAKE</th>
               <th className={`px-4 py-3 ${thBgClass}`}>12TH ENGLISH & MOI</th>
-              <th className={`px-4 py-3 min-w-[150px] ${thBgClass}`}>
+              <th className={`min-w-[150px] px-4 py-3 ${thBgClass}`}>
                 APP STATUS
               </th>
-              <th className={`px-4 py-3 ${thBgClass}`}>PORTAL</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>APPLICATION DATE</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>UNIVERSITY NAME</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>COURSE NAME</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>PURSUING / GRADUATE</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>OFFER STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>
                 DEPOSIT DEADLINE DATE
               </th>
               <th className={`px-4 py-3 ${thBgClass}`}>DEPOSIT STATUS</th>
-              <th className={`px-4 py-3 ${thBgClass}`}>IHS&VISA PAID STATUS</th>
+              <th className={`px-4 py-3 ${thBgClass}`}>
+                IHS & VISA PAID STATUS
+              </th>
               <th className={`px-4 py-3 ${thBgClass}`}>CAS DEADLINE DATE</th>
               <th className={`px-4 py-3 ${thBgClass}`}>CAS STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>VISA STATUS</th>
@@ -188,309 +213,243 @@ export function StudentTable({
               <th className={`px-4 py-3 ${thBgClass}`}>PF STATUS</th>
               <th className={`px-4 py-3 ${thBgClass}`}>SANCTIONED</th>
               <th className={`px-4 py-3 ${thBgClass}`}>DISBURSED</th>
-              <th className={`px-4 py-3 min-w-[185px] ${thBgClass}`}>
+              <th className={`min-w-[185px] px-4 py-3 ${thBgClass}`}>
                 REMARKS
               </th>
               <th
-                className={`px-5 py-3 text-right sticky top-0 right-0 z-[40] border-l ${thBgClass}`}
+                className={`sticky right-0 top-0 z-[40] border-l px-5 py-3 text-right ${thBgClass}`}
               >
-                Actions
+                ACTIONS
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 whitespace-nowrap">
+
+          <tbody className="divide-y divide-slate-100 whitespace-nowrap dark:divide-slate-800/50">
             {students.length === 0 ? (
               <tr>
                 <td
-                  colSpan={36}
-                  className="text-center py-12 text-xs text-slate-400 font-bold bg-white dark:bg-slate-900"
+                  colSpan={34}
+                  className="bg-white py-12 text-center text-xs font-bold text-slate-400 dark:bg-slate-900"
                 >
-                  No registered active students found. Check filter exclusions.
+                  No students found.
                 </td>
               </tr>
             ) : (
-              students.map((student: StudentRecord, idx: number) => {
-                const firstApp = student?.applications?.[0];
-
-                const applicationStatus = firstApp?.status ?? "-";
-                const universityName = firstApp?.university?.name ?? "-";
-                const courseName = firstApp?.course?.name ?? "-";
-
-                const latestRemark = student?.remarks?.length
-                  ? student.remarks[student.remarks.length - 1]?.note
-                  : "No active remarks";
+              students.map((student: StudentRecord, index: number) => {
+                const visaLoanProfile = student?.visaLoanProfile ?? null;
+                const lead = student?.lead ?? null;
+                const counselor = student?.counselor ?? null;
+                const remarks = Array.isArray(student?.remarks)
+                  ? student.remarks
+                  : [];
+                const latestRemark = remarks.at(-1)?.note ?? "No remarks added";
+                const password = getText(student?.password, "Not set");
 
                 return (
                   <tr
-                    key={student.id}
-                    className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850/40 transition-colors"
+                    key={student?.id ?? `student-${index}`}
+                    className="bg-white transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/40"
                   >
-                    {/* 1. SNO (Sticky left-0) */}
-                    <td className="px-3 py-3.5 font-bold font-mono text-center text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] w-12">
-                      {idx + 1}
+                    <td className="sticky left-0 z-10 w-12 border-r border-slate-200 bg-white px-3 py-3.5 text-center font-mono font-bold text-slate-400 shadow-[2px_0_5px_rgba(0,0,0,0.03)] dark:border-slate-800 dark:bg-slate-900">
+                      {index + 1}
                     </td>
 
-                    {/* 2. Student unique ID (Sticky left-12) */}
-                    <td className="px-3 py-3.5 font-mono text-[11px] font-black tracking-wider text-slate-500 bg-white dark:bg-slate-900 sticky left-12 z-10 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] w-20">
-                      {student?.studentName ?? "-"}
+                    <td className="sticky left-12 z-10 w-20 border-r border-slate-200 bg-white px-3 py-3.5 font-mono text-[11px] font-black tracking-wider text-slate-500 shadow-[2px_0_5px_rgba(0,0,0,0.03)] dark:border-slate-800 dark:bg-slate-900">
+                      {student?.id ? student.id.slice(0, 8).toUpperCase() : "-"}
                     </td>
 
-                    {/* 3. Student Name (Sticky left-32) */}
                     <td
-                      className="px-4 py-3.5 font-extrabold text-[#000000] dark:text-white hover:underline cursor-pointer sticky left-32 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] truncate w-40 min-w-[160px]"
-                      onClick={() => onSelectStudent(student.id)}
+                      className="sticky left-32 z-10 w-40 min-w-[160px] cursor-pointer truncate border-r border-slate-200 bg-white px-4 py-3.5 font-extrabold text-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.03)] hover:underline dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                      onClick={() => student?.id && onSelectStudent(student.id)}
+                      title={getText(
+                        student?.studentName,
+                        "Student name unavailable",
+                      )}
                     >
-                      {student?.studentName ?? "-"}
+                      {getText(
+                        student?.studentName,
+                        "Student name unavailable",
+                      )}
                     </td>
 
-                    {/* 4. Counsellor Name */}
                     <td className="px-4 py-3.5 font-semibold text-slate-600 dark:text-slate-300">
-                      {student?.counselor?.name ?? "-"}
+                      {getText(counselor?.name, "Not assigned")}
                     </td>
 
-                    {/* 5. Date of Admission */}
-                    <td className="px-4 py-3.5 text-slate-500 font-semibold font-mono text-[11px]">
-                      {student?.applicationDate
-                        ? new Date(student.applicationDate).toLocaleDateString(
-                            "en-GB",
-                          )
-                        : "-"}
+                    <td className="px-4 py-3.5 font-mono text-[11px] font-semibold text-slate-500">
+                      {getDate(student?.applicationDate)}
                     </td>
 
-                    {/* 7. Passport Number */}
                     <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                      {student?.lead?.passport ?? "-"}
+                      {getText(lead?.passport, "Not provided")}
                     </td>
 
-                    {/* 8. Mobile Number */}
-                    <td className="px-4 py-3.5 font-mono text-[11px] text-slate-605 dark:text-slate-400">
-                      {student?.mobileNumber ?? "-"}
+                    <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                      {getText(student?.mobileNumber, "Not provided")}
                     </td>
 
-                    {/* 9. Email ID */}
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400">
-                      {student?.emailId ?? "-"}
+                      {getText(student?.emailId, "Not provided")}
                     </td>
 
-                    {/* 10. Password */}
                     <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1.5">
                         <span>
                           {visiblePasswords[student.id]
-                            ? student?.lead?.password || "Pass@2026"
-                            : "••••••••"}
+                            ? password
+                            : password === "Not set"
+                              ? "Not set"
+                              : "••••••••"}
                         </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePassword(student.id);
-                          }}
-                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"
-                        >
-                          {visiblePasswords[student.id] ? (
-                            <ShieldOff className="h-3 w-3" />
-                          ) : (
-                            <Shield className="h-3 w-3" />
-                          )}
-                        </button>
+                        {password !== "Not set" && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              togglePassword(student.id);
+                            }}
+                            className="rounded p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            aria-label={
+                              visiblePasswords[student.id]
+                                ? "Hide password"
+                                : "Show password"
+                            }
+                          >
+                            {visiblePasswords[student.id] ? (
+                              <ShieldOff className="h-3 w-3" />
+                            ) : (
+                              <Shield className="h-3 w-3" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
 
-                    {/* 11. Country */}
-                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-350">
-                      {student.lead?.preferredCountry}
+                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
+                      {getText(lead?.preferredCountry, "Not selected")}
                     </td>
 
-                    {/* 12. Intake */}
                     <td className="px-4 py-3.5 text-center font-bold">
-                      <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px]">
-                        {student.lead?.preferredIntake}
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] dark:bg-slate-800">
+                        {getText(lead?.preferredIntake, "Not selected")}
                       </span>
                     </td>
 
-                    {/* 13. 12th English / MOI */}
-                    <td className="px-4 py-3.5 text-slate-500 font-medium">
-                      {student?.lead?.twelfthPercentage || "MOI Waiver Letter"}
+                    <td className="px-4 py-3.5 font-medium text-slate-500">
+                      {getText(lead?.twelfthPercentage, "Not provided")}
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-slate-600 dark:text-slate-400">
+                      {getText(lead?.bachelorsCourse, "Not provided")}
+                    </td>
+                    <td className="px-4 py-3.5 font-mono text-[11px] font-semibold text-slate-500">
+                      {getDate(visaLoanProfile?.depositDeadlineDate)}
                     </td>
 
-                    {/* 14. Application Status overall */}
                     <td className="px-4 py-3.5 text-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(applicationStatus)}`}
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.depositStatus)}`}
                       >
-                        {applicationStatus}
+                        {getText(visaLoanProfile?.depositStatus, "Not updated")}
                       </span>
                     </td>
 
-                    {/* 15. Portal */}
-                    <td className="px-4 py-3.5 font-mono font-bold text-[10px] text-red-650 bg-red-600/5 px-2 py-0.5 rounded">
-                      {firstApp?.portal ?? ""}
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.ihsPaidStatus)}`}
+                      >
+                        {getText(visaLoanProfile?.ihsPaidStatus, "Not updated")}
+                      </span>
                     </td>
 
-                    {/* 16. Application Date */}
-                    <td className="px-4 py-3.5 font-mono text-[10px] text-slate-400">
-                      {firstApp?.applicationDate
-                        ? new Date(firstApp.applicationDate).toLocaleDateString(
-                            "en-GB",
-                          )
-                        : "-"}
+                    <td className="px-4 py-3.5 font-mono text-[11px] font-semibold text-slate-500">
+                      {getDate(visaLoanProfile?.casDeadlineDate)}
                     </td>
 
-                    {/* 17. University Name */}
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.casStatus)}`}
+                      >
+                        {getText(visaLoanProfile?.casStatus, "Not updated")}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.visaStatus)}`}
+                      >
+                        {getText(visaLoanProfile?.visaStatus, "Not updated")}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono text-[11px] font-semibold text-slate-500">
+                      {getDate(visaLoanProfile?.universityStartDate)}
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      {getText(
+                        visaLoanProfile?.fintechAssignee,
+                        "Not assigned",
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3.5 font-bold text-slate-600 dark:text-slate-300">
+                      {getText(visaLoanProfile?.nbfc, "Not selected")}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.loanStatus)}`}
+                      >
+                        {getText(visaLoanProfile?.loanStatus, "Not updated")}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${getCellColorClass(visaLoanProfile?.pfStatus)}`}
+                      >
+                        {getText(visaLoanProfile?.pfStatus, "Not updated")}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono font-black text-slate-800 dark:text-slate-300">
+                      {getAmount(visaLoanProfile?.sanctionedAmount)}
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono font-bold text-emerald-600">
+                      {getAmount(visaLoanProfile?.disbursedAmount)}
+                    </td>
+
                     <td
-                      className="px-4 py-3.5 text-slate-800 dark:text-slate-205 font-bold truncate max-w-[180px]"
-                      title={firstApp?.university?.name ?? "-"}
-                    >
-                      {firstApp?.university?.name ?? "-"}
-                    </td>
-
-                    {/* 18. Course Name */}
-                    <td
-                      className="px-4 py-3.5 text-slate-550 dark:text-slate-400 truncate max-w-[150px]"
-                      title={firstApp?.course?.name ?? "-"}
-                    >
-                      {firstApp?.course?.name ?? "-"}
-                    </td>
-
-                    {/* 19. Pursuing / Graduate */}
-                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-bold font-mono">
-                      {student?.lead?.bachelorsCourse || "Graduate"}
-                    </td>
-
-                    {/* 20. Offer Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(applicationStatus)}`}
-                      >
-                        {applicationStatus}
-                      </span>
-                    </td>
-
-                    {/* 21. Deposit Deadline Date */}
-                    <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaLoanProfile?.depositDeadlineDate
-                        ? new Date(
-                            student.visaLoanProfile.depositDeadlineDate,
-                          ).toLocaleDateString("en-GB")
-                        : "-"}
-                    </td>
-
-                    {/* 22. Deposit Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.depositStatus ?? "-")}`}
-                      >
-                        {student?.visaLoanProfile?.depositStatus ?? "-"}
-                      </span>
-                    </td>
-
-                    {/* 23. IHS & Visa Paid Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaLoanProfile?.ihsPaidStatus ?? "-")}`}
-                      >
-                        {student.visaLoanProfile?.ihsPaidStatus ?? "-"}
-                      </span>
-                    </td>
-
-                    {/* 25. CAS Deadline Date */}
-                    <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaLoanProfile?.casDeadlineDate
-                        ? new Date(
-                            student.visaLoanProfile.casDeadlineDate,
-                          ).toLocaleDateString("en-GB")
-                        : "-"}
-                    </td>
-
-                    {/* 26. CAS Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.casStatus ?? "-")}`}
-                      >
-                        {student?.visaLoanProfile?.casStatus}
-                      </span>
-                    </td>
-
-                    {/* 27. Visa Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.visaStatus ?? "-")}`}
-                      >
-                        {student?.visaLoanProfile?.visaStatus}
-                      </span>
-                    </td>
-
-                    {/* 28. Univ Start Date */}
-                    <td className="px-4 py-3.5 font-semibold text-slate-500 font-mono text-[11px]">
-                      {student?.visaLoanProfile?.universityStartDate
-                        ? new Date(
-                            student.visaLoanProfile.universityStartDate,
-                          ).toLocaleDateString("en-GB")
-                        : "-"}
-                    </td>
-
-                    {/* 29. Fintech Assignee */}
-                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-medium font-mono text-[11px]">
-                      {student?.visaLoanProfile?.fintechAssignee}
-                    </td>
-
-                    {/* 30. NBFC */}
-                    <td className="px-4 py-3.5 text-slate-605 dark:text-slate-300 font-bold">
-                      {student.visaLoanProfile?.nbfc}
-                    </td>
-
-                    {/* 31. Loan Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student.visaLoanProfile?.loanStatus ?? "-")}`}
-                      >
-                        {student.visaLoanProfile?.loanStatus}
-                      </span>
-                    </td>
-
-                    {/* 32. PF Status */}
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border ${getCellColorClass(student?.visaLoanProfile?.pfStatus ?? "Pending")}`}
-                      >
-                        {student.visaLoanProfile?.pfStatus || "Pending"}
-                      </span>
-                    </td>
-
-                    {/* 33. Sanctioned */}
-                    <td className="px-4 py-3.5 font-black text-slate-805 dark:text-slate-300 font-mono">
-                      {student.visaLoanProfile?.sanctionedAmount}
-                    </td>
-
-                    {/* 34. Disbursed */}
-                    <td className="px-4 py-3.5 font-bold text-emerald-600 font-mono">
-                      {student.visaLoanProfile?.disbursedAmount}
-                    </td>
-
-                    {/* 35. Remarks timeline note */}
-                    <td
-                      className="px-4 py-3.5 text-[11px] text-slate-500 max-w-[200px] truncate"
+                      className="max-w-[200px] truncate px-4 py-3.5 text-[11px] text-slate-500"
                       title={latestRemark}
                     >
                       {latestRemark}
                     </td>
 
-                    {/* 36. Actions sticky right */}
-                    <td className="px-5 py-3.5 text-right sticky right-0 z-10 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-[-2px_0_5px_rgba(0,0,0,0.035)]">
-                      <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                    <td className="sticky right-0 z-10 border-l border-slate-200 bg-white px-5 py-3.5 text-right shadow-[-2px_0_5px_rgba(0,0,0,0.035)] dark:border-slate-800 dark:bg-slate-900">
+                      <div className="flex flex-nowrap items-center justify-end gap-1.5">
                         <button
-                          onClick={() => onSelectStudent(student.id)}
-                          className="bg-red-600/10 text-red-650 hover:bg-red-600 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide inline-flex items-center gap-0.5 transition-colors cursor-pointer"
-                          title="View complete student folders"
+                          type="button"
+                          onClick={() =>
+                            student?.id && onSelectStudent(student.id)
+                          }
+                          disabled={!student?.id}
+                          className="inline-flex cursor-pointer items-center gap-0.5 rounded-lg bg-red-600/10 px-2.5 py-1.5 text-[10px] font-black tracking-wide text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          title="View complete student details"
                         >
                           <Eye className="h-3 w-3" />
                           <span>View Detail</span>
                         </button>
 
                         <button
-                          onClick={() => onDeleteStudent(student.id)}
-                          className="bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-500 px-2 py-1.5 rounded-lg text-[10px] font-black transition-colors cursor-pointer"
-                          title="Delete Case File"
+                          type="button"
+                          onClick={() =>
+                            student?.id && onDeleteStudent(student.id)
+                          }
+                          disabled={!student?.id}
+                          className="cursor-pointer rounded-lg bg-rose-500/10 px-2 py-1.5 text-[10px] font-black text-rose-500 transition-colors hover:bg-rose-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Delete student"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
