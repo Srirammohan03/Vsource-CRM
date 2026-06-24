@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Eye, Edit, Trash2, Shield, ShieldOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, Trash2, Shield, ShieldOff } from "lucide-react";
 import { Student } from "./mockData";
 import { toast } from "sonner";
 import { useStudents } from "@/hooks/student/useStudents";
@@ -20,14 +20,12 @@ export interface LocalStudent extends Student {
 interface StudentTableProps {
   isDarkMode: boolean;
   onSelectStudent: (id: string) => void;
-  onEditStudent: (student: any) => void;
   onDeleteStudent: (id: string) => void;
 }
 
 export function StudentTable({
   isDarkMode,
   onSelectStudent,
-  onEditStudent,
   onDeleteStudent,
 }: StudentTableProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<
@@ -487,15 +485,6 @@ export function StudentTable({
                         >
                           <Eye className="h-3 w-3" />
                           <span>View Detail</span>
-                        </button>
-
-                        <button
-                          onClick={() => onEditStudent(student)}
-                          className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1.5 rounded-lg text-[10px] font-black inline-flex items-center gap-0.5 transition-colors cursor-pointer"
-                          title="Edit Student Basic Information"
-                        >
-                          <Edit className="h-3 w-3" />
-                          <span>Edit</span>
                         </button>
 
                         <button

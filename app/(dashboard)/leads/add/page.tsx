@@ -97,7 +97,7 @@ const leadFormSchema = z.object({
   preferredCountry: z.string().optional(),
   preferredIntake: z.string().optional(),
   preferredCourse: z.string().optional(),
-  preferredTiers: z.array(z.string()).optional().default([]),
+  preferredTiers: z.array(z.string()).default([]),
   greGmatScore: z.number().optional(),
   quantitativeScore: z.number().optional(),
   verbalScore: z.number().optional(),
@@ -171,17 +171,7 @@ export default function AddLeadPage() {
       return data?.data || [];
     },
   });
-  const getCurrentDateTimeLocal = () => {
-    const now = new Date();
 
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
   const {
     register,
     control,
@@ -191,7 +181,7 @@ export default function AddLeadPage() {
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
-      counsellingDate: getCurrentDateTimeLocal(),
+      counsellingDate: new Date().toISOString().split("T")[0],
       studentName: "",
       mobileNumber: "",
       emailId: "",
@@ -322,12 +312,11 @@ export default function AddLeadPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="counsellingDate">
-                          Application Date
+                          Counselling Date
                         </Label>
                         <Input
                           id="counsellingDate"
-                          type="datetime-local"
-                          defaultValue={new Date().toISOString().slice(0, 16)}
+                          type="date"
                           {...register("counsellingDate")}
                         />
                       </div>
