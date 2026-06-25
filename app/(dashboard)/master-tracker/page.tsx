@@ -49,6 +49,7 @@ const KANBAN_COLUMNS = [
       "bg-purple-100 text-purple-800 dark:bg-purple-955 dark:text-purple-300",
   },
 ] as const;
+
 type InfoRowProps = {
   label: string;
   value: React.ReactNode;
@@ -58,11 +59,11 @@ function InfoRow({ label, value }: InfoRowProps) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs">
       <span className="font-medium text-slate-500">{label}</span>
-
       <span className="font-bold text-slate-900">{value}</span>
     </div>
   );
 }
+
 export default function ApplicationsTrackerPage() {
   const { data, isLoading } = useMasterTracker();
   const router = useRouter();
@@ -70,23 +71,16 @@ export default function ApplicationsTrackerPage() {
   const isDarkMode = false;
   const [filters, setFilters] = useState({
     search: "",
-
     dateRange: "all",
-
     branchId: "",
-
     counselorId: "",
-
     country: "",
-
     intake: "",
-
     stage: "",
-
     moduleStatus: "",
-
     recordType: "",
   });
+
   const onSelectStudent = (id: string) => {
     router.push(`/student-profiles/${id}`);
   };
@@ -115,32 +109,28 @@ export default function ApplicationsTrackerPage() {
       "pending"
     );
   };
+
   const getCurrentModuleStatus = (student: StudentRecord) => {
     const basic = getModuleStatus(student, "basic_information");
-
     if (basic !== "completed") return basic;
 
     const docs = getModuleStatus(student, "documents");
-
     if (docs !== "completed") return docs;
 
     const apps = getModuleStatus(student, "university_applications");
-
     if (apps !== "completed") return apps;
 
     return getModuleStatus(student, "visa_process");
   };
+
   const mapStageToKanban = (item: any): string => {
     if (item.recordType === "lead") {
       return "Inquiry";
     }
 
     const basicInfo = getModuleStatus(item, "basic_information");
-
     const documents = getModuleStatus(item, "documents");
-
     const applications = getModuleStatus(item, "university_applications");
-
     const visa = getModuleStatus(item, "visa_process");
 
     if (basicInfo !== "completed") {
@@ -186,36 +176,29 @@ export default function ApplicationsTrackerPage() {
       switch (item.status) {
         case "converted":
           return "green";
-
         case "qualified":
         case "contacted":
           return "yellow";
-
         case "lost":
           return "red";
-
         default:
           return "white";
       }
     }
 
     const stage = mapStageToKanban(item);
-
     let currentStatus = "pending";
 
     switch (stage) {
       case "Inquiry":
         currentStatus = getModuleStatus(item, "basic_information");
         break;
-
       case "Documents":
         currentStatus = getModuleStatus(item, "documents");
         break;
-
       case "Applied":
         currentStatus = getModuleStatus(item, "university_applications");
         break;
-
       case "Visa Process":
         currentStatus = getModuleStatus(item, "visa_process");
         break;
@@ -224,15 +207,12 @@ export default function ApplicationsTrackerPage() {
     switch (currentStatus) {
       case "completed":
         return "green";
-
       case "rejected":
         return "red";
-
       case "started":
       case "in_progress":
       case "need_corrections":
         return "yellow";
-
       case "pending":
       default:
         return "white";
@@ -285,69 +265,12 @@ export default function ApplicationsTrackerPage() {
   };
 
   // Drag handles and verification
-  const handleDragStart = (e: React.DragEvent, studentId: string) => {
-    e.dataTransfer.setData("studentId", studentId);
-    e.dataTransfer.effectAllowed = "move";
-  };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleOnDrop = (e: React.DragEvent, targetStage: string) => {
-    e.preventDefault();
-    const studentId = e.dataTransfer.getData("studentId");
-    if (!studentId) return;
-
-    const student = students.find((s) => s.id === studentId);
-    if (!student) return;
-
-    const currentStageName = mapStageToKanban(student);
-    const KANBAN_ORDER = [
-      "Inquiry",
-      "Documents",
-      "Applied",
-      "Offer Received",
-      "Visa Process",
-      "Enrolled",
-    ];
-    const currentIndex = KANBAN_ORDER.indexOf(currentStageName);
-    const targetIndex = KANBAN_ORDER.indexOf(targetStage);
-
-    if (targetIndex < currentIndex) {
-      setWarningMessage(
-        `You cannot move "${student.studentName}" backward once they have reached a higher stage.`,
-      );
-      return;
-    }
-
-    if (targetIndex > currentIndex + 1) {
-      setWarningMessage(
-        `Please move "${student.studentName}" one status at a time. The next logical stage is "${KANBAN_ORDER[currentIndex + 1]}".`,
-      );
-      return;
-    }
-
-    if (targetIndex === currentIndex) {
-      return; // Dropped in the exact same column
-    }
-
-    // Logical single step forward
-    if (targetIndex === currentIndex + 1) {
-      setMoveConfirm({
-        studentId: student.id,
-        studentName: student.studentName,
-        fromStage: currentStageName,
-        toStage: targetStage,
-      });
-    }
-  };
 
   const confirmMove = async () => {
     if (!moveConfirm) return;
 
     const { studentId, toStage } = moveConfirm;
-
     const nextStageValue = mapKanbanToStageValue(toStage);
 
     try {
@@ -364,21 +287,20 @@ export default function ApplicationsTrackerPage() {
           }),
         },
       );
-
       window.location.reload();
     } catch (error) {
       console.error(error);
     }
-
     setMoveConfirm(null);
   };
+
   const trackerData = students.map((student) => ({
     ...student,
     recordType: "student",
   }));
+
   const filteredTrackerData = trackerData.filter((item: any) => {
     const search = filters.search.toLowerCase();
-
     const matchesSearch =
       !search ||
       item.studentName?.toLowerCase().includes(search) ||
@@ -403,7 +325,6 @@ export default function ApplicationsTrackerPage() {
 
     if (filters.dateRange !== "all") {
       const date = new Date(item.createdAt);
-
       const today = new Date();
 
       if (filters.dateRange === "today") {
@@ -412,9 +333,7 @@ export default function ApplicationsTrackerPage() {
 
       if (filters.dateRange === "week") {
         const weekAgo = new Date();
-
         weekAgo.setDate(today.getDate() - 7);
-
         matchesDate = date >= weekAgo;
       }
 
@@ -426,11 +345,11 @@ export default function ApplicationsTrackerPage() {
     }
 
     let matchesModuleStatus = true;
-
     if (item.recordType === "student" && filters.moduleStatus) {
       matchesModuleStatus =
         getCurrentModuleStatus(item) === filters.moduleStatus;
     }
+
     return (
       matchesSearch &&
       matchesBranch &&
@@ -442,6 +361,7 @@ export default function ApplicationsTrackerPage() {
       matchesModuleStatus
     );
   });
+
   const branchOptions: string[] = [
     ...new Set(
       students
@@ -473,6 +393,7 @@ export default function ApplicationsTrackerPage() {
         .filter((intake): intake is string => Boolean(intake)),
     ),
   ];
+
   const renderStageContent = (student: StudentRecord, stage: string) => {
     if (stage === "Inquiry") {
       const profileFields = [
@@ -483,9 +404,7 @@ export default function ApplicationsTrackerPage() {
         student.lead?.bachelorsCourse,
         student.counselor?.name,
       ];
-
       const completedFields = profileFields.filter(Boolean).length;
-
       const profileCompletion = Math.round(
         (completedFields / profileFields.length) * 100,
       );
@@ -496,17 +415,14 @@ export default function ApplicationsTrackerPage() {
             label="Passport"
             value={student.lead?.passport || "Not Added"}
           />
-
           <InfoRow
             label="Country"
             value={student.lead?.preferredCountry || "Not Selected"}
           />
-
           <InfoRow
             label="Intake"
             value={student.lead?.preferredIntake || "Not Selected"}
           />
-
           <InfoRow
             label="Education"
             value={student.lead?.bachelorsCourse || "Not Added"}
@@ -517,7 +433,6 @@ export default function ApplicationsTrackerPage() {
 
     if (stage === "Documents") {
       const uploaded = student.documents?.length ?? 0;
-
       const verified =
         student.documents?.filter(
           (doc) => doc.remarks?.toLowerCase() === "verified",
@@ -526,9 +441,7 @@ export default function ApplicationsTrackerPage() {
       return (
         <div className="space-y-2">
           <InfoRow label="Uploaded" value={`${uploaded}/5`} />
-
           <InfoRow label="Verified" value={`${verified}/5`} />
-
           <InfoRow label="Pending" value={`${Math.max(0, 5 - uploaded)}/5`} />
         </div>
       );
@@ -536,15 +449,12 @@ export default function ApplicationsTrackerPage() {
 
     if (stage === "Applied") {
       const totalApps = student.applications?.length ?? 0;
-
       const appliedCount =
         student.applications?.filter((app) => app.status === "applied")
           .length ?? 0;
-
       const draftCount =
         student.applications?.filter((app) => app.status === "draft").length ??
         0;
-
       const offerReceivedCount =
         student.applications?.filter(
           (app) => app.offerStatus !== "not_received",
@@ -553,11 +463,8 @@ export default function ApplicationsTrackerPage() {
       return (
         <div className="space-y-2">
           <InfoRow label="Uni Application" value={totalApps} />
-
           <InfoRow label="Uni Applied" value={appliedCount} />
-
           <InfoRow label="Uni Draft" value={draftCount} />
-
           <InfoRow label="Uni Offers" value={offerReceivedCount} />
         </div>
       );
@@ -570,17 +477,14 @@ export default function ApplicationsTrackerPage() {
             label="CAS"
             value={student.visaLoanProfile?.casStatus ?? "-"}
           />
-
           <InfoRow
             label="Visa"
             value={student.visaLoanProfile?.visaStatus ?? "-"}
           />
-
           <InfoRow
             label="Loan"
             value={student.visaLoanProfile?.loanStatus ?? "-"}
           />
-
           <InfoRow label="NBFC" value={student.visaLoanProfile?.nbfc ?? "-"} />
         </div>
       );
@@ -588,6 +492,7 @@ export default function ApplicationsTrackerPage() {
 
     return null;
   };
+
   return (
     <div className="space-y-6">
       <TrackerFilter
@@ -599,274 +504,171 @@ export default function ApplicationsTrackerPage() {
         intakeOptions={intakeOptions}
       />
 
-      {/* Kanban Board Container. 
-          To fulfill "remove the scrollbars on each column let the page size or height increase",
-          we do not put max height constraints or overflow-y-auto on columns. 
-          The columns grow to fit their tallest card stack perfectly. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:overflow-x-auto gap-4 items-start pb-10 select-none scrollbar-thin">
-        {KANBAN_COLUMNS.map((col, colIndex) => {
-          // Filter students for this column based on active global filters
-          const columnStudents = filteredTrackerData.filter(
-            (student: any) => mapStageToKanban(student) === col.id,
-          );
+      {/* Grid container perfectly structured for Mobile (1 col) and Desktop (4 cols) */}
+      <div className="w-full pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 xl:gap-6">
+          {KANBAN_COLUMNS.map((col) => {
+            const columnStudents = filteredTrackerData.filter(
+              (student: any) => mapStageToKanban(student) === col.id,
+            );
 
-          return (
-            <div
-              key={col.id}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleOnDrop(e, col.id)}
-              className="flex flex-col bg-slate-50/45 dark:bg-slate-950/40 p-4 border border-slate-200/60 dark:border-slate-850/70 rounded-[28px] xl:w-80 xl:min-w-80 w-full shadow-xs"
-            >
-              {/* Header section of each Kanban category */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/50 dark:border-slate-800/50">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl ${col.badgeStyle}`}
-                  >
-                    {col.label}
+            return (
+              <div
+                key={col.id}
+                className="flex flex-col w-full h-full rounded-[28px] border border-slate-200/60 bg-slate-50/45 p-4 xl:p-5 shadow-sm dark:border-slate-800/60 dark:bg-slate-950/40"
+              >
+                {/* Header section of each Kanban category */}
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/50 dark:border-slate-800/50">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl ${col.badgeStyle}`}
+                    >
+                      {col.label}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black px-2.5 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-slate-500">
+                    {columnStudents.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-black px-2.5 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-slate-500">
-                  {columnStudents.length}
-                </span>
-              </div>
 
-              {/* Vertical list of student cards without secondary scrollbar restriction, allows standard flow height expansion */}
-              <div className="flex flex-col gap-3">
-                {columnStudents.length === 0 ? (
-                  <div className="py-12 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-850 text-center text-slate-400 font-bold text-xs flex flex-col items-center justify-center">
-                    <span className="text-xl mb-1">📭</span>
-                    <span>No students at this stage</span>
-                  </div>
-                ) : (
-                  columnStudents.map((student) => {
-                    const colorKey = getStudentColorThemeKey(student);
-                    const colorClass = getColorClasses(colorKey);
-                    let progressPercent = 0;
+                {/* Vertical list of student cards */}
+                <div className="flex flex-col gap-3">
+                  {columnStudents.length === 0 ? (
+                    <div className="py-12 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-850 text-center text-slate-400 font-bold text-xs flex flex-col items-center justify-center">
+                      <span className="text-xl mb-1">📭</span>
+                      <span>No students at this stage</span>
+                    </div>
+                  ) : (
+                    columnStudents.map((student) => {
+                      const colorKey = getStudentColorThemeKey(student);
+                      const colorClass = getColorClasses(colorKey);
+                      let progressPercent = 0;
 
-                    switch (col.id) {
-                      case "Inquiry":
-                        progressPercent =
-                          student.moduleProgress?.find(
-                            (m: any) => m.module === "basic_information",
-                          )?.progress ?? 0;
-                        break;
+                      switch (col.id) {
+                        case "Inquiry":
+                          progressPercent =
+                            student.moduleProgress?.find(
+                              (m: any) => m.module === "basic_information",
+                            )?.progress ?? 0;
+                          break;
 
-                      case "Documents":
-                        progressPercent =
-                          student.moduleProgress?.find(
-                            (m: any) => m.module === "documents",
-                          )?.progress ?? 0;
-                        break;
+                        case "Documents":
+                          progressPercent =
+                            student.moduleProgress?.find(
+                              (m: any) => m.module === "documents",
+                            )?.progress ?? 0;
+                          break;
 
-                      case "Applied":
-                        progressPercent =
-                          student.moduleProgress?.find(
-                            (m: any) => m.module === "university_applications",
-                          )?.progress ?? 0;
-                        break;
+                        case "Applied":
+                          progressPercent =
+                            student.moduleProgress?.find(
+                              (m: any) =>
+                                m.module === "university_applications",
+                            )?.progress ?? 0;
+                          break;
 
-                      case "Visa Process":
-                        progressPercent =
-                          student.moduleProgress?.find(
-                            (m: any) => m.module === "visa_process",
-                          )?.progress ?? 0;
-                        break;
-                    }
-                    const progressColor =
-                      colorKey === "green"
-                        ? "bg-emerald-500"
-                        : colorKey === "yellow"
-                          ? "bg-amber-500"
-                          : colorKey === "red"
-                            ? "bg-rose-500"
-                            : "bg-slate-400";
-                    const activeApp = student.applications?.[0];
+                        case "Visa Process":
+                          progressPercent =
+                            student.moduleProgress?.find(
+                              (m: any) => m.module === "visa_process",
+                            )?.progress ?? 0;
+                          break;
+                      }
 
-                    return (
-                      <div
-                        key={student.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, student.id)}
-                        onClick={() => onSelectStudent(student.id)}
-                        className={`relative p-5 rounded-[24px] border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer overflow-hidden ${colorClass}`}
-                      >
-                        {/* Header */}
-                        <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <div
-                              className="flex items-center gap-2 min-w-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="text-slate-400 cursor-grab hover:text-slate-600 transition-colors">
-                                <GripVertical className="h-4 w-4" />
-                              </div>
+                      const progressColor =
+                        colorKey === "green"
+                          ? "bg-emerald-500"
+                          : colorKey === "yellow"
+                            ? "bg-amber-500"
+                            : colorKey === "red"
+                              ? "bg-rose-500"
+                              : "bg-slate-400";
 
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h5
-                                    onClick={() => onSelectStudent(student.id)}
-                                    className="font-bold text-sm truncate cursor-pointer hover:underline"
-                                  >
-                                    {student.studentName}
-                                  </h5>
+                      return (
+                        <div
+                          key={student.id}
+                          draggable
+                          onClick={() => onSelectStudent(student.id)}
+                          className={`relative p-5 rounded-[24px] border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer overflow-hidden ${colorClass}`}
+                        >
+                          {/* Header */}
+                          <div>
+                            <div className="flex items-start justify-between gap-3">
+                              <div
+                                className="flex items-center gap-2 min-w-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="text-slate-400 cursor-grab hover:text-slate-600 transition-colors">
+                                  <GripVertical className="h-4 w-4" />
+                                </div>
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h5
+                                      onClick={() =>
+                                        onSelectStudent(student.id)
+                                      }
+                                      className="font-bold text-sm truncate cursor-pointer hover:underline"
+                                    >
+                                      {student.studentName}
+                                    </h5>
+                                  </div>
                                 </div>
                               </div>
+
+                              <div className="px-2 py-1 rounded-full bg-white/60 dark:bg-slate-800/60 shrink-0">
+                                <span className="text-[10px] font-bold uppercase text-black dark:text-white">
+                                  {(
+                                    student?.lead?.preferredCountry ?? "---"
+                                  ).substring(0, 3)}
+                                </span>
+                              </div>
                             </div>
 
-                            <div className="px-2 py-1 rounded-full bg-white/60 dark:bg-slate-800/60">
-                              <span className="text-[10px] font-bold uppercase text-black dark:text-white">
-                                {(
-                                  student?.lead?.preferredCountry ?? "---"
-                                ).substring(0, 3)}
-                              </span>
+                            <div className="mt-5">
+                              {renderStageContent(student, col.id)}
+                            </div>
+
+                            {/* Progress */}
+                            <div className="mt-5">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[11px] font-semibold text-slate-500">
+                                  Compliance & Checklists
+                                </span>
+                                <span className="text-[11px] font-bold">
+                                  {progressPercent}%
+                                </span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-200/70 dark:bg-slate-800 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+                                  style={{ width: `${progressPercent}%` }}
+                                />
+                              </div>
                             </div>
                           </div>
 
-                          <div className="mt-5">
-                            {renderStageContent(student, col.id)}
-                          </div>
-
-                          {/* Progress */}
-                          <div className="mt-5">
-                            <div className="flex items-center justify-between mb-2">
+                          {/* Footer */}
+                          <div className="mt-5 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+                            <div className="flex items-center justify-between">
                               <span className="text-[11px] font-semibold text-slate-500">
-                                Compliance & Checklists
+                                {student?.lead?.preferredIntake || "Fall 2026"}
                               </span>
-
-                              <span className="text-[11px] font-bold">
-                                {progressPercent}%
+                              <span className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold">
+                                {student?.counselor?.name || "Unassigned"}
                               </span>
-                            </div>
-
-                            <div className="w-full h-2 rounded-full bg-slate-200/70 dark:bg-slate-800 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
-                                style={{ width: `${progressPercent}%` }}
-                              />
                             </div>
                           </div>
                         </div>
-
-                        {/* Footer */}
-                        <div className="mt-5 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              {student?.lead?.preferredIntake || "Fall 2026"}
-                            </span>
-
-                            <span className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold">
-                              {student?.counselor?.name || "Unassigned"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-
-      {/* Simple, easy confirmation dialog */}
-      <AnimatePresence>
-        {moveConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className={`w-full max-w-sm rounded-[24px] p-6 border shadow-2xl ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}
-            >
-              <div className="flex items-center gap-2 mb-2 text-rose-600">
-                <span className="text-[10px] font-black tracking-widest uppercase bg-rose-500/10 px-2.5 py-1 rounded-md">
-                  Are you sure?
-                </span>
-              </div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-2">
-                Move student to next stage?
-              </h3>
-
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-semibold">
-                Do you want to confirm moving{" "}
-                <span className="text-[#000000] dark:text-white font-extrabold">
-                  {moveConfirm.studentName}
-                </span>{" "}
-                from{" "}
-                <span className="font-bold underline text-slate-700 dark:text-slate-300">
-                  {moveConfirm.fromStage}
-                </span>{" "}
-                to{" "}
-                <span className="font-bold underline text-emerald-600 dark:text-emerald-400">
-                  {moveConfirm.toStage}
-                </span>
-                ?
-              </p>
-
-              <p className="text-[10.5px] text-slate-400 dark:text-slate-500 leading-normal mb-6 font-medium italic">
-                Note: You can only move students forward one step at a time.
-                Once they are moved forward, they cannot go back.
-              </p>
-
-              <div className="flex justify-end gap-2 text-[11px] font-bold">
-                <button
-                  onClick={() => setMoveConfirm(null)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmMove}
-                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md cursor-pointer"
-                >
-                  Move Forward
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Dynamic warning modal using simple, easily readable English */}
-        {warningMessage && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className={`w-full max-w-sm rounded-[24px] p-6 border shadow-2xl ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}
-            >
-              <div className="flex items-center gap-2 mb-2 text-rose-600">
-                <span className="text-[10px] font-black tracking-widest uppercase bg-rose-500/10 px-2.5 py-1 rounded-md">
-                  Heads Up
-                </span>
-              </div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-2">
-                Stage Change Blocked
-              </h3>
-
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-5 leading-relaxed font-semibold">
-                {warningMessage}
-              </p>
-
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-normal mb-5 italic">
-                Enrollment rules specify that students should only go forward
-                one step at a time, and never go back.
-              </p>
-
-              <div className="flex justify-end text-[11px] font-bold">
-                <button
-                  onClick={() => setWarningMessage(null)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-950 dark:hover:bg-slate-700 text-white shadow-sm cursor-pointer"
-                >
-                  OK
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
