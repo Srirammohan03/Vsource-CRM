@@ -23,6 +23,7 @@ model User {
 
   leadAssignments        LeadCounselor[]
   leadCounselorsAssigned LeadCounselor[] @relation("LeadAssignedBy")
+  leadsConverted         Lead[]          @relation("LeadConvertedBy")
 
   mbbsLeadAssignments        MbbsLeadCounselor[]
   mbbsLeadCounselorsAssigned MbbsLeadCounselor[] @relation("MbbsLeadAssignedBy")
@@ -161,7 +162,10 @@ model Lead {
 
   counselors LeadCounselor[]
 
-  isConverted Boolean @default(false)
+  isConverted   Boolean @default(false)
+  convertedById String?
+
+  convertedBy User? @relation("LeadConvertedBy", fields: [convertedById], references: [id], onDelete: SetNull)
 
   convertedAt DateTime?
 
@@ -220,6 +224,7 @@ model Lead {
   @@index([branchId])
   @@index([branchId, status])
   @@index([branchId, isConverted])
+  @@index([convertedById])
 }
 
 model LeadCounselor {
@@ -628,6 +633,7 @@ enum StudentModuleStatus {
   in_progress
   need_corrections
   completed
+  rejected
 }
 
 model StudentModuleProgress {
