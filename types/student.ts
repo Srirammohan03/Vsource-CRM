@@ -48,6 +48,25 @@ export interface StudentRecord {
 
   lead?: Lead;
 
+  moduleProgress?: {
+    id: string;
+    module:
+      | "basic_information"
+      | "documents"
+      | "university_applications"
+      | "visa_process";
+
+    status:
+      | "pending"
+      | "started"
+      | "in_progress"
+      | "need_corrections"
+      | "completed"
+      | "rejected";
+
+    progress: number;
+  }[];
+
   createdAt: string;
   updatedAt: string;
 }
@@ -186,3 +205,29 @@ export type StudentVisaLoanProfilePayload = {
   disbursed: boolean;
   disbursedAmount: number | null;
 };
+
+export interface StudentModuleProgressRecord {
+  id: string;
+
+  studentId: string;
+
+  module:
+    | "basic_information"
+    | "documents"
+    | "university_applications"
+    | "visa_process";
+
+  status:
+    | "pending"
+    | "started"
+    | "in_progress"
+    | "need_corrections"
+    | "completed"
+    | "rejected";
+
+  progress: number;
+
+  createdAt: string;
+
+  updatedAt: string;
+}

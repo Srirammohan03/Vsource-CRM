@@ -13,7 +13,8 @@ export type StudentModuleStatus =
   | "started"
   | "in_progress"
   | "need_corrections"
-  | "completed";
+  | "completed"
+  | "rejected";
 
 export type StudentModuleProgress = {
   id: string | null;

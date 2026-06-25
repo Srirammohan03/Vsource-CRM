@@ -22,6 +22,7 @@ const defaultProgress: Record<StudentModuleStatus, number> = {
   in_progress: 50,
   need_corrections: 75,
   completed: 100,
+  rejected:0,
 };
 
 export async function GET(_request: NextRequest, context: RouteContext) {

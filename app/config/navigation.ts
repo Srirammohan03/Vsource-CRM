@@ -57,7 +57,7 @@ export const navigationItems = [
   {
     moduleCode: "UNIVERSITIES",
     to: "/universities",
-    label: "Universities",
+    label: "Abroad Universities",
     icon: Building2,
   },
   {

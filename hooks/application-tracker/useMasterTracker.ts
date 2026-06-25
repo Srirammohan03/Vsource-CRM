@@ -9,18 +9,18 @@ export const useMasterTracker = () => {
   return useQuery({
     queryKey: ["master-tracker"],
     queryFn: async () => {
-      let leads = [];
+      // let leads = [];
       let students = [];
 
-      try {
-        const leadsRes = await axios.get(`${API}/leads`, {
-          withCredentials: true,
-        });
+      // try {
+      //   const leadsRes = await axios.get(`${API}/leads`, {
+      //     withCredentials: true,
+      //   });
 
-        leads = leadsRes.data?.data ?? [];
-      } catch (err) {
-        console.error("Leads Error", err);
-      }
+      //   leads = leadsRes.data?.data ?? [];
+      // } catch (err) {
+      //   console.error("Leads Error", err);
+      // }
 
       try {
         const studentsRes = await axios.get(`${API}/students`, {
@@ -33,7 +33,7 @@ export const useMasterTracker = () => {
       }
 
       return {
-        leads,
+        // leads,
         students,
       };
     },

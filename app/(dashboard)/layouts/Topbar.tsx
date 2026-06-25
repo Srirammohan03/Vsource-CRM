@@ -23,12 +23,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { CommandPalette } from "@/components/common/CommandPalette";
 import { usePathname, useRouter } from "next/navigation";
+import { usePageTitle } from "@/store/page-title";
 
 export function Topbar() {
+  const { title } = usePageTitle();
   const { user, logout } = useAuth();
   const { darkMode, toggleDark, setCommandOpen, toggleSidebar } = useUi();
   const router = useRouter();
@@ -60,49 +60,35 @@ export function Topbar() {
             <Menu className="size-5" />
           </Button>
           <div className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground">
-            {crumbs.length === 0 ? (
-              <span className="font-medium text-foreground">Overview</span>
-            ) : (
-              crumbs.map((c, i) => (
+            {crumbs
+              .filter((c) => !/^[0-9a-fA-F-]{36}$/.test(c))
+              .map((c, i, arr) => (
                 <span key={i} className="flex items-center gap-1.5">
                   <span
                     className={
-                      i === crumbs.length - 1
+                      i === arr.length - 1
                         ? "font-medium text-foreground capitalize"
                         : "capitalize"
                     }
                   >
-                    {c.replace("-", " ")}
+                    {c.replace(/-/g, " ")}
                   </span>
-                  {i < crumbs.length - 1 && (
+
+                  {i < arr.length - 1 && (
                     <span className="text-muted-foreground/50">/</span>
                   )}
                 </span>
-              ))
+              ))}
+
+            {title && pathname.startsWith("/student-profiles/") && (
+              <>
+                <span className="text-muted-foreground/50">/</span>
+                <span className="font-medium text-foreground">{title}</span>
+              </>
             )}
           </div>
 
           <div className="flex-1" />
-
-          <button
-            onClick={() => setCommandOpen(true)}
-            className="hidden md:flex items-center gap-2 h-9 w-72 px-3 rounded-lg border border-input bg-secondary/50 text-sm text-muted-foreground hover:bg-secondary transition-colors"
-          >
-            <Search className="size-4" />
-            <span className="flex-1 text-left">Search anything…</span>
-            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-background border border-border flex items-center gap-0.5">
-              <Command className="size-2.5" />K
-            </kbd>
-          </button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setCommandOpen(true)}
-          >
-            <Search className="size-4" />
-          </Button>
 
           <Button
             variant="ghost"
@@ -116,40 +102,6 @@ export function Topbar() {
               <Moon className="size-4" />
             )}
           </Button>
-
-          {/* <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="size-4" />
-                {unread > 0 && (
-                  <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary animate-pulse" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel className="flex items-center justify-between">
-                Notifications <Badge variant="secondary">{unread} new</Badge>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {notifications.map((n) => (
-                <DropdownMenuItem
-                  key={n.id}
-                  className="flex-col items-start gap-0.5 py-2.5"
-                >
-                  <div className="flex w-full items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-primary shrink-0" />
-                    <span className="text-sm font-medium">{n.title}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">
-                      {n.time}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground pl-3.5">
-                    {n.description}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu> */}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -174,13 +126,7 @@ export function Topbar() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                <UserIcon className="size-4 mr-2" /> Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="size-4 mr-2" /> Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 onClick={() => {
                   logout();

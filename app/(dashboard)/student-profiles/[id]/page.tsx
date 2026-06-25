@@ -1,4 +1,4 @@
-// app\(dashboard)\student-profiles\page.tsx
+// app\(dashboard)\student-profiles\[id]\page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,8 +18,8 @@ import {
   LayoutGrid,
   TableProperties,
 } from "lucide-react";
-import { DMSSection } from "./DMSSection";
-import { StudentTable } from "./StudentTable";
+import { DMSSection } from "../DMSSection";
+import { StudentTable } from "../StudentTable";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStudents } from "@/hooks/student/useStudents";
 import { Remarks, StudentRecord } from "@/types/student";
@@ -45,6 +45,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import StudentApplicationsSection from "@/components/student/StudentApplicationsSection";
 import { useParams, useRouter } from "next/navigation";
+import { usePageTitle } from "@/store/page-title";
 
 const tabs = [
   {
@@ -102,7 +103,7 @@ export default function Home() {
   const [appPortal, setAppPortal] = useState<string>("GVOC");
   const [appDate, setAppDate] = useState<string>("");
   const [appStatus, setAppStatus] = useState<string>("Pending");
-
+  const { setTitle, clearTitle } = usePageTitle();
   const [newRemarkText, setNewRemarkText] = useState<string>("");
   const [selectedUniversityId, setSelectedUniversityId] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -198,9 +199,13 @@ export default function Home() {
       students.find((s: StudentRecord) => s.id === selectedStudentId) ?? null
     );
   }, [students, selectedStudentId]);
-  const handleSelectStudent = (id: string) => {
-    router.push(`/student-profiles/${id}`);
-  };
+  useEffect(() => {
+    if (selectedStudent?.studentName) {
+      setTitle(selectedStudent.studentName);
+    }
+
+    return () => clearTitle();
+  }, [selectedStudent?.studentName, setTitle, clearTitle]);
   const handleDeleteStudent = async (id: string) => {
     if (
       confirm(
@@ -567,7 +572,7 @@ export default function Home() {
                             type="text"
                             value={newRemarkText}
                             onChange={(e) => setNewRemarkText(e.target.value)}
-                            placeholder="Type a new compliance note, advisory update..."
+                            placeholder="Type here..."
                             className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-200" : "bg-slate-50 border-slate-202"}`}
                             required
                           />
@@ -576,7 +581,7 @@ export default function Home() {
                             className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer"
                             disabled={createRemarkMutation.isPending}
                           >
-                            Append Remark
+                            Save
                           </button>
                         </form>
 
@@ -622,7 +627,9 @@ export default function Home() {
                   >
                     <StudentTable
                       isDarkMode={isDarkMode}
-                      onSelectStudent={handleSelectStudent}
+                      onSelectStudent={(id) =>
+                        router.push(`/student-profiles/${id}`)
+                      }
                       onDeleteStudent={handleDeleteStudent}
                     />
                   </motion.div>

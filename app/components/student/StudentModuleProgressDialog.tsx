@@ -36,6 +36,7 @@ const statusOptions: Array<{
   { value: "in_progress", label: "In Progress", defaultProgress: 50 },
   { value: "need_corrections", label: "Need Corrections", defaultProgress: 75 },
   { value: "completed", label: "Completed", defaultProgress: 100 },
+  {value: "rejected", label:"Rejected", defaultProgress:0}
 ];
 
 type Props = {

@@ -5,6 +5,7 @@ import { Eye, Shield, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStudents } from "@/hooks/student/useStudents";
 import { StudentRecord } from "@/types/student";
+import { useRouter } from "next/navigation";
 
 interface StudentTableProps {
   isDarkMode: boolean;
@@ -20,7 +21,7 @@ export function StudentTable({
   const [visiblePasswords, setVisiblePasswords] = useState<
     Record<string, boolean>
   >({});
-
+const router = useRouter();
   const { data, isLoading, isError, error } = useStudents();
 
   const students = Array.isArray(data?.data) ? data.data : [];
@@ -432,11 +433,9 @@ export function StudentTable({
                         <button
                           type="button"
                           onClick={() =>
-                            student?.id && onSelectStudent(student.id)
+                            router.push(`/student-profiles/${student.id}`)
                           }
-                          disabled={!student?.id}
-                          className="inline-flex cursor-pointer items-center gap-0.5 rounded-lg bg-red-600/10 px-2.5 py-1.5 text-[10px] font-black tracking-wide text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                          title="View complete student details"
+                          className="inline-flex cursor-pointer items-center gap-0.5 rounded-lg bg-red-600/10 px-2.5 py-1.5 text-[10px] font-black tracking-wide text-red-600 transition-colors hover:bg-red-600 hover:text-white"
                         >
                           <Eye className="h-3 w-3" />
                           <span>View Detail</span>

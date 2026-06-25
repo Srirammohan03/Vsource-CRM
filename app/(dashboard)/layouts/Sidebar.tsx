@@ -77,7 +77,7 @@ const items = [
   {
     moduleCode: "APPLICATIONS",
     to: "/master-tracker",
-    label: "Master Tracker",
+    label: "Daily Tracker - Masters",
     icon: FileText,
   },
   {
@@ -90,7 +90,7 @@ const items = [
   {
     moduleCode: "UNIVERSITIES",
     to: "/universities",
-    label: "Universities",
+    label: "Abroad Universities",
     icon: Building2,
   },
   {
