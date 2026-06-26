@@ -266,7 +266,6 @@ export default function ApplicationsTrackerPage() {
 
   // Drag handles and verification
 
-
   const confirmMove = async () => {
     if (!moveConfirm) return;
 
@@ -433,16 +432,21 @@ export default function ApplicationsTrackerPage() {
 
     if (stage === "Documents") {
       const uploaded = student.documents?.length ?? 0;
-      const verified =
-        student.documents?.filter(
-          (doc) => doc.remarks?.toLowerCase() === "verified",
-        ).length ?? 0;
+
+      const status =
+        student.moduleProgress?.find((m) => m.module === "documents")?.status ??
+        "pending";
 
       return (
         <div className="space-y-2">
-          <InfoRow label="Uploaded" value={`${uploaded}/5`} />
-          <InfoRow label="Verified" value={`${verified}/5`} />
-          <InfoRow label="Pending" value={`${Math.max(0, 5 - uploaded)}/5`} />
+          <InfoRow label="Documents" value={uploaded} />
+
+          <InfoRow label="Checklist" value={status.replaceAll("_", " ")} />
+
+          <InfoRow
+            label="Updated"
+            value={new Date(student.updatedAt).toLocaleDateString()}
+          />
         </div>
       );
     }
