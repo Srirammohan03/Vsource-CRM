@@ -362,6 +362,7 @@ export default function StudentApplicationsSection({
             <div className="flex justify-end mt-6">
               <Button
                 onClick={handleSaveApplication}
+                disabled={isSaving}
                 className="rounded-2xl px-8 bg-red-600 hover:bg-red-700"
               >
                 {isSaving
