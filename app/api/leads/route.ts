@@ -108,8 +108,6 @@ export async function POST(req: NextRequest) {
       PERMISSIONS.CREATE,
     );
 
-    console.log("currentUser", currentUser);
-
     const body = LeadCreateSchema.parse(await req.json());
     const lastLead = await db.lead.findFirst({
       orderBy: {
@@ -133,10 +131,20 @@ export async function POST(req: NextRequest) {
     const lead = await db.lead.create({
       data: {
         ...body,
-
         leadNumber: body.leadNumber!,
         createdById: currentUser.id,
         updatedById: currentUser.id,
+
+        counselors:
+          currentUser.role.name === "Counsellor"
+            ? {
+                create: {
+                  counselorId: currentUser.id,
+                  assignedById: currentUser.id,
+                  isPrimary: true,
+                },
+              }
+            : undefined,
       },
     });
 
