@@ -155,7 +155,6 @@ export function ReportFilterSheet({
   }, [open, value]);
 
   const dateOptions = useMemo(() => getDateOptions(), []);
-  const access = options?.access;
 
   const counselorOptions = useMemo(() => {
     if (!options) {
@@ -308,29 +307,15 @@ export function ReportFilterSheet({
                 <SheetTitle>Advanced Report Filters</SheetTitle>
                 <Badge variant="secondary">{activeCount} active</Badge>
               </div>
-              {/* <SheetDescription>
-                {access
-                  ? `${access.roleName}: ${access.scopeLabel}. Dashboard and Excel use the same server-enforced scope.`
-                  : "The dashboard and Excel workbook always use the same filters."}
-              </SheetDescription> */}
+              <SheetDescription>
+                The dashboard and Excel workbook always use the same filters.
+              </SheetDescription>
             </div>
           </div>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
           <div className="space-y-6 px-6 py-5">
-            {/* {access && (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{access.roleName}</Badge>
-                  <span className="text-sm font-medium">{access.scopeLabel}</span>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  These restrictions are applied in the API and cannot be bypassed by changing query parameters.
-                </p>
-              </div>
-            )} */}
-
             <section className="space-y-4 rounded-xl border bg-muted/20 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <CalendarDays className="size-4 text-primary" />
@@ -433,7 +418,7 @@ export function ReportFilterSheet({
                   value={draft.branchId}
                   placeholder="All Branches"
                   options={options?.branches ?? []}
-                  disabled={isLoading || !access?.canFilterBranches}
+                  disabled={isLoading}
                   onChange={handleBranchChange}
                 />
 
@@ -443,7 +428,7 @@ export function ReportFilterSheet({
                   value={draft.counselorId}
                   placeholder="All Counselors"
                   options={counselorOptions}
-                  disabled={isLoading || !access?.canFilterCounsellors}
+                  disabled={isLoading}
                   onChange={(nextValue) =>
                     updateFilter("counselorId", nextValue)
                   }
@@ -608,11 +593,7 @@ export function ReportFilterSheet({
                     value={draft.fintechAssigneeId}
                     placeholder="All Fintech Assignees"
                     options={options?.fintechAssignees ?? []}
-                    disabled={
-                      isLoading ||
-                      draft.recordScope === "leads" ||
-                      !access?.canFilterFintechAssignees
-                    }
+                    disabled={isLoading || draft.recordScope === "leads"}
                     onChange={(nextValue) =>
                       updateFilter("fintechAssigneeId", nextValue)
                     }

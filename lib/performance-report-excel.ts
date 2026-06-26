@@ -147,9 +147,6 @@ function addSummarySheet(
 
   const summaryRows: Array<[string, string | number]> = [
     ["Generated At", new Date(report.generatedAt).toLocaleString("en-IN")],
-    ["Generated For", report.access.userName],
-    ["Role", report.access.roleName],
-    ["Data Access", report.access.scopeLabel],
     ["Pipeline Records", report.summary.totalPipelineRecords],
     ["Active / Unconverted Leads", report.summary.totalLeads],
     ["Converted Students", report.summary.totalStudents],
@@ -170,11 +167,9 @@ function addSummarySheet(
     worksheet.addRow({ metric, value });
   }
 
-  summaryRows.forEach(([metric], index) => {
-    if (metric.startsWith("Total ") && metric.endsWith(" Amount")) {
-      worksheet.getCell(`B${index + 2}`).numFmt = "₹#,##0.00";
-    }
-  });
+  for (const rowNumber of [14, 15, 16]) {
+    worksheet.getCell(`B${rowNumber}`).numFmt = "₹#,##0.00";
+  }
 
   styleWorksheet(worksheet);
 
@@ -194,50 +189,26 @@ function addSummarySheet(
   ];
 
   const filterRows: Array<[string, string]> = [
-  ["Search", filters.search || "All"],
-  ["Report Scope", humanize(filters.recordScope)],
+    ["Search", filters.search || "All"],
+    ["Report Scope", humanize(filters.recordScope)],
+    ["Branch ID", filters.branchId || "All"],
+    ["Counselor ID", filters.counselorId || "All"],
+    ["Lead Status", humanize(filters.leadStatus)],
+    ["Lead Source", filters.leadSource || "All"],
+    ["Country ID", filters.countryId || "All"],
+    ["Intake ID", filters.intakeId || "All"],
+    ["University ID", filters.universityId || "All"],
+    ["Application Status", humanize(filters.applicationStatus)],
+    ["CAS Status", humanize(filters.casStatus)],
+    ["Visa Status", humanize(filters.visaStatus)],
+    ["Loan Status", humanize(filters.loanStatus)],
+    ["NBFC", filters.nbfc || "All"],
+    ["Fintech Assignee ID", filters.fintechAssigneeId || "All"],
+    ["Lifecycle Date Range", humanize(filters.datePreset)],
+    ["Custom Start Date", filters.startDate || "Not Set"],
+    ["Custom End Date", filters.endDate || "Not Set"],
+  ];
 
-  ["Branch", filters.branchId || "All"],
-  ["Counsellor", filters.counselorId || "All"],
-
-  ["Lead Status", humanize(filters.leadStatus)],
-  ["Lead Source", filters.leadSource || "All"],
-
-  ["Country", filters.countryId || "All"],
-  ["Intake", filters.intakeId || "All"],
-  ["University", filters.universityId || "All"],
-
-  [
-    "Application Status",
-    humanize(filters.applicationStatus),
-  ],
-
-  ["CAS Status", humanize(filters.casStatus)],
-  ["Visa Status", humanize(filters.visaStatus)],
-  ["Loan Status", humanize(filters.loanStatus)],
-
-  ["NBFC", filters.nbfc || "All"],
-
-  [
-    "Fintech Assignee",
-    filters.fintechAssigneeId || "All",
-  ],
-
-  [
-    "Lifecycle Date Range",
-    humanize(filters.datePreset),
-  ],
-
-  [
-    "Custom Start Date",
-    filters.startDate || "Not Set",
-  ],
-
-  [
-    "Custom End Date",
-    filters.endDate || "Not Set",
-  ],
-];
   for (const [filter, value] of filterRows) {
     filtersWorksheet.addRow({ filter, value });
   }
@@ -295,8 +266,6 @@ function addPipelineSheet(
       key: "fintechAssigneeName",
       width: 24,
     },
-    { header: "Created By", key: "createdByName", width: 24 },
-    { header: "Converted By", key: "convertedByName", width: 24 },
     { header: "Sanctioned Amount", key: "sanctionedAmount", width: 20 },
     { header: "Disbursed Amount", key: "disbursedAmount", width: 20 },
     { header: "Lead ID", key: "leadId", width: 38 },
@@ -502,7 +471,7 @@ export async function buildPerformanceReportWorkbook(
   workbook.lastModifiedBy = "VSource CRM";
   workbook.created = new Date();
   workbook.modified = new Date();
-  workbook.subject = `VSource CRM role-aware performance report for ${report.access.userName}`;
+  workbook.subject = "VSource CRM lead and student performance report";
   workbook.title = "Performance Report";
 
   addSummarySheet(workbook, report, filters);

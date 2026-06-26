@@ -13,25 +13,6 @@ export type ReportDatePreset =
 
 export type ReportRecordScope = "all" | "leads" | "students";
 
-export type PerformanceReportAccessMode =
-  | "global"
-  | "branch"
-  | "counsellor"
-  | "associate";
-
-export type PerformanceReportAccessInfo = {
-  userId: string;
-  userName: string;
-  roleName: string;
-  mode: PerformanceReportAccessMode;
-  branchIds: string[];
-  scopeLabel: string;
-  canExport: boolean;
-  canFilterBranches: boolean;
-  canFilterCounsellors: boolean;
-  canFilterFintechAssignees: boolean;
-};
-
 export type PerformanceReportFilters = {
   search: string;
   recordScope: ReportRecordScope;
@@ -88,7 +69,6 @@ export type UniversityReportOption = ReportOption & {
 };
 
 export type PerformanceReportFilterOptions = {
-  access: PerformanceReportAccessInfo;
   branches: ReportOption[];
   counselors: CounselorReportOption[];
   countries: ReportOption[];
@@ -195,10 +175,6 @@ export type PerformanceReportRow = {
   loanStatus: string;
   nbfc: string;
   fintechAssigneeName: string;
-  createdById: string | null;
-  createdByName: string;
-  convertedById: string | null;
-  convertedByName: string;
   sanctionedAmount: number;
   disbursedAmount: number;
 };
@@ -238,7 +214,6 @@ export type PerformanceApplicationExportRow = {
 
 export type PerformanceReportData = {
   generatedAt: string;
-  access: PerformanceReportAccessInfo;
   summary: PerformanceReportSummary;
   monthlyVolume: PerformanceReportMonthlyPoint[];
   countryDemand: PerformanceReportCountryPoint[];

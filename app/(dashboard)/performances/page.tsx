@@ -174,7 +174,6 @@ export default function PerformanceReportsPage() {
   const filterOptionsQuery = usePerformanceReportFilters();
 
   const report = reportQuery.data;
-  const access = filterOptionsQuery.data?.access ?? report?.access;
   const activeFiltersCount = countPerformanceReportFilters(filters);
 
   const topCountryData = useMemo(
@@ -212,16 +211,6 @@ export default function PerformanceReportsPage() {
     setPage(1);
   };
 
-  const reportErrorMessage =
-    reportQuery.error instanceof Error
-      ? reportQuery.error.message
-      : filterOptionsQuery.error instanceof Error
-        ? filterOptionsQuery.error.message
-        : "You do not have access to performance reports.";
-
-  const hasFatalAccessError =
-    !report && reportQuery.isError && filterOptionsQuery.isError;
-
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -241,25 +230,6 @@ export default function PerformanceReportsPage() {
       setIsExporting(false);
     }
   };
-
-  if (hasFatalAccessError) {
-    return (
-      <PageTransition>
-        <PageHeader
-          title="Performance Reports"
-          description="Role-based lead and student performance analytics."
-        />
-        <Card className="border-destructive/40">
-          <CardContent className="p-6">
-            <p className="font-semibold text-destructive">Report access denied</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {reportErrorMessage}
-            </p>
-          </CardContent>
-        </Card>
-      </PageTransition>
-    );
-  }
 
   return (
     <PageTransition>
@@ -292,7 +262,6 @@ export default function PerformanceReportsPage() {
                 isExporting ||
                 reportQuery.isLoading ||
                 !report ||
-                !access?.canExport ||
                 report.pagination.total === 0
               }
             >
@@ -306,27 +275,6 @@ export default function PerformanceReportsPage() {
           </>
         }
       />
-
-      {/* {access && (
-        <Card className="mb-4 border-primary/20 bg-primary/5">
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{access.roleName}</Badge>
-                <p className="text-sm font-semibold">{access.scopeLabel}</p>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Signed in as {access.userName}. Report rows and Excel exports use the same server-enforced access rules.
-              </p>
-            </div>
-            <Badge variant="secondary">
-              {access.mode === "global"
-                ? "All branches"
-                : `${access.branchIds.length} accessible branch${access.branchIds.length === 1 ? "" : "es"}`}
-            </Badge>
-          </CardContent>
-        </Card>
-      )} */}
 
       {reportQuery.isError && (
         <Card className="mb-4 border-destructive/40">
@@ -374,7 +322,7 @@ export default function PerformanceReportsPage() {
               icon={GraduationCap}
             />
             <SummaryCard
-              title="Uni Applications"
+              title="Applications"
               value={report.summary.totalApplications.toLocaleString("en-IN")}
               description={`${report.summary.offerApplications.toLocaleString(
                 "en-IN",
@@ -382,7 +330,7 @@ export default function PerformanceReportsPage() {
               icon={FileText}
             />
             <SummaryCard
-              title="Total Records"
+              title="Pipeline Records"
               value={report.summary.totalPipelineRecords.toLocaleString(
                 "en-IN",
               )}
@@ -841,7 +789,7 @@ export default function PerformanceReportsPage() {
             <CardTitle className="text-base">Lead and Student Records</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
               Converted leads appear only as students, preventing duplicate
-              Walk-ins.
+              pipeline records.
             </p>
           </div>
           <Badge variant="secondary">
@@ -850,7 +798,7 @@ export default function PerformanceReportsPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1650px] text-sm">
+            <table className="w-full min-w-[1450px] text-sm">
               <thead>
                 <tr className="border-b bg-secondary/30 text-xs text-muted-foreground">
                   <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -870,7 +818,6 @@ export default function PerformanceReportsPage() {
                   <th className="px-4 py-3 text-left font-medium">
                     Visa / Loan
                   </th>
-                  <th className="px-4 py-3 text-left font-medium">Handled By</th>
                   <th className="px-4 py-3 text-left font-medium">Created</th>
                 </tr>
               </thead>
@@ -878,7 +825,7 @@ export default function PerformanceReportsPage() {
                 {reportQuery.isLoading ? (
                   Array.from({ length: 8 }).map((_, index) => (
                     <tr key={index} className="border-b">
-                      <td colSpan={11} className="px-4 py-3">
+                      <td colSpan={10} className="px-4 py-3">
                         <Skeleton className="h-10 w-full" />
                       </td>
                     </tr>
@@ -966,12 +913,6 @@ export default function PerformanceReportsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="text-xs">Created: {row.createdByName}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Converted: {row.convertedByName}
-                        </p>
-                      </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <p>{formatReportDate(row.createdAt)}</p>
                         {row.nextFollowup && (
@@ -985,7 +926,7 @@ export default function PerformanceReportsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={10}
                       className="px-4 py-12 text-center text-muted-foreground"
                     >
                       No leads or students match the selected filters.

@@ -1,11 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
 import db from "@/lib/prisma";
-import {
-  applyAccessibleBranchIds,
-  buildPerformanceLeadAccessWhere,
-  buildPerformanceStudentAccessWhere,
-  type PerformanceReportAccessContext,
-} from "@/lib/performance-report-access";
 import type {
   PerformanceApplicationExportRow,
   PerformanceReportBranchPoint,
@@ -29,8 +23,6 @@ const performanceLeadSelect = {
   emailId: true,
   source: true,
   branchId: true,
-  createdById: true,
-  convertedById: true,
   isConverted: true,
   convertedAt: true,
   preferredCountry: true,
@@ -40,18 +32,6 @@ const performanceLeadSelect = {
   nextFollowup: true,
   createdAt: true,
   branch: {
-    select: {
-      id: true,
-      name: true,
-    },
-  },
-  createdBy: {
-    select: {
-      id: true,
-      name: true,
-    },
-  },
-  convertedBy: {
     select: {
       id: true,
       name: true,
@@ -104,8 +84,6 @@ const performanceStudentSelect = {
     select: {
       id: true,
       leadNumber: true,
-      createdById: true,
-      convertedById: true,
       source: true,
       preferredCountry: true,
       preferredIntake: true,
@@ -114,18 +92,6 @@ const performanceStudentSelect = {
       convertedAt: true,
       nextFollowup: true,
       createdAt: true,
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      convertedBy: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
     },
   },
   visaLoanProfile: {
@@ -551,10 +517,6 @@ function mapLeadToRow(lead: PerformanceLeadRecord): PerformanceReportRow {
     loanStatus: "",
     nbfc: "",
     fintechAssigneeName: "Not Assigned",
-    createdById: lead.createdById,
-    createdByName: lead.createdBy?.name ?? "Not Assigned",
-    convertedById: lead.convertedById,
-    convertedByName: lead.convertedBy?.name ?? "Not Converted",
     sanctionedAmount: 0,
     disbursedAmount: 0,
   };
@@ -615,10 +577,6 @@ function mapStudentToRow(
     nbfc: profile?.nbfc ?? "",
     fintechAssigneeName:
       profile?.fintechAssignee?.name ?? "Not Assigned",
-    createdById: student.lead.createdById,
-    createdByName: student.lead.createdBy?.name ?? "Not Assigned",
-    convertedById: student.lead.convertedById,
-    convertedByName: student.lead.convertedBy?.name ?? "Not Recorded",
     sanctionedAmount: toNumber(profile?.sanctionedAmount),
     disbursedAmount: toNumber(profile?.disbursedAmount),
   };
@@ -999,6 +957,15 @@ function buildSummary(
   };
 }
 
+function hasApplicationFilters(filters: PerformanceReportFilters): boolean {
+  return Boolean(
+    filters.countryId ||
+      filters.intakeId ||
+      filters.universityId ||
+      filters.applicationStatus,
+  );
+}
+
 function hasStudentOnlyApplicationFilters(
   filters: PerformanceReportFilters,
 ): boolean {
@@ -1052,9 +1019,8 @@ function shouldIncludeStudents(filters: PerformanceReportFilters): boolean {
 function buildLeadWhere(
   filters: PerformanceReportFilters,
   lookup: FilterLookup,
-  access: PerformanceReportAccessContext,
 ): Prisma.LeadWhereInput {
-  const filterWhere: Prisma.LeadWhereInput = {
+  const where: Prisma.LeadWhereInput = {
     leadType:
       STUDY_ABROAD_LEAD_TYPE as Prisma.LeadWhereInput["leadType"],
     isConverted: false,
@@ -1064,22 +1030,52 @@ function buildLeadWhere(
   };
 
   if (filters.search) {
-    filterWhere.OR = [
-      { leadNumber: { contains: filters.search, mode: "insensitive" } },
-      { studentName: { contains: filters.search, mode: "insensitive" } },
-      { emailId: { contains: filters.search, mode: "insensitive" } },
-      { mobileNumber: { contains: filters.search, mode: "insensitive" } },
-      { preferredCountry: { contains: filters.search, mode: "insensitive" } },
-      { preferredCourse: { contains: filters.search, mode: "insensitive" } },
+    where.OR = [
+      {
+        leadNumber: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        studentName: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        emailId: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        mobileNumber: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        preferredCountry: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        preferredCourse: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
     ];
   }
 
   if (filters.branchId) {
-    filterWhere.branchId = filters.branchId;
+    where.branchId = filters.branchId;
   }
 
   if (filters.counselorId) {
-    filterWhere.counselors = {
+    where.counselors = {
       some: {
         counselorId: filters.counselorId,
       },
@@ -1087,26 +1083,26 @@ function buildLeadWhere(
   }
 
   if (filters.leadStatus) {
-    filterWhere.status =
+    where.status =
       filters.leadStatus as Prisma.LeadWhereInput["status"];
   }
 
   if (filters.leadSource) {
-    filterWhere.source = {
+    where.source = {
       equals: filters.leadSource,
       mode: "insensitive",
     };
   }
 
   if (lookup.countryName) {
-    filterWhere.preferredCountry = {
+    where.preferredCountry = {
       contains: lookup.countryName,
       mode: "insensitive",
     };
   }
 
   if (lookup.intakeName) {
-    filterWhere.preferredIntake = {
+    where.preferredIntake = {
       contains: lookup.intakeName,
       mode: "insensitive",
     };
@@ -1119,12 +1115,10 @@ function buildLeadWhere(
   );
 
   if (dateRange) {
-    filterWhere.createdAt = dateRange;
+    where.createdAt = dateRange;
   }
 
-  return {
-    AND: [buildPerformanceLeadAccessWhere(access), filterWhere],
-  };
+  return where;
 }
 
 function buildApplicationWhere(
@@ -1154,22 +1148,39 @@ function buildApplicationWhere(
 
 function buildStudentWhere(
   filters: PerformanceReportFilters,
-  access: PerformanceReportAccessContext,
 ): Prisma.StudentWhereInput {
-  const filterWhere: Prisma.StudentWhereInput = {};
+  const where: Prisma.StudentWhereInput = {};
   const leadWhere: Prisma.LeadWhereInput = {};
   const visaLoanWhere: Prisma.StudentVisaLoanProfileWhereInput = {};
   const applicationWhere = buildApplicationWhere(filters);
 
   if (filters.search) {
-    filterWhere.OR = [
-      { studentName: { contains: filters.search, mode: "insensitive" } },
-      { emailId: { contains: filters.search, mode: "insensitive" } },
-      { mobileNumber: { contains: filters.search, mode: "insensitive" } },
+    where.OR = [
+      {
+        studentName: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        emailId: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        mobileNumber: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
       {
         lead: {
           is: {
-            leadNumber: { contains: filters.search, mode: "insensitive" },
+            leadNumber: {
+              contains: filters.search,
+              mode: "insensitive",
+            },
           },
         },
       },
@@ -1207,11 +1218,11 @@ function buildStudentWhere(
   }
 
   if (filters.branchId) {
-    filterWhere.branchId = filters.branchId;
+    where.branchId = filters.branchId;
   }
 
   if (filters.counselorId) {
-    filterWhere.counselorId = filters.counselorId;
+    where.counselorId = filters.counselorId;
   }
 
   if (filters.leadSource) {
@@ -1227,27 +1238,39 @@ function buildStudentWhere(
   }
 
   if (Object.keys(leadWhere).length > 0) {
-    filterWhere.lead = {
+    where.lead = {
       is: leadWhere,
     };
   }
 
   if (Object.keys(applicationWhere).length > 0) {
-    filterWhere.applications = {
+    where.applications = {
       some: applicationWhere,
     };
   }
 
-  if (filters.casStatus) visaLoanWhere.casStatus = filters.casStatus;
-  if (filters.visaStatus) visaLoanWhere.visaStatus = filters.visaStatus;
-  if (filters.loanStatus) visaLoanWhere.loanStatus = filters.loanStatus;
-  if (filters.nbfc) visaLoanWhere.nbfc = filters.nbfc;
+  if (filters.casStatus) {
+    visaLoanWhere.casStatus = filters.casStatus;
+  }
+
+  if (filters.visaStatus) {
+    visaLoanWhere.visaStatus = filters.visaStatus;
+  }
+
+  if (filters.loanStatus) {
+    visaLoanWhere.loanStatus = filters.loanStatus;
+  }
+
+  if (filters.nbfc) {
+    visaLoanWhere.nbfc = filters.nbfc;
+  }
+
   if (filters.fintechAssigneeId) {
     visaLoanWhere.fintechAssigneeId = filters.fintechAssigneeId;
   }
 
   if (Object.keys(visaLoanWhere).length > 0) {
-    filterWhere.visaLoanProfile = {
+    where.visaLoanProfile = {
       is: visaLoanWhere,
     };
   }
@@ -1259,12 +1282,10 @@ function buildStudentWhere(
   );
 
   if (dateRange) {
-    filterWhere.createdAt = dateRange;
+    where.createdAt = dateRange;
   }
 
-  return {
-    AND: [buildPerformanceStudentAccessWhere(access), filterWhere],
-  };
+  return where;
 }
 
 async function getFilterLookup(
@@ -1370,7 +1391,6 @@ export async function getPerformanceReport(
   filters: PerformanceReportFilters,
   page: number,
   limit: number,
-  access: PerformanceReportAccessContext,
   includeApplicationRows = false,
 ): Promise<PerformanceReportData> {
   const lookup = await getFilterLookup(filters);
@@ -1380,7 +1400,7 @@ export async function getPerformanceReport(
   const [leads, students] = await Promise.all([
     includeLeads
       ? db.lead.findMany({
-          where: buildLeadWhere(filters, lookup, access),
+          where: buildLeadWhere(filters, lookup),
           select: performanceLeadSelect,
           orderBy: {
             createdAt: "desc",
@@ -1389,7 +1409,7 @@ export async function getPerformanceReport(
       : Promise.resolve([] as PerformanceLeadRecord[]),
     includeStudents
       ? db.student.findMany({
-          where: buildStudentWhere(filters, access),
+          where: buildStudentWhere(filters),
           select: performanceStudentSelect,
           orderBy: {
             createdAt: "desc",
@@ -1449,17 +1469,8 @@ export async function getPerformanceReport(
       })
     : undefined;
 
-  const visibleBranchIds = Array.from(
-    new Set([
-      ...access.assignedBranchIds,
-      ...leads.map((lead) => lead.branchId),
-      ...students.map((student) => student.branchId),
-    ]),
-  );
-
   return {
     generatedAt: new Date().toISOString(),
-    access: applyAccessibleBranchIds(access, visibleBranchIds),
     summary: buildSummary(leads, students, applications),
     monthlyVolume: buildMonthlyVolume(leads, students, applications),
     countryDemand: buildCountryDemand(
@@ -1496,87 +1507,16 @@ export async function getPerformanceReport(
 
 export async function getPerformanceReportForExport(
   filters: PerformanceReportFilters,
-  access: PerformanceReportAccessContext,
 ): Promise<PerformanceReportData> {
   return getPerformanceReport(
     filters,
     1,
     Number.MAX_SAFE_INTEGER,
-    access,
     true,
   );
 }
 
-export async function getPerformanceReportFilterOptions(
-  access: PerformanceReportAccessContext,
-): Promise<PerformanceReportFilterOptions> {
-  const leadAccessWhere = buildPerformanceLeadAccessWhere(access);
-  const studentAccessWhere = buildPerformanceStudentAccessWhere(access);
-
-  const [leadBranches, studentBranches] = await Promise.all([
-    db.lead.findMany({
-      where: leadAccessWhere,
-      distinct: ["branchId"],
-      select: { branchId: true },
-    }),
-    db.student.findMany({
-      where: studentAccessWhere,
-      distinct: ["branchId"],
-      select: { branchId: true },
-    }),
-  ]);
-
-  const accessibleBranchIds = Array.from(
-    new Set([
-      ...access.assignedBranchIds,
-      ...leadBranches.map((item) => item.branchId),
-      ...studentBranches.map((item) => item.branchId),
-    ]),
-  );
-
-  const counselorWhere: Prisma.UserWhereInput =
-    access.mode === "counsellor"
-      ? { id: access.userId }
-      : accessibleBranchIds.length > 0
-        ? {
-            role: {
-              is: {
-                name: {
-                  in: ["Counsellor", "Counselor"],
-                },
-              },
-            },
-            branches: {
-              some: {
-                id: {
-                  in: accessibleBranchIds,
-                },
-              },
-            },
-          }
-        : { id: { in: [] } };
-
-  const applicationAccessWhere: Prisma.StudentApplicationWhereInput = {
-    student: {
-      is: studentAccessWhere,
-    },
-  };
-
-  const profileAccessWhere: Prisma.StudentVisaLoanProfileWhereInput = {
-    student: {
-      is: studentAccessWhere,
-    },
-  };
-
-  const branchWhere: Prisma.BranchWhereInput =
-    access.mode === "global"
-      ? {}
-      : {
-          id: {
-            in: accessibleBranchIds,
-          },
-        };
-
+export async function getPerformanceReportFilterOptions(): Promise<PerformanceReportFilterOptions> {
   const [
     branches,
     counselors,
@@ -1588,10 +1528,8 @@ export async function getPerformanceReportFilterOptions(
     fintechProfiles,
     leadSourcesMaster,
     leadSourcesUsed,
-    studentLeadSourcesUsed,
   ] = await Promise.all([
     db.branch.findMany({
-      where: branchWhere,
       select: {
         id: true,
         name: true,
@@ -1601,7 +1539,13 @@ export async function getPerformanceReportFilterOptions(
       },
     }),
     db.user.findMany({
-      where: counselorWhere,
+      where: {
+        role: {
+          is: {
+            name: "Counsellor",
+          },
+        },
+      },
       select: {
         id: true,
         name: true,
@@ -1644,7 +1588,6 @@ export async function getPerformanceReportFilterOptions(
       },
     }),
     db.studentApplication.findMany({
-      where: applicationAccessWhere,
       distinct: ["status"],
       select: {
         status: true,
@@ -1654,7 +1597,6 @@ export async function getPerformanceReportFilterOptions(
       },
     }),
     db.studentVisaLoanProfile.findMany({
-      where: profileAccessWhere,
       select: {
         casStatus: true,
         visaStatus: true,
@@ -1664,14 +1606,9 @@ export async function getPerformanceReportFilterOptions(
     }),
     db.studentVisaLoanProfile.findMany({
       where: {
-        AND: [
-          profileAccessWhere,
-          {
-            fintechAssigneeId: {
-              not: null,
-            },
-          },
-        ],
+        fintechAssigneeId: {
+          not: null,
+        },
       },
       distinct: ["fintechAssigneeId"],
       select: {
@@ -1696,29 +1633,13 @@ export async function getPerformanceReportFilterOptions(
     }),
     db.lead.findMany({
       where: {
-        AND: [
-          leadAccessWhere,
-          {
-            source: {
-              not: null,
-            },
-          },
-        ],
+        source: {
+          not: null,
+        },
       },
       distinct: ["source"],
       select: {
         source: true,
-      },
-    }),
-    db.student.findMany({
-      where: studentAccessWhere,
-      distinct: ["leadId"],
-      select: {
-        lead: {
-          select: {
-            source: true,
-          },
-        },
       },
     }),
   ]);
@@ -1728,13 +1649,7 @@ export async function getPerformanceReportFilterOptions(
       new Set(values.map((value) => value?.trim()).filter(Boolean) as string[]),
     ).sort((a, b) => a.localeCompare(b));
 
-  const accessInfo = applyAccessibleBranchIds(
-    access,
-    branches.map((branch) => branch.id),
-  );
-
   return {
-    access: accessInfo,
     branches: branches.map((branch) => ({
       value: branch.id,
       label: branch.name,
@@ -1783,7 +1698,6 @@ export async function getPerformanceReportFilterOptions(
     leadSources: uniqueSorted([
       ...leadSourcesMaster.map((source) => source.name),
       ...leadSourcesUsed.map((lead) => lead.source),
-      ...studentLeadSourcesUsed.map((student) => student.lead.source),
     ]),
     applicationStatuses: applicationStatuses.map((item) =>
       String(item.status),
