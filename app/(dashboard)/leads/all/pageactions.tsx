@@ -645,40 +645,6 @@ export default function PageActions(props: PageActionsProps) {
                     />
                   </div>
 
-                  {/* Pipeline Status */}
-                  <div className="grid gap-1.5 sm:col-span-2">
-                    <Label
-                      htmlFor="edit-status"
-                      className="text-sm font-medium"
-                    >
-                      Pipeline Status
-                    </Label>
-                    <Select
-                      value={editingLead.status}
-                      onValueChange={(val) =>
-                        setEditingLead({
-                          ...editingLead,
-                          status: val as LeadStatus,
-                        })
-                      }
-                    >
-                      <SelectTrigger
-                        id="edit-status"
-                        className="w-full bg-background"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="converted">Converted</SelectItem>
-                        <SelectItem value="lost">Lost</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   {/* Assigned Branch - Synced dynamically with loaded branches */}
                   <div className="grid gap-1.5 sm:col-span-2">
                     <Label

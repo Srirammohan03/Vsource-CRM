@@ -1,3 +1,4 @@
+// app\(dashboard)\leads\all\page.tsx
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -215,11 +216,7 @@ export default function AllLeadsPage() {
         throw new Error("Unable to update lead");
       }
 
-      setLeads((current) =>
-        current.map((item) =>
-          item.id === editingLead.id ? editingLead : item,
-        ),
-      );
+      await loadLeads();
       toast.success("Lead updated successfully");
       setEditingLead(null);
     } catch (error) {
