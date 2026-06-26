@@ -345,11 +345,11 @@ export default function StudentApplicationsSection({
                   <SelectContent>
                     <SelectItem value="not_received">Not Received</SelectItem>
 
-                    <SelectItem value="conditional">
+                    <SelectItem value="conditional_offer">
                       Conditional Offer
                     </SelectItem>
 
-                    <SelectItem value="unconditional">
+                    <SelectItem value="unconditional_offer">
                       Unconditional Offer
                     </SelectItem>
 
