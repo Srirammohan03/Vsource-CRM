@@ -109,25 +109,41 @@ export async function POST(req: NextRequest) {
     );
 
     const body = LeadCreateSchema.parse(await req.json());
-    const lastLead = await db.lead.findFirst({
-      orderBy: {
-        createdAt: "desc",
-      },
+    const allLeads = await db.lead.findMany({
       select: {
         leadNumber: true,
       },
     });
-    let nextNumber = 1;
 
-    if (lastLead?.leadNumber) {
-      const currentNumber = parseInt(lastLead.leadNumber.replace("LD", ""), 10);
-      if (!isNaN(currentNumber)) {
-        nextNumber = currentNumber + 1;
+    const highestLeadNumber = allLeads.reduce((max, lead) => {
+      const num = parseInt(lead.leadNumber.replace("LD", ""), 10);
+
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+
+    body.leadNumber = `LD${String(highestLeadNumber + 1).padStart(4, "0")}`;
+    const existingLead = await db.lead.findFirst({
+      where: {
+        OR: [
+          {
+            mobileNumber: body.mobileNumber,
+          },
+          {
+            emailId: body.emailId,
+          },
+        ],
+      },
+    });
+
+    if (existingLead) {
+      if (existingLead.mobileNumber === body.mobileNumber) {
+        throw new Error("Mobile number already exists");
+      }
+
+      if (existingLead.emailId === body.emailId) {
+        throw new Error("Email address already exists");
       }
     }
-
-    body.leadNumber = `LD${String(nextNumber).padStart(4, "0")}`;
-
     const lead = await db.lead.create({
       data: {
         ...body,

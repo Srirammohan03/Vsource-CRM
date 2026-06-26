@@ -25,6 +25,7 @@ import {
   Globe,
   BookOpen,
   Briefcase,
+  Loader2,
 } from "lucide-react";
 import { Branch, getBranches } from "@/lib/branches";
 import { useEffect, useState } from "react";
@@ -67,7 +68,18 @@ import { useAuth } from "@/store";
 import { RoutePermission } from "@/components/guards/RoutePermission";
 import { MODULES } from "@/lib/module-codes";
 import { Badge } from "@/components/ui/badge";
+const optionalNumber = z.preprocess((value) => {
+  if (
+    value === "" ||
+    value === null ||
+    value === undefined ||
+    Number.isNaN(value)
+  ) {
+    return undefined;
+  }
 
+  return Number(value);
+}, z.number().optional());
 const leadFormSchema = z.object({
   counsellingDate: z.string().optional(),
   studentName: z.string().min(1, "Student name is required"),
@@ -84,36 +96,36 @@ const leadFormSchema = z.object({
   place: z.string().optional(),
   passport: z.string().optional(),
   passportExpireDate: z.string().optional(),
-  tenthPercentage: z.number().optional(),
-  tenthYearOfPassing: z.number().optional(),
-  twelfthPercentage: z.number().optional(),
-  twelfthYearOfPassing: z.number().optional(),
+  tenthPercentage: optionalNumber,
+  tenthYearOfPassing: optionalNumber,
+  twelfthPercentage: optionalNumber,
+  twelfthYearOfPassing: optionalNumber,
   bachelorsCourse: z.string().optional(),
   bachelorsUniversityName: z.string().optional(),
-  bachelorsPercentage: z.number().optional(),
-  bachelorsYearOfPassing: z.number().optional(),
-  backlogs: z.number().optional(),
+  bachelorsPercentage: optionalNumber,
+  bachelorsYearOfPassing: optionalNumber,
+  backlogs: optionalNumber,
   workExperience: z.string().optional(),
   preferredCountry: z.string().optional(),
   preferredIntake: z.string().optional(),
   preferredCourse: z.string().optional(),
   preferredTiers: z.array(z.string()).optional(),
-  greGmatScore: z.number().optional(),
-  quantitativeScore: z.number().optional(),
-  verbalScore: z.number().optional(),
-  analyticalWritingScore: z.number().optional(),
+  greGmatScore: optionalNumber,
+  quantitativeScore: optionalNumber,
+  verbalScore: optionalNumber,
+  analyticalWritingScore: optionalNumber,
   englishTestType: z.string().optional(),
-  listeningScore: z.number().optional(),
-  writingScore: z.number().optional(),
-  readingScore: z.number().optional(),
-  speakingScore: z.number().optional(),
+  listeningScore: optionalNumber,
+  writingScore: optionalNumber,
+  readingScore: optionalNumber,
+  speakingScore: optionalNumber,
   gapsIfAny: z.string().optional(),
   status: z.string().optional(),
   source: z.string().optional(),
   branchId: z.string().min(1, "Branch is required"),
 });
 
-type LeadFormValues = z.infer<typeof leadFormSchema>;
+type LeadFormValues = z.input<typeof leadFormSchema>;
 
 const englishTestOptions = ["IELTS", "TOEFL", "DUOLINGO", "PTE"];
 
@@ -129,7 +141,7 @@ export default function AddLeadPage() {
   const { user } = useAuth();
 
   const branches = user?.branches ?? [];
-
+  const [isSaving, setIsSaving] = useState(false);
   const { data: universities = [], isLoading: universitiesLoad } = useQuery({
     queryKey: ["universities"],
     queryFn: async () => {
@@ -192,14 +204,52 @@ export default function AddLeadPage() {
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
       counsellingDate: getCurrentDateTimeLocal(),
+
+      // Required
       studentName: "",
       mobileNumber: "",
       emailId: "",
+      branchId: "",
+
+      // Basic Info
+      fatherName: "",
       place: "",
       passport: "",
+      passportExpireDate: "",
       source: "",
-      branchId: "",
+
+      // Education
+      tenthPercentage: undefined,
+      tenthYearOfPassing: undefined,
+      twelfthPercentage: undefined,
+      twelfthYearOfPassing: undefined,
+      bachelorsCourse: "",
+      bachelorsUniversityName: "",
+      bachelorsPercentage: undefined,
+      bachelorsYearOfPassing: undefined,
+      backlogs: 0,
+      gapsIfAny: "",
+
+      // EPT
+      englishTestType: "",
+      listeningScore: undefined,
+      readingScore: undefined,
+      writingScore: undefined,
+      speakingScore: undefined,
+
+      // GRE / GMAT
+      greGmatScore: undefined,
+      quantitativeScore: undefined,
+      verbalScore: undefined,
+      analyticalWritingScore: undefined,
+
+      // Preferences
+      preferredCountry: "",
+      preferredIntake: "",
+      preferredCourse: "",
       preferredTiers: [],
+      workExperience: "",
+
       status: "draft",
     },
   });
@@ -226,8 +276,11 @@ export default function AddLeadPage() {
   }, []);
 
   const onSubmit = async (values: LeadFormValues, continueFlow = false) => {
+    setIsSaving(true);
+
     try {
       console.log("SUBMIT VALUES", values);
+      console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/leads`, {
         method: "POST",
         credentials: "include",
@@ -240,7 +293,9 @@ export default function AddLeadPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed");
+        toast.error(data?.message || data?.error || "Failed to create lead");
+
+        return;
       }
 
       toast.success("Lead created successfully");
@@ -251,9 +306,12 @@ export default function AddLeadPage() {
       }
 
       reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to create lead");
+
+      toast.error(error?.message || "Failed to create lead");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -373,6 +431,7 @@ export default function AddLeadPage() {
                           id="mobileNumber"
                           placeholder="9876543210"
                           maxLength={10}
+                          min={0}
                           // This event handler ensures only numbers are accepted
                           onInput={(e: React.FormEvent<HTMLInputElement>) => {
                             e.currentTarget.value =
@@ -463,7 +522,6 @@ export default function AddLeadPage() {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-
                 {/* Section 2: Educational Information */}
                 {/* Education */}
                 <AccordionItem
@@ -484,10 +542,12 @@ export default function AddLeadPage() {
                       <div className="space-y-2">
                         <Label>10th Percentage (%)</Label>
                         <Input
+                          min={0}
                           placeholder="e.g. 85"
                           type="number"
                           {...register("tenthPercentage", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -495,9 +555,11 @@ export default function AddLeadPage() {
                         <Label>10th Year of Passing</Label>
                         <Input
                           placeholder="YYYY"
+                          min={0}
                           type="number"
                           {...register("tenthYearOfPassing", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -505,9 +567,11 @@ export default function AddLeadPage() {
                         <Label>12th Percentage (%)</Label>
                         <Input
                           placeholder="e.g. 88"
+                          min={0}
                           type="number"
                           {...register("twelfthPercentage", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -515,9 +579,11 @@ export default function AddLeadPage() {
                         <Label>12th Year of Passing</Label>
                         <Input
                           placeholder="YYYY"
+                          min={0}
                           type="number"
                           {...register("twelfthYearOfPassing", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -674,8 +740,10 @@ export default function AddLeadPage() {
                           placeholder="e.g. 75 or 8.5"
                           type="number"
                           step="0.01"
+                          min={0}
                           {...register("bachelorsPercentage", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -684,8 +752,10 @@ export default function AddLeadPage() {
                         <Input
                           placeholder="YYYY"
                           type="number"
+                          min={0}
                           {...register("bachelorsYearOfPassing", {
-                            valueAsNumber: true,
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
                           })}
                         />
                       </div>
@@ -694,7 +764,11 @@ export default function AddLeadPage() {
                         <Input
                           placeholder="0"
                           type="number"
-                          {...register("backlogs", { valueAsNumber: true })}
+                          min={0}
+                          {...register("backlogs", {
+                            setValueAs: (v) =>
+                              v === "" ? undefined : Number(v),
+                          })}
                         />
                       </div>
                     </div>
@@ -760,8 +834,10 @@ export default function AddLeadPage() {
                               placeholder="L Score"
                               type="number"
                               step="0.5"
+                              min={0}
                               {...register("listeningScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -771,8 +847,10 @@ export default function AddLeadPage() {
                               placeholder="R Score"
                               type="number"
                               step="0.5"
+                              min={0}
                               {...register("readingScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -782,8 +860,10 @@ export default function AddLeadPage() {
                               placeholder="W Score"
                               type="number"
                               step="0.5"
+                              min={0}
                               {...register("writingScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -793,8 +873,10 @@ export default function AddLeadPage() {
                               placeholder="S Score"
                               type="number"
                               step="0.5"
+                              min={0}
                               {...register("speakingScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -812,8 +894,10 @@ export default function AddLeadPage() {
                             <Input
                               placeholder="Overall Score"
                               type="number"
+                              min={0}
                               {...register("greGmatScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -822,8 +906,10 @@ export default function AddLeadPage() {
                             <Input
                               placeholder="Q Score"
                               type="number"
+                              min={0}
                               {...register("quantitativeScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -832,8 +918,10 @@ export default function AddLeadPage() {
                             <Input
                               placeholder="V Score"
                               type="number"
+                              min={0}
                               {...register("verbalScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -845,8 +933,10 @@ export default function AddLeadPage() {
                               placeholder="AWA Score"
                               type="number"
                               step="0.5"
+                              min={0}
                               {...register("analyticalWritingScore", {
-                                valueAsNumber: true,
+                                setValueAs: (v) =>
+                                  v === "" ? undefined : Number(v),
                               })}
                             />
                           </div>
@@ -855,7 +945,6 @@ export default function AddLeadPage() {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-
                 {/* Section 4: Preferences & Experience */}
                 <AccordionItem
                   value="preferences"
@@ -1017,33 +1106,36 @@ export default function AddLeadPage() {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-
-                {/* Sticky/Fixed Bottom Action Bar */}
                 <div className="sticky bottom-4 z-10 flex flex-col-reverse gap-3 rounded-2xl bg-background/80 p-4 shadow-lg backdrop-blur-md border sm:flex-row sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    disabled={isSaving}
                     onClick={() => reset()}
                   >
                     Reset Form
                   </Button>
-
                   <Button
                     type="button"
-                    className="w-full sm:w-auto"
-                    disabled={isSubmitting}
-                    onClick={handleSubmit((values) =>
+                    disabled={isSaving}
+                    onClick={handleSubmit((values) => {
                       onSubmit(
                         {
                           ...values,
                           status: "new",
                         },
                         true,
-                      ),
-                    )}
+                      );
+                    })}
                   >
-                    Save Lead & Continue
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving Lead...
+                      </>
+                    ) : (
+                      "Save Lead & Continue"
+                    )}
                   </Button>
                 </div>
               </Accordion>

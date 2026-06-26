@@ -6,7 +6,7 @@ import ReactQueryProvider from "./providers/ReactQueryProvider";
 
 import AuthProvider from "./providers/AuthProvider";
 import { cn } from "./lib/utils";
-
+import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
@@ -41,7 +41,10 @@ export default function RootLayout({
     >
       <body>
         <ReactQueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </AuthProvider>
         </ReactQueryProvider>
       </body>
     </html>

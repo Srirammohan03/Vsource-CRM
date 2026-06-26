@@ -148,7 +148,7 @@ model Lead {
   fatherName  String?
 
   mobileNumber String? @unique
-  emailId      String?
+  emailId      String? @unique
 
   place    String?
   passport String?
@@ -324,7 +324,7 @@ model MbbsLead {
   fatherName  String?
 
   mobileNumber String? @unique
-  emailId      String?
+  emailId      String? @unique
 
   address String?
 
