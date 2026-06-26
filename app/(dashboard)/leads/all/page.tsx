@@ -79,7 +79,7 @@ export default function AllLeadsPage() {
   const [page, setPage] = useState(1);
   const [selectedCounselors, setSelectedCounselors] = useState<string[]>([]);
   const { canCreate, canUpdate, canDelete } = useAuth();
-
+  const [isUpdating, setIsUpdating] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingLeadStatus, setEditingLeadStatus] = useState<Lead | null>(null);
@@ -200,6 +200,8 @@ export default function AllLeadsPage() {
     if (!editingLead) return;
 
     try {
+      setIsUpdating(true);
+
       const response = await fetch(`${API_BASE_URL}/leads/${editingLead.id}`, {
         method: "PATCH",
         credentials: "include",
@@ -217,14 +219,16 @@ export default function AllLeadsPage() {
       }
 
       await loadLeads();
+
       toast.success("Lead updated successfully");
       setEditingLead(null);
     } catch (error) {
       console.error(error);
       toast.error("Failed to update lead");
+    } finally {
+      setIsUpdating(false);
     }
   };
-
   return (
     <PageTransition>
       <PageHeader
@@ -854,6 +858,7 @@ export default function AllLeadsPage() {
         statusStyle={statusStyle}
         selectedCounselors={selectedCounselors}
         setSelectedCounselors={setSelectedCounselors}
+        isUpdating={isUpdating}
       />
     </PageTransition>
   );

@@ -38,7 +38,26 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useCounselors } from "@/lib/lead";
+import { Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 interface LeadRecord {
   id: string;
   leadNumber: string;
@@ -129,8 +148,9 @@ interface PageActionsProps {
 
   selectedCounselors: string[];
   setSelectedCounselors: React.Dispatch<React.SetStateAction<string[]>>;
+  isUpdating: boolean;
 }
-
+const englishTestOptions = ["IELTS", "TOEFL", "DUOLINGO", "PTE"];
 export default function PageActions(props: PageActionsProps) {
   const {
     selected,
@@ -143,11 +163,13 @@ export default function PageActions(props: PageActionsProps) {
     executeDeleteLead,
     selectedCounselors,
     setSelectedCounselors,
+    isUpdating,
   } = props;
+  const queryClient = useQueryClient();
   const [branches, setBranches] = useState<Branch[]>([]);
-
   const { data: counselors = [] } = useCounselors(editingLead?.branchId);
-
+  const [universityOpen, setUniversityOpen] = useState(false);
+  const [universitySearch, setUniversitySearch] = useState("");
   const { data: intakes = [], isLoading: intakeLoad } = useQuery({
     queryKey: ["intake"],
     queryFn: async () => {
@@ -157,6 +179,49 @@ export default function PageActions(props: PageActionsProps) {
           withCredentials: true,
         },
       );
+      return data?.data || [];
+    },
+  });
+  const { data: universities = [] } = useQuery({
+    queryKey: ["universities"],
+    queryFn: async () => {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/lead-universities?status=true`,
+        {
+          withCredentials: true,
+        },
+      );
+
+      return data?.data || [];
+    },
+  });
+  const createUniversity = async (name: string) => {
+    const { data } = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/lead-universities`,
+      {
+        name,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+
+    await queryClient.invalidateQueries({
+      queryKey: ["universities"],
+    });
+
+    return data;
+  };
+  const { data: courses = [], isLoading: coursesLoad } = useQuery({
+    queryKey: ["courses"],
+    queryFn: async () => {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/lead-degrees?status=true`,
+        {
+          withCredentials: true,
+        },
+      );
+
       return data?.data || [];
     },
   });
@@ -488,7 +553,7 @@ export default function PageActions(props: PageActionsProps) {
         open={!!editingLead}
         onOpenChange={(value) => !value && setEditingLead(null)}
       >
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {editingLead && (
             <form
               onSubmit={handleUpdateLead}
@@ -902,7 +967,449 @@ export default function PageActions(props: PageActionsProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* EDUCATIONAL INFORMATION */}
 
+                  <div className="sm:col-span-2 border-t pt-4">
+                    <h3 className="font-semibold text-base">
+                      Educational Information
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>10th Percentage</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.tenthPercentage ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          tenthPercentage: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>10th Year</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.tenthYearOfPassing ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          tenthYearOfPassing: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>12th Percentage</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.twelfthPercentage ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          twelfthPercentage: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>12th Year</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.twelfthYearOfPassing ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          twelfthYearOfPassing: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label>University / College</Label>
+
+                    <Popover
+                      open={universityOpen}
+                      onOpenChange={setUniversityOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          {editingLead.bachelorsUniversityName ||
+                            "Select or Type University"}
+
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-[450px] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search university..."
+                            value={universitySearch}
+                            onValueChange={setUniversitySearch}
+                          />
+
+                          <CommandList>
+                            <CommandEmpty>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="w-full justify-start"
+                                onClick={async () => {
+                                  const value = universitySearch.trim();
+
+                                  if (!value) return;
+
+                                  try {
+                                    await createUniversity(value);
+
+                                    setEditingLead({
+                                      ...editingLead,
+                                      bachelorsUniversityName: value,
+                                    });
+
+                                    setUniversitySearch("");
+                                    setUniversityOpen(false);
+
+                                    toast.success(
+                                      "University added successfully",
+                                    );
+                                  } catch {
+                                    toast.error("Failed to create university");
+                                  }
+                                }}
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add "{universitySearch}"
+                              </Button>
+                            </CommandEmpty>
+
+                            <CommandGroup>
+                              {universities.map(
+                                (uni: { id: string; name: string }) => (
+                                  <CommandItem
+                                    key={uni.id}
+                                    value={uni.name}
+                                    onSelect={(currentValue) => {
+                                      setEditingLead({
+                                        ...editingLead,
+                                        bachelorsUniversityName: currentValue,
+                                      });
+
+                                      setUniversityOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        editingLead.bachelorsUniversityName ===
+                                          uni.name
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+
+                                    {uni.name}
+                                  </CommandItem>
+                                ),
+                              )}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Bachelor Course</Label>
+
+                    <Select
+                      value={editingLead.bachelorsCourse || ""}
+                      onValueChange={(value) =>
+                        setEditingLead({
+                          ...editingLead,
+                          bachelorsCourse: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Course" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {coursesLoad ? (
+                          <SelectItem value="loading" disabled>
+                            Loading courses...
+                          </SelectItem>
+                        ) : (
+                          courses.map(
+                            (
+                              course: { id: string; name: string },
+                              index: number,
+                            ) => (
+                              <SelectItem
+                                key={course.id || index}
+                                value={course.name}
+                              >
+                                {course.name}
+                              </SelectItem>
+                            ),
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Bachelor Percentage</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.bachelorsPercentage ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          bachelorsPercentage: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Bachelor Passing Year</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.bachelorsYearOfPassing ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          bachelorsYearOfPassing: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Backlogs</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.backlogs ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          backlogs: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label>Education Gaps</Label>
+                    <Input
+                      value={editingLead.gapsIfAny || ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          gapsIfAny: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="sm:col-span-2 border-t pt-4">
+                    <h3 className="font-semibold text-base">EPT Details</h3>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>English Test Type</Label>
+
+                    <Select
+                      value={editingLead.englishTestType || ""}
+                      onValueChange={(value) =>
+                        setEditingLead({
+                          ...editingLead,
+                          englishTestType: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Test" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {englishTestOptions.map((test) => (
+                          <SelectItem key={test} value={test}>
+                            {test}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Listening</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.listeningScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          listeningScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Reading</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.readingScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          readingScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Writing</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.writingScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          writingScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Speaking</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.speakingScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          speakingScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="sm:col-span-2 border-t pt-4">
+                    <h3 className="font-semibold text-base">GRE / GMAT</h3>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Total Score</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.greGmatScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          greGmatScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Quantitative</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.quantitativeScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          quantitativeScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Verbal</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.verbalScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          verbalScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>AWA</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editingLead.analyticalWritingScore ?? ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          analyticalWritingScore: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label>Preferred Course</Label>
+                    <Input
+                      placeholder="Data Science.."
+                      value={editingLead.preferredCourse || ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          preferredCourse: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label>Work Experience</Label>
+                    <Input
+                      value={editingLead.workExperience || ""}
+                      onChange={(e) =>
+                        setEditingLead({
+                          ...editingLead,
+                          workExperience: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                   {/* Next Followup Date */}
                   <div className="grid gap-1.5 sm:col-span-2">
                     <Label
@@ -957,13 +1464,26 @@ export default function PageActions(props: PageActionsProps) {
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={isUpdating}
                   onClick={() => setEditingLead(null)}
                   className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  Save Updates
+
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="w-full sm:w-auto min-w-[150px]"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating Lead...
+                    </>
+                  ) : (
+                    "Save Updates"
+                  )}
                 </Button>
               </SheetFooter>
             </form>
