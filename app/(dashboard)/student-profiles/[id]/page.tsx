@@ -446,11 +446,11 @@ export default function Home() {
                               val: selectedStudent?.emailId,
                               icon: FileText,
                             },
-                            {
-                              label: "Password",
-                              val: selectedStudent?.password,
-                              icon: FileText,
-                            },
+                            // {
+                            //   label: "Password",
+                            //   val: selectedStudent?.password,
+                            //   icon: FileText,
+                            // },
                             {
                               label: "Course",
                               val: selectedStudent?.lead?.bachelorsCourse,
