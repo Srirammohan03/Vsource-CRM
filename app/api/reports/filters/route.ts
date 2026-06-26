@@ -1,29 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { handleError, ok } from "@/lib/api-helpers";
-import { resolvePerformanceReportAccess } from "@/lib/performance-report-access";
+import { MODULES, PERMISSIONS } from "@/lib/module-codes";
 import { getPerformanceReportFilterOptions } from "@/lib/performance-reports";
+import { getAuthorizedUser } from "@/lib/rbac";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const accessResult = await resolvePerformanceReportAccess(req);
+    const currentUser = await getAuthorizedUser(
+      req,
+      MODULES.STUDENT_PROFILES,
+      PERMISSIONS.READ,
+    );
 
-    if (!accessResult.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          data: null,
-          message: accessResult.message,
-        },
-        { status: accessResult.status },
+    const options = await getPerformanceReportFilterOptions();
+
+    if (currentUser.role.name === "Counsellor") {
+      options.counselors = options.counselors.filter(
+        (counselor) => counselor.value === currentUser.id,
       );
     }
-
-    const options = await getPerformanceReportFilterOptions(
-      accessResult.access,
-    );
 
     return ok(options, "Performance report filters fetched successfully");
   } catch (error) {
