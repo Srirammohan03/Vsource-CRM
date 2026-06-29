@@ -5,15 +5,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Edit3,
+  Download,
   Eye,
   FileText,
-  FolderOpen,
-  Info,
   Loader2,
-  Search,
-  ShieldCheck,
+  RefreshCw,
   Trash2,
+  Upload,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -21,8 +19,10 @@ import {
   ChangeEvent,
   DragEvent,
   FormEvent,
+  KeyboardEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -35,7 +35,6 @@ import type {
   StudentDocumentChecklistItem,
   StudentDocumentRecord,
 } from "@/types/student";
-import { CATEGORY_LABELS } from "@/lib/student-document-checklist";
 
 type DMSSectionProps = {
   studentId: string;
@@ -45,118 +44,44 @@ type DMSSectionProps = {
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx";
-
-const DOCUMENT_TABS = [
-  {
-    key: "ACADEMIC",
-    label: "Educational",
-  },
-  {
-    key: "PERSONAL",
-    label: "Personal",
-  },
-  {
-    key: "TEST_SCORE",
-    label: "Test Scores",
-  },
-  {
-    key: "APPLICATION",
-    label: "Application",
-  },
-  {
-    key: "UNIVERSITY",
-    label: "University",
-  },
-  {
-    key: "LOAN",
-    label: "Financial / Loan",
-  },
-  {
-    key: "VISA",
-    label: "Visa",
-  },
-] as const;
-
-type DocumentTabKey = (typeof DOCUMENT_TABS)[number]["key"];
-
-function getDocumentTab(
-  category: StudentDocumentChecklistItem["category"],
-): DocumentTabKey {
-  switch (category) {
-    case "ACADEMIC":
-      return "ACADEMIC";
-
-    case "PERSONAL":
-      return "PERSONAL";
-
-    case "TEST_SCORE":
-      return "TEST_SCORE";
-
-    case "APPLICATION":
-      return "APPLICATION";
-
-    case "UNIVERSITY":
-      return "UNIVERSITY";
-
-    case "LOAN_COLLATERAL":
-    case "LOAN_STUDENT":
-    case "LOAN_PARENT":
-      return "LOAN";
-
-    case "VISA":
-      return "VISA";
-
-    default: {
-      const exhaustiveCheck: never = category;
-      return exhaustiveCheck;
-    }
-  }
-}
+const ACCEPTED_EXTENSIONS = [
+  "pdf",
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "doc",
+  "docx",
+];
 
 function formatBytes(bytes?: number | null) {
-  if (!bytes || bytes <= 0) return "Unknown size";
+  if (!bytes || bytes <= 0) return "Size unavailable";
 
   const units = ["B", "KB", "MB", "GB"];
   const index = Math.min(
     Math.floor(Math.log(bytes) / Math.log(1024)),
     units.length - 1,
   );
+  const value = bytes / 1024 ** index;
 
-  return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return { date: "-", time: "" };
+function getFileExtension(fileName?: string | null) {
+  return fileName?.split(".").pop()?.toLowerCase() ?? "";
+}
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: "-", time: "" };
-
-  return {
-    date: date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    time: date.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-  };
+function getDocumentType(fileName?: string | null) {
+  return getFileExtension(fileName).toUpperCase() || "FILE";
 }
 
 function isValidFile(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  return Boolean(
-    extension &&
-    ["pdf", "jpg", "jpeg", "png", "webp", "doc", "docx"].includes(extension),
-  );
+  return ACCEPTED_EXTENSIONS.includes(getFileExtension(file.name));
 }
 
-function getDocumentType(fileName: string) {
-  return fileName.split(".").pop()?.toUpperCase() || "FILE";
-}
+function isOptionalItem(item?: StudentDocumentChecklistItem | null) {
+  if (!item) return false;
 
-function isOptionalItem(item: StudentDocumentChecklistItem) {
   const value = item as StudentDocumentChecklistItem & {
     isOptional?: boolean;
     required?: boolean;
@@ -165,19 +90,97 @@ function isOptionalItem(item: StudentDocumentChecklistItem) {
   return value.isOptional ?? value.required === false;
 }
 
-export function DMSSection({ studentId, studentName }: DMSSectionProps) {
+function getSafeFileUrl(value?: string | null) {
+  const url = value?.trim() ?? "";
+
+  if (!url) return "";
+  if (url.startsWith("/") || url.startsWith("blob:")) return url;
+
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:"
+      ? url
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return "Something went wrong. Please try again.";
+}
+
+function DocumentPreview({ record }: { record: StudentDocumentRecord }) {
+  const fileName = record.originalFileName?.trim() || "Uploaded document";
+  const extension = getFileExtension(fileName);
+  const fileUrl = getSafeFileUrl(record.fileUrl);
+  const isImage = ["jpg", "jpeg", "png", "webp"].includes(extension);
+  const isPdf = extension === "pdf";
+
+  if (!fileUrl) {
+    return (
+      <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center dark:border-slate-700 dark:bg-slate-900">
+        <FileText className="h-10 w-10 text-slate-300" />
+        <p className="mt-3 text-sm font-black text-slate-700 dark:text-slate-200">
+          Preview unavailable
+        </p>
+        <p className="mt-1 max-w-sm text-xs text-slate-500">
+          The document URL is missing or invalid. The file record is still
+          available below.
+        </p>
+      </div>
+    );
+  }
+
+  if (isImage) {
+    return (
+      <div className="flex h-full min-h-[300px] items-center justify-center overflow-hidden rounded-[20px] border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+        <img
+          src={fileUrl}
+          alt={fileName}
+          className="max-h-[430px] w-full object-contain"
+        />
+      </div>
+    );
+  }
+
+  if (isPdf) {
+    return (
+      <iframe
+        src={fileUrl}
+        title={fileName}
+        className="h-[430px] w-full rounded-[20px] border border-slate-200 bg-white dark:border-slate-800"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center dark:border-slate-700 dark:bg-slate-900">
+      <FileText className="h-12 w-12 text-slate-300" />
+      <p className="mt-3 text-sm font-black text-slate-700 dark:text-slate-200">
+        In-browser preview is not available for {getDocumentType(fileName)}
+      </p>
+      <a
+        href={fileUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+      >
+        <Eye className="h-4 w-4" />
+        Open document
+      </a>
+    </div>
+  );
+}
+
+export function DMSSection({ studentId }: DMSSectionProps) {
   const documentsQuery = useStudentDocuments(studentId);
   const uploadMutation = useUploadStudentDocument(studentId);
   const updateMutation = useUpdateStudentDocument(studentId);
   const deleteMutation = useDeleteStudentDocument(studentId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedCategory, setSelectedCategory] =
-    useState<DocumentTabKey>("ACADEMIC");
-
-  const [checklistSearch, setChecklistSearch] = useState("");
-  const [documentSearch, setDocumentSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedItemCode, setSelectedItemCode] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
@@ -188,86 +191,31 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
     useState<StudentDocumentRecord | null>(null);
 
   const checklist = documentsQuery.data?.checklist ?? [];
-  const summary = documentsQuery.data?.summary;
-
   const selectedItem = useMemo(
     () => checklist.find((item) => item.code === selectedItemCode) ?? null,
     [checklist, selectedItemCode],
   );
 
-  const filteredDocuments = useMemo(() => {
-    const documents = selectedItem?.documents ?? [];
-    const query = documentSearch.trim().toLowerCase();
+  const selectedIndex = useMemo(
+    () => checklist.findIndex((item) => item.code === selectedItemCode),
+    [checklist, selectedItemCode],
+  );
 
-    return documents.filter((document) => {
-      const matchesSearch =
-        !query ||
-        document.originalFileName.toLowerCase().includes(query) ||
-        document.documentType.toLowerCase().includes(query);
-      const extension = getDocumentType(
-        document.originalFileName,
-      ).toLowerCase();
-      const matchesType = typeFilter === "all" || extension === typeFilter;
-      const matchesStatus =
-        statusFilter === "all" || statusFilter === "uploaded";
-
-      return matchesSearch && matchesType && matchesStatus;
-    });
-  }, [selectedItem, documentSearch, typeFilter, statusFilter]);
-
-  const groupedChecklist = useMemo(() => {
-    const groups: Record<DocumentTabKey, typeof checklist> = {
-      ACADEMIC: [],
-      PERSONAL: [],
-      TEST_SCORE: [],
-      APPLICATION: [],
-      UNIVERSITY: [],
-      LOAN: [],
-      VISA: [],
-    };
-
-    checklist.forEach((item) => {
-      const tab = getDocumentTab(item.category);
-      groups[tab].push(item);
-    });
-
-    return groups;
-  }, [checklist]);
-
-  const displayedChecklist = useMemo(() => {
-    const search = checklistSearch.trim().toLowerCase();
-    const categoryDocuments = groupedChecklist[selectedCategory] ?? [];
-
-    if (!search) {
-      return categoryDocuments;
-    }
-
-    return categoryDocuments.filter(
-      (item) =>
-        item.name.toLowerCase().includes(search) ||
-        item.code.toLowerCase().includes(search),
-    );
-  }, [groupedChecklist, selectedCategory, checklistSearch]);
-
+  const activeDocument = selectedItem?.documents?.[0] ?? null;
   useEffect(() => {
-    if (displayedChecklist.length === 0) {
+    if (checklist.length === 0) {
       setSelectedItemCode(null);
       return;
     }
 
-    const selectedItemExists = displayedChecklist.some(
+    const selectedExists = checklist.some(
       (item) => item.code === selectedItemCode,
     );
 
-    if (!selectedItemExists) {
-      setSelectedItemCode(displayedChecklist[0].code);
+    if (!selectedExists) {
+      setSelectedItemCode(checklist[0]?.code ?? null);
     }
-  }, [displayedChecklist, selectedItemCode]);
-
-  const requiredTotal = summary?.totalRequiredUploads ?? checklist.length;
-  const completedTotal = summary?.completedRequiredUploads ?? 0;
-  const pendingTotal = Math.max(requiredTotal - completedTotal, 0);
-  const optionalTotal = checklist.filter(isOptionalItem).length;
+  }, [checklist, selectedItemCode]);
 
   const clearUploadForm = () => {
     setSelectedFile(null);
@@ -275,26 +223,23 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
     setFileError("");
     setProgress(0);
     setEditingDocument(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleCategoryChange = (category: DocumentTabKey) => {
-    const firstItem = groupedChecklist[category]?.[0];
-
-    setSelectedCategory(category);
-    setChecklistSearch("");
-    setSelectedItemCode(firstItem?.code ?? null);
-    setDocumentSearch("");
-    setTypeFilter("all");
-    setStatusFilter("all");
-    clearUploadForm();
-  };
-
-  const selectChecklistItem = (item: StudentDocumentChecklistItem) => {
+  const selectChecklistItem = (item?: StudentDocumentChecklistItem | null) => {
+    if (!item?.code) return;
     setSelectedItemCode(item.code);
-    setDocumentSearch("");
-    setTypeFilter("all");
-    setStatusFilter("all");
     clearUploadForm();
+  };
+
+  const handleCardKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    item: StudentDocumentChecklistItem,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectChecklistItem(item);
+    }
   };
 
   const validateFile = (file: File) => {
@@ -321,15 +266,29 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
     setSelectedFile(file);
   };
 
+  const openFilePicker = (record?: StudentDocumentRecord | null) => {
+    setEditingDocument(record ?? null);
+    setSelectedFile(null);
+    setRemarks(record?.remarks ?? "");
+    setFileError("");
+    setProgress(0);
+    fileInputRef.current?.click();
+  };
+
   const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) validateFile(file);
-    event.target.value = "";
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
+
+    if (activeDocument && !editingDocument) {
+      setEditingDocument(activeDocument);
+      setRemarks(activeDocument.remarks ?? "");
+    }
+
     const file = event.dataTransfer.files?.[0];
     if (file) validateFile(file);
   };
@@ -337,20 +296,21 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!selectedItem) {
+    if (!selectedItem?.code) {
       setFileError("Select a checklist item first.");
       return;
     }
 
-    if (!editingDocument && !selectedFile) {
+    if (!selectedFile) {
       setFileError("Please select a document.");
       return;
     }
 
+    setFileError("");
     setProgress(0);
 
     try {
-      if (editingDocument) {
+      if (editingDocument?.id) {
         await updateMutation.mutateAsync({
           documentId: editingDocument.id,
           file: selectedFile,
@@ -360,64 +320,82 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
       } else {
         await uploadMutation.mutateAsync({
           documentCode: selectedItem.code,
-          file: selectedFile as File,
+          file: selectedFile,
           remarks,
           onProgress: setProgress,
         });
       }
 
       clearUploadForm();
-    } catch {
-      return;
+      await documentsQuery.refetch();
+    } catch (error) {
+      setFileError(getErrorMessage(error));
     }
   };
 
-  const handleEdit = (document: StudentDocumentRecord) => {
-    setEditingDocument(document);
-    setSelectedFile(null);
-    setRemarks(document.remarks || "");
-    setFileError("");
-    window.document.getElementById("dms-upload-panel")?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-  };
+  const handleDelete = async (record?: StudentDocumentRecord | null) => {
+    if (!record?.id) return;
 
-  const handleDelete = async (document: StudentDocumentRecord) => {
-    const accepted = window.confirm(
-      `Delete "${document.originalFileName}" permanently?`,
-    );
+    const fileName = record.originalFileName?.trim() || "this document";
+    const accepted = window.confirm(`Delete "${fileName}" permanently?`);
     if (!accepted) return;
 
     try {
-      await deleteMutation.mutateAsync(document.id);
-      if (editingDocument?.id === document.id) clearUploadForm();
-    } catch {
-      return;
+      await deleteMutation.mutateAsync(record.id);
+      if (editingDocument?.id === record.id) clearUploadForm();
+      await documentsQuery.refetch();
+    } catch (error) {
+      setFileError(getErrorMessage(error));
     }
   };
 
+  const goToChecklistItem = (direction: -1 | 1) => {
+    if (checklist.length === 0) return;
+
+    const currentIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const nextIndex = Math.min(
+      Math.max(currentIndex + direction, 0),
+      checklist.length - 1,
+    );
+    const nextItem = checklist[nextIndex];
+
+    if (nextItem) selectChecklistItem(nextItem);
+  };
+
+  const currentPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
+  const activeFileName =
+    activeDocument?.originalFileName?.trim() ||
+    `${selectedItem?.name?.trim() || "Document"} file pending`;
+  const activeFileMeta = activeDocument
+    ? `${activeDocument.documentType?.trim() || getDocumentType(activeFileName)} | ${formatBytes(activeDocument.fileSize)}`
+    : `${selectedItem?.name?.trim() || "Document"} | Not uploaded`;
+  const activeFileUrl = getSafeFileUrl(activeDocument?.fileUrl);
+  const isSaving = uploadMutation.isPending || updateMutation.isPending;
+
   if (documentsQuery.isLoading) {
     return (
-      <div className="grid min-h-[650px] grid-cols-1 gap-5 xl:grid-cols-[360px_1fr]">
-        <div className="animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-900" />
-        <div className="animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-900" />
+      <div className="grid min-h-[720px] grid-cols-1 gap-6 xl:h-[calc(100vh-120px)] xl:min-h-[720px] xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="animate-pulse rounded-[28px] bg-slate-100 dark:bg-slate-900" />
+        <div className="animate-pulse rounded-[28px] bg-slate-100 dark:bg-slate-900" />
       </div>
     );
   }
 
   if (documentsQuery.isError) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-900/50 dark:bg-rose-950/20">
+      <div className="flex min-h-[460px] items-center justify-center rounded-[28px] border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-900/50 dark:bg-rose-950/20">
         <div>
-          <AlertCircle className="mx-auto h-9 w-9 text-rose-500" />
-          <h4 className="mt-3 text-sm font-black text-rose-700 dark:text-rose-300">
+          <AlertCircle className="mx-auto h-10 w-10 text-rose-500" />
+          <h4 className="mt-4 text-sm font-black text-rose-700 dark:text-rose-300">
             Unable to load document checklist
           </h4>
+          <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">
+            Please refresh the checklist and try again.
+          </p>
           <button
             type="button"
             onClick={() => documentsQuery.refetch()}
-            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700"
+            className="mt-5 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-red-700"
           >
             Try again
           </button>
@@ -427,177 +405,92 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
   }
 
   return (
-    <div className="grid min-h-[710px] grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <aside
-        className="
-    sticky
-    top-6
-    h-[calc(100vh-120px)]
-    flex
-    flex-col
-    overflow-hidden
-    rounded-2xl
-    border
-    border-slate-200
-    bg-white
-    shadow-sm
-    dark:border-slate-800
-    dark:bg-slate-950
-  "
-      >
-        <div className="border-b border-slate-200 p-5 dark:border-slate-800">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-500/10">
-              <FolderOpen className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">
-              Documents
-            </h3>
-          </div>
+    <div className="grid min-h-[720px] grid-cols-1 gap-6 xl:h-[calc(100vh-120px)] xl:min-h-[720px] xl:grid-cols-[420px_minmax(0,1fr)]">
+      <aside className="flex min-h-[520px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-950 xl:h-full xl:min-h-0">
+        <div className="relative min-h-0 flex-1 overflow-y-auto px-7 pb-7 pt-2 [scrollbar-color:rgb(148_163_184)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400/70 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="pointer-events-none absolute bottom-8 left-[36px] top-3 w-px bg-slate-300 dark:bg-slate-700" />
 
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {[
-              {
-                label: "Total",
-                value: requiredTotal,
-                className: "text-slate-900 dark:text-white",
-              },
-              {
-                label: "Completed",
-                value: completedTotal,
-                className: "text-emerald-600",
-              },
-              {
-                label: "Pending",
-                value: pendingTotal,
-                className: "text-red-600",
-              },
-              {
-                label: "Optional",
-                value: optionalTotal,
-                className: "text-slate-600 dark:text-slate-300",
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className={`text-sm font-black ${item.className}`}>
-                  {item.value}
-                </div>
-                <div className="mt-1 text-[9px] text-slate-500">
-                  {item.label}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative mt-4">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={checklistSearch}
-              onChange={(event) => setChecklistSearch(event.target.value)}
-              placeholder="Search checklist..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs outline-none transition focus:border-red-500 dark:border-slate-800 dark:bg-slate-900"
-            />
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {DOCUMENT_TABS.map((tab) => {
-              const documentCount = groupedChecklist[tab.key].length;
-              const isActive = selectedCategory === tab.key;
-
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => handleCategoryChange(tab.key)}
-                  className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-[11px] font-bold transition ${
-                    isActive
-                      ? "border-red-600 bg-red-600 text-white shadow-sm"
-                      : "border-slate-200 bg-slate-50 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-red-900 dark:hover:bg-red-950/20"
-                  }`}
-                >
-                  <span className="truncate">{tab.label}</span>
-
-                  <span
-                    className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : "bg-white text-slate-500 dark:bg-slate-800 dark:text-slate-300"
-                    }`}
-                  >
-                    {documentCount}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {displayedChecklist.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
-              <FileText className="mx-auto h-7 w-7 text-slate-300" />
-
-              <p className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                No documents found
+          {checklist.length === 0 ? (
+            <div className="relative rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
+              <FileText className="mx-auto h-9 w-9 text-slate-300" />
+              <p className="mt-3 text-sm font-black text-slate-600 dark:text-slate-300">
+                No checklist items found
               </p>
-
-              <p className="mt-1 text-[10px] text-slate-400">
-                No matching documents are available in this category.
+              <p className="mt-1 text-xs text-slate-400">
+                Document folders will appear here when available.
               </p>
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {displayedChecklist.map((item) => {
-                const isSelected = selectedItemCode === item.code;
-                const uploadedCount = item.documents.length;
+            <div className="relative space-y-3">
+              {checklist.map((item) => {
+                const itemDocuments = item.documents ?? [];
+                const itemDocument = itemDocuments[0] ?? null;
+                const isSelected = item.code === selectedItemCode;
+                const isComplete = item.isComplete || itemDocuments.length > 0;
+                const itemFileUrl = getSafeFileUrl(itemDocument?.fileUrl);
+                const title = item.name?.trim() || "Untitled document";
 
                 return (
-                  <button
+                  <div
                     key={item.code}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => selectChecklistItem(item)}
-                    className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                    onKeyDown={(event) => handleCardKeyDown(event, item)}
+                    className={`group relative ml-0 flex min-h-[82px] cursor-pointer items-center gap-3 overflow-hidden rounded-[22px] border px-4 py-3.5 outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
                       isSelected
-                        ? "border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/20"
-                        : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:hover:border-slate-800 dark:hover:bg-slate-900"
+                        ? "border-emerald-200 bg-emerald-50/80 shadow-[0_8px_24px_rgba(16,185,129,0.10)] dark:border-emerald-900/70 dark:bg-emerald-950/20"
+                        : "border-slate-300 bg-white hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-[0_10px_24px_rgba(15,23,42,0.10)] dark:border-slate-700 dark:bg-slate-950 dark:hover:border-slate-600"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <FileText
-                        className={`h-4 w-4 shrink-0 ${
-                          item.isComplete
-                            ? "text-emerald-600"
-                            : "text-slate-400"
-                        }`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">
-                          {item.name}
-                        </div>
-                        <div className="mt-1 text-[9px] text-slate-500">
-                          {isOptionalItem(item) ? "Optional" : "Required"}{" "}
-                          &nbsp;•&nbsp; {uploadedCount} file
-                          {uploadedCount === 1 ? "" : "s"}
-                        </div>
-                      </div>
+                    <div
+                      className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        isComplete
+                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                          : "bg-slate-50 text-slate-400 dark:bg-slate-900"
+                      }`}
+                    >
+                      <FileText className="h-5 w-5" />
+                    </div>
 
-                      {item.isComplete ? (
-                        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                      ) : isOptionalItem(item) ? (
-                        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900">
-                          Optional
-                        </span>
+                    <div className="relative z-10 min-w-0 flex-1 pr-1">
+                      <p className="truncate text-[14px] font-black text-slate-700 dark:text-slate-100">
+                        {title}
+                      </p>
+                      {isComplete ? (
+                        <p className="mt-1 truncate text-[10px] text-slate-400">
+                          {itemDocument?.originalFileName?.trim() ||
+                            `${itemDocuments.length} uploaded file${itemDocuments.length === 1 ? "" : "s"}`}
+                        </p>
                       ) : (
-                        <span className="rounded-md border border-red-100 bg-red-50 px-2 py-1 text-[9px] font-medium text-red-600 dark:border-red-900/50 dark:bg-red-950/20">
-                          Missing
-                        </span>
+                        <p className="mt-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.08em] text-rose-500">
+                          <AlertCircle className="h-3 w-3" />
+                          {isOptionalItem(item)
+                            ? "Optional document"
+                            : "Missing checklist item"}
+                        </p>
                       )}
                     </div>
-                  </button>
+
+                    {isComplete ? (
+                      <>
+                        <CheckCircle2 className="relative z-10 h-5 w-5 shrink-0 text-emerald-500 transition group-hover:opacity-0" />
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectChecklistItem(item);
+                          window.setTimeout(() => openFilePicker(null), 0);
+                        }}
+                        className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2.5 text-[11px] font-black text-white shadow-sm transition hover:bg-rose-600"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -605,244 +498,137 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
         </div>
       </aside>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <section className="flex min-h-[720px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-950 xl:h-full xl:min-h-0">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_TYPES}
+          onChange={handleFileInput}
+          className="sr-only"
+        />
+
         {!selectedItem ? (
-          <div className="flex min-h-[650px] items-center justify-center p-6 text-center">
+          <div className="flex flex-1 items-center justify-center p-8 text-center">
             <div>
-              <FileText className="mx-auto h-10 w-10 text-slate-300" />
-              <h3 className="mt-3 text-sm font-black">
-                Select a checklist item
+              <FileText className="mx-auto h-12 w-12 text-slate-300" />
+              <h3 className="mt-4 text-base font-black text-slate-700 dark:text-slate-200">
+                Select a document folder
               </h3>
+              <p className="mt-1 text-xs text-slate-400">
+                Choose a checklist item to view or upload its document.
+              </p>
             </div>
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-center md:justify-between dark:border-slate-800">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-black text-slate-900 dark:text-white">
-                    {selectedItem.name}
-                  </h3>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${
-                      selectedItem.isComplete
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                        : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
-                    }`}
-                  >
-                    {selectedItem.isComplete ? "Completed" : "Pending"}
-                  </span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Upload required documents for {studentName}
+            <div className="flex flex-col gap-4 border-b border-slate-100 px-7 py-5 md:flex-row md:items-center md:justify-between dark:border-slate-800">
+              <div className="min-w-0">
+                <h3 className="mt-3 truncate text-[16px] font-black text-slate-800 dark:text-white">
+                  {activeFileName}
+                </h3>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {activeFileMeta}
                 </p>
               </div>
 
-              <div className="flex items-center gap-5 text-[10px] text-slate-500">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <Info className="h-3.5 w-3.5" />
-                    Required:{" "}
-                    {isOptionalItem(selectedItem)
-                      ? 0
-                      : selectedItem.requiredCount}{" "}
-                    file(s)
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <UploadCloud className="h-3.5 w-3.5" />
-                    Uploaded: {selectedItem.documents.length} file(s)
-                  </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToChecklistItem(-1)}
+                  disabled={selectedIndex <= 0}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                  aria-label="Previous checklist item"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <div className="rounded-xl bg-slate-50 px-4 py-3 text-[11px] font-black text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  Checklist: {currentPosition} / {checklist.length}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => goToChecklistItem(1)}
+                  disabled={
+                    selectedIndex < 0 || selectedIndex >= checklist.length - 1
+                  }
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                  aria-label="Next checklist item"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
             </div>
 
-            <div className="p-5">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={documentSearch}
-                    onChange={(event) => setDocumentSearch(event.target.value)}
-                    placeholder="Search documents..."
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs outline-none focus:border-red-500 dark:border-slate-800 dark:bg-slate-900"
-                  />
-                </div>
-
-                <select
-                  value={typeFilter}
-                  onChange={(event) => setTypeFilter(event.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600 outline-none focus:border-red-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                >
-                  <option value="all">All Types</option>
-                  <option value="pdf">PDF</option>
-                  <option value="jpg">JPG</option>
-                  <option value="jpeg">JPEG</option>
-                  <option value="png">PNG</option>
-                  <option value="doc">DOC</option>
-                  <option value="docx">DOCX</option>
-                </select>
-
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600 outline-none focus:border-red-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                >
-                  <option value="all">All Status</option>
-                  <option value="uploaded">Uploaded</option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocumentSearch("");
-                    setTypeFilter("all");
-                    setStatusFilter("all");
-                  }}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-left text-xs">
-                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500 dark:bg-slate-900">
-                      <tr>
-                        <th className="px-4 py-3 font-bold">#</th>
-                        <th className="px-4 py-3 font-bold">Document Name</th>
-                        <th className="px-4 py-3 font-bold">Type</th>
-                        <th className="px-4 py-3 font-bold">Size</th>
-                        <th className="px-4 py-3 font-bold">Remarks</th>
-                        <th className="px-4 py-3 font-bold">Uploaded On</th>
-                        <th className="px-4 py-3 font-bold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {filteredDocuments.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={7}
-                            className="px-4 py-10 text-center text-slate-400"
-                          >
-                            No uploaded documents found for this checklist item.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredDocuments.map((document, index) => {
-                          const uploaded = formatDate(document.uploadedAt);
-                          return (
-                            <tr
-                              key={document.id}
-                              className="hover:bg-slate-50 dark:hover:bg-slate-900/70"
-                            >
-                              <td className="px-4 py-4 text-slate-500">
-                                {index + 1}
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex min-w-0 items-center gap-3">
-                                  <div className="rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-500/10">
-                                    <FileText className="h-4 w-4" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="max-w-[260px] truncate font-semibold text-slate-800 dark:text-slate-100">
-                                      {document.originalFileName}
-                                    </div>
-                                    <div className="mt-1 text-[10px] text-slate-500">
-                                      {document.documentType ||
-                                        selectedItem.name}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <span className="rounded-md bg-blue-50 px-2 py-1 text-[9px] font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
-                                  {getDocumentType(document.originalFileName)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-4 text-slate-500">
-                                {formatBytes(document.fileSize)}
-                              </td>
-                              <td className="px-4 py-4 text-slate-500">
-                                {document.remarks}
-                              </td>
-                              <td className="px-4 py-4 text-slate-500">
-                                <div>{uploaded.date}</div>
-                                <div className="mt-0.5 text-[10px]">
-                                  {uploaded.time}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-2">
-                                  <a
-                                    href={document.fileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/20"
-                                    title="View document"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </a>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEdit(document)}
-                                    className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/20"
-                                    title="Edit document"
-                                  >
-                                    <Edit3 className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDelete(document)}
-                                    disabled={deleteMutation.isPending}
-                                    className="rounded-lg border border-red-100 bg-red-50 p-2 text-red-600 hover:bg-red-100 disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/20"
-                                    title="Delete document"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-[10px] text-slate-500 dark:border-slate-800">
-                  <span>
-                    Showing {filteredDocuments.length === 0 ? 0 : 1} to{" "}
-                    {filteredDocuments.length} of {filteredDocuments.length}{" "}
-                    document{filteredDocuments.length === 1 ? "" : "s"}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled
-                      className="rounded-lg border border-slate-200 p-2 disabled:opacity-40 dark:border-slate-800"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="rounded-lg bg-red-600 px-3 py-2 font-bold text-white">
-                      1
-                    </span>
-                    <button
-                      type="button"
-                      disabled
-                      className="rounded-lg border border-slate-200 p-2 disabled:opacity-40 dark:border-slate-800"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-5 dark:bg-slate-900/40 md:p-7">
               <form
-                id="dms-upload-panel"
                 onSubmit={handleSubmit}
-                className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                className="mx-auto flex min-h-[620px] max-w-[760px] flex-col rounded-[26px] border border-slate-300 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.14)] dark:border-slate-700 dark:bg-slate-950 md:p-7"
               >
+                {activeDocument ? (
+                  <div className="group relative">
+                    <DocumentPreview record={activeDocument} />
+
+                    <div className="absolute right-3 top-3 flex translate-y-1 items-center gap-2 rounded-xl border border-white/70 bg-white/90 p-1.5 opacity-0 shadow-lg backdrop-blur transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-950/90">
+                      {activeFileUrl ? (
+                        <a
+                          href={activeFileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+                          title="Open document"
+                          aria-label="Open document"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openFilePicker(activeDocument)}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+                        title="Replace document"
+                        aria-label="Replace document"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
+                      {activeFileUrl ? (
+                        <a
+                          href={activeFileUrl}
+                          download={
+                            activeDocument.originalFileName?.trim() || undefined
+                          }
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+                          title="Download document"
+                          aria-label="Download document"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(activeDocument)}
+                        disabled={deleteMutation.isPending}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+                        title="Delete document"
+                        aria-label="Delete document"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                    <h4 className="mt-4 text-[15px] font-black uppercase tracking-[0.02em] text-slate-700 dark:text-slate-200">
+                      {selectedItem.name?.trim() || "Document"} File Pending
+                    </h4>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      No official document attached. Please upload a PDF or
+                      image.
+                    </p>
+                  </div>
+                )}
+
                 <div
                   onDragEnter={(event) => {
                     event.preventDefault();
@@ -857,128 +643,110 @@ export function DMSSection({ studentId, studentName }: DMSSectionProps) {
                     setIsDragging(false);
                   }}
                   onDrop={handleDrop}
-                  className={`rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${
+                  onClick={() => openFilePicker(activeDocument)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openFilePicker(activeDocument);
+                    }
+                  }}
+                  className={`mt-5 cursor-pointer rounded-[18px] border border-dashed px-5 py-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-red-500 ${
                     isDragging
                       ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+                      : "border-slate-300 bg-slate-50 hover:border-red-300 hover:bg-red-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-red-900 dark:hover:bg-red-950/10"
                   }`}
                 >
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10">
-                    <UploadCloud className="h-7 w-7" />
-                  </div>
-                  <p className="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">
-                    Drag & drop your file here or{" "}
-                    <label
-                      htmlFor="dms-document-file"
-                      className="cursor-pointer text-red-600 hover:underline"
-                    >
-                      click to browse
-                    </label>
+                  <UploadCloud className="mx-auto h-6 w-6 text-slate-400" />
+                  <p className="mt-2 text-xs font-black text-slate-700 dark:text-slate-200">
+                    {activeDocument
+                      ? "Upload / Replace Device File here"
+                      : "Upload / Attach Device File here"}
                   </p>
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    PDF, JPG, PNG, WEBP, DOC, DOCX (Max 15MB)
+                  <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    PDF, JPG, PNG format
                   </p>
-                  <input
-                    id="dms-document-file"
-                    type="file"
-                    accept={ACCEPTED_TYPES}
-                    onChange={handleFileInput}
-                    className="sr-only"
-                  />
                 </div>
 
-                {editingDocument && !selectedFile && (
-                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300">
-                    Editing {editingDocument.originalFileName}. Select another
-                    file only when you want to replace it.
-                  </div>
-                )}
-
-                {selectedFile && (
-                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-500/10">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-semibold">
-                          {selectedFile.name}
+                {selectedFile ? (
+                  <div className="mt-4 rounded-[18px] border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm dark:bg-slate-900 dark:text-emerald-400">
+                          <FileText className="h-5 w-5" />
                         </div>
-                        <div className="mt-0.5 text-[10px] text-slate-500">
-                          {formatBytes(selectedFile.size)}
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-black text-slate-700 dark:text-slate-200">
+                            {selectedFile.name || "Selected document"}
+                          </p>
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            {formatBytes(selectedFile.size)}
+                          </p>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setFileError("");
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-slate-700 dark:hover:bg-slate-900 dark:hover:text-white"
+                        aria-label="Remove selected file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFile(null)}
-                      className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
 
-                {fileError && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600 dark:border-red-900/40 dark:bg-red-950/20">
-                    <AlertCircle className="h-4 w-4" />
-                    {fileError}
-                  </div>
-                )}
+                    <textarea
+                      value={remarks}
+                      onChange={(event) => setRemarks(event.target.value)}
+                      maxLength={200}
+                      rows={2}
+                      placeholder="Remarks (optional)"
+                      className="mt-3 w-full resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-red-500 dark:border-emerald-900/60 dark:bg-slate-900 dark:text-slate-200"
+                    />
 
-                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                      Remarks (Optional)
-                    </label>
-                    <div className="relative">
-                      <textarea
-                        value={remarks}
-                        onChange={(event) => setRemarks(event.target.value)}
-                        maxLength={200}
-                        rows={2}
-                        placeholder="Add any remarks about this document..."
-                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-3 pr-16 text-xs outline-none focus:border-red-500 dark:border-slate-800 dark:bg-slate-900"
-                      />
-                      <span className="absolute bottom-2 right-3 text-[9px] text-slate-400">
-                        {remarks.length} / 200
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {editingDocument && (
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
                       <button
                         type="button"
                         onClick={clearUploadForm}
-                        className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                       >
                         Cancel
                       </button>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={
-                        uploadMutation.isPending ||
-                        updateMutation.isPending ||
-                        (!editingDocument && !selectedFile)
-                      }
-                      className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {uploadMutation.isPending || updateMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Saving {progress}%
-                        </>
-                      ) : (
-                        <>
-                          <UploadCloud className="h-4 w-4" />
-                          {editingDocument ? "Save Changes" : "Upload Document"}
-                        </>
-                      )}
-                    </button>
+                      <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving {progress}%
+                          </>
+                        ) : (
+                          <>
+                            <UploadCloud className="h-4 w-4" />
+                            {editingDocument
+                              ? "Replace Document"
+                              : "Upload Document"}
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : null}
+
+                {fileError ? (
+                  <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{fileError}</span>
+                  </div>
+                ) : null}
               </form>
             </div>
           </>

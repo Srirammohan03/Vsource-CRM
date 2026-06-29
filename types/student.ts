@@ -31,6 +31,7 @@ export interface StudentRecord {
   branch?: {
     id: string;
     name: string;
+    code?: string;
   };
 
   counselor?: {
