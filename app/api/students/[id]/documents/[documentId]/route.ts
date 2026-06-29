@@ -15,13 +15,10 @@ function errorResponse(message: string, status: number) {
 }
 
 async function removeStoredFile(fileUrl: string) {
-  const safeFileName = path.basename(fileUrl);
   const filePath = path.join(
     process.cwd(),
     "public",
-    "upload",
-    "student",
-    safeFileName,
+    fileUrl.replace(/^\/+/, ""),
   );
 
   await unlink(filePath).catch(() => undefined);
@@ -100,8 +97,8 @@ export async function PUT(
     const uploadDirectory = path.join(
       process.cwd(),
       "public",
-      "upload",
-      "student",
+      "uploads",
+      "students",
     );
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -115,7 +112,7 @@ export async function PUT(
       data: {
         originalFileName: file.name,
         storedFileName,
-        fileUrl: `/upload/student/${storedFileName}`,
+        fileUrl: `/uploads/students/${storedFileName}`,
         mimeType: file.type,
         fileSize: file.size,
         remarks: remarks || null,
