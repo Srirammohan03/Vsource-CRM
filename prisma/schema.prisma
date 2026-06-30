@@ -32,6 +32,8 @@ model User {
 
   studentTimelines StudentTimeline[] @relation("StudentTimelineCreatedBy")
 
+  studentRemarks StudentRemark[] @relation("StudentRemark")
+
   leadTimelinesCreated LeadTimeline[] @relation("LeadTimelineCreatedBy")
   leadTimelinesUpdated LeadTimeline[] @relation("LeadTimelineUpdatedBy")
 
@@ -583,6 +585,7 @@ model StudentRemark {
   note String @db.Text
 
   createdById String?
+  createdBy   User?   @relation("StudentRemark", fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
 

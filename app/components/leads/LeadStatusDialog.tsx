@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { LEADS } from "@/lib/lead";
 
 const statuses = [
   "draft",
@@ -46,16 +47,11 @@ interface Props {
   lead: any;
   open: boolean;
   onClose: () => void;
-  onSuccess: () => Promise<void> | void;
 }
 
-export default function LeadStatusDialog({
-  lead,
-  open,
-  onClose,
-  onSuccess,
-}: Props) {
+export default function LeadStatusDialog({ lead, open, onClose }: Props) {
   const [status, setStatus] = useState<LeadStatus>("new");
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (lead?.status) {
@@ -65,23 +61,19 @@ export default function LeadStatusDialog({
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: LeadStatus) => {
-      const { data } = await api.patch(
-        `/leads/${lead.id}/status`,
-        {
-          status,
-        }
-      );
+      const { data } = await api.patch(`/leads/${lead.id}/status`, {
+        status,
+      });
 
       return data;
     },
 
     onSuccess: async (response) => {
-      await onSuccess();
+      queryClient.invalidateQueries({
+        queryKey: LEADS.all,
+      });
 
-      toast.success(
-        response?.message ||
-          "Lead status updated successfully"
-      );
+      toast.success(response?.message || "Lead status updated successfully");
 
       onClose();
     },
@@ -90,7 +82,7 @@ export default function LeadStatusDialog({
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          "Failed to update lead status"
+          "Failed to update lead status",
       );
     },
   });
@@ -110,9 +102,7 @@ export default function LeadStatusDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Update Lead Status
-          </AlertDialogTitle>
+          <AlertDialogTitle>Update Lead Status</AlertDialogTitle>
 
           <AlertDialogDescription>
             {lead.studentName}
@@ -124,9 +114,7 @@ export default function LeadStatusDialog({
         <div className="py-4">
           <Select
             value={status}
-            onValueChange={(value) =>
-              setStatus(value as LeadStatus)
-            }
+            onValueChange={(value) => setStatus(value as LeadStatus)}
           >
             <SelectTrigger>
               <SelectValue />
@@ -134,10 +122,7 @@ export default function LeadStatusDialog({
 
             <SelectContent>
               {statuses.map((item) => (
-                <SelectItem
-                  key={item}
-                  value={item}
-                >
+                <SelectItem key={item} value={item}>
                   {item}
                 </SelectItem>
               ))}
@@ -146,28 +131,22 @@ export default function LeadStatusDialog({
 
           {status === "converted" && (
             <p className="mt-3 text-sm text-orange-500">
-              This will convert the lead into a Student
-              and move it to Visa Applications.
+              This will convert the lead into a Student and move it to Visa
+              Applications.
             </p>
           )}
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel
-            disabled={updateStatusMutation.isPending}
-          >
+          <AlertDialogCancel disabled={updateStatusMutation.isPending}>
             Cancel
           </AlertDialogCancel>
 
           <Button
-            onClick={() =>
-              updateStatusMutation.mutate(status)
-            }
+            onClick={() => updateStatusMutation.mutate(status)}
             disabled={updateStatusMutation.isPending}
           >
-            {updateStatusMutation.isPending
-              ? "Updating..."
-              : "Update Status"}
+            {updateStatusMutation.isPending ? "Updating..." : "Update Status"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,10 +1,10 @@
 // hooks/student/useCreateStudentRemark.ts
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
-import { STUDENTKEY } from "@/services/student/query-key";
+import { REMARKS } from "@/services/student/query-key";
 
 export const useCreateStudentRemark = () => {
   const queryClient = useQueryClient();
@@ -28,12 +28,22 @@ export const useCreateStudentRemark = () => {
       toast.success(data?.message ?? "Remark added successfully");
 
       queryClient.invalidateQueries({
-        queryKey: STUDENTKEY.all,
+        queryKey: REMARKS.all,
       });
     },
 
     onError: (error: any) => {
       toast.error(error?.response?.data?.message ?? "Failed to add remark");
+    },
+  });
+};
+
+export const useRemarks = (id: string) => {
+  return useQuery({
+    queryKey: REMARKS.all,
+    queryFn: async () => {
+      const { data } = await api.get(`/students/${id}/remarks`);
+      return data?.data || [];
     },
   });
 };

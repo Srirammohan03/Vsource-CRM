@@ -1,4 +1,5 @@
 // types\student.ts
+import { User } from "@/users/types/user";
 import { Lead } from ".";
 
 export interface StudentRecord {
@@ -104,6 +105,7 @@ export interface Remarks {
   id: string;
   note: string;
   createdAt: string | Date;
+  createdBy: User;
 }
 
 export type StudentDocumentRecord = {

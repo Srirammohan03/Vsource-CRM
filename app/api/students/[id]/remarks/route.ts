@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, handleError } from "@/lib/api-helpers";
 import { getAuthorizedUser } from "@/lib/rbac";
@@ -32,6 +32,44 @@ export async function POST(
     });
 
     return ok(remark, "Remark added successfully");
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Student ID is required",
+        },
+        { status: 400 },
+      );
+    }
+
+    const remarks = await prisma.studentRemark.findMany({
+      where: { studentId: id },
+      include: {
+        createdBy: {
+          select: {
+            name: true,
+            id: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return ok(remarks, "remarks fetched successfully");
   } catch (error) {
     return handleError(error);
   }

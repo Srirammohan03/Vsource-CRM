@@ -13,3 +13,7 @@ export const APPLICATION = {
   universityDropDown: ["university-dropdown"],
   courseDropDown: ["course-dropdown"],
 };
+
+export const REMARKS = {
+  all: ["remarks"],
+};
