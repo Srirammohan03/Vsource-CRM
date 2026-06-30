@@ -1,3 +1,4 @@
+// app\(dashboard)\student-profiles\DMSSection.tsx
 "use client";
 
 import {
@@ -137,7 +138,7 @@ function DocumentPreview({ record }: { record: StudentDocumentRecord }) {
     return (
       <div className="flex h-full min-h-[300px] items-center justify-center overflow-hidden rounded-[20px] border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
         <img
-          src={fileUrl}
+          src={`${process.env.NEXT_PUBLIC_IMAGE}${fileUrl}`}
           alt={fileName}
           className="max-h-[430px] w-full object-contain"
         />
@@ -148,7 +149,7 @@ function DocumentPreview({ record }: { record: StudentDocumentRecord }) {
   if (isPdf) {
     return (
       <iframe
-        src={fileUrl}
+        src={`${process.env.NEXT_PUBLIC_IMAGE}${fileUrl}`}
         title={fileName}
         className="h-[430px] w-full rounded-[20px] border border-slate-200 bg-white dark:border-slate-800"
       />
@@ -589,7 +590,7 @@ export function DMSSection({ studentId }: DMSSectionProps) {
                       >
                         <RefreshCw className="h-4 w-4" />
                       </button>
-                      {activeFileUrl ? (
+                      {/* {activeFileUrl ? (
                         <a
                           href={activeFileUrl}
                           download={
@@ -601,7 +602,7 @@ export function DMSSection({ studentId }: DMSSectionProps) {
                         >
                           <Download className="h-4 w-4" />
                         </a>
-                      ) : null}
+                      ) : null} */}
                       <button
                         type="button"
                         onClick={() => void handleDelete(activeDocument)}
