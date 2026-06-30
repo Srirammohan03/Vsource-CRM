@@ -1,3 +1,4 @@
+// app\api\students\[id]\documents\[documentId]\route.ts
 import { unlink, writeFile } from "fs/promises";
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
