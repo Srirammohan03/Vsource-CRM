@@ -30,7 +30,7 @@ export default function EditUserSheet({ open, onOpenChange, user }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-150overflow-y-auto">
+      <SheetContent className="sm:max-w-150 overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Edit User</SheetTitle>
         </SheetHeader>
