@@ -279,8 +279,6 @@ export default function AddLeadPage() {
     setIsSaving(true);
 
     try {
-      console.log("SUBMIT VALUES", values);
-      console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/leads`, {
         method: "POST",
         credentials: "include",

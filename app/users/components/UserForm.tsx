@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useForm } from "react-hook-form";
 
@@ -32,6 +32,7 @@ import {
   UserFormValues,
 } from "../schemas/user.schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff } from "lucide-react";
 
 interface Role {
   id: string;
@@ -65,6 +66,8 @@ export default function UserForm({
   isLoading,
   onSubmit,
 }: UserFormProps) {
+  const [show, setShow] = useState(false);
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(
       mode === "create" ? createUserSchema : updateUserSchema,
@@ -96,7 +99,6 @@ export default function UserForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* NAME */}
-
         <FormField
           control={form.control}
           name="name"
@@ -112,9 +114,7 @@ export default function UserForm({
             </FormItem>
           )}
         />
-
         {/* EMAIL */}
-
         <FormField
           control={form.control}
           name="email"
@@ -132,28 +132,41 @@ export default function UserForm({
         />
 
         {/* PASSWORD */}
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
 
-        {mode === "create" && (
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-
-                <FormControl>
+              <FormControl>
+                <div className="relative">
                   <Input
-                    type="password"
+                    type={show ? "text" : "password"}
                     placeholder="Enter password"
+                    className="pr-10"
                     {...field}
                   />
-                </FormControl>
 
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+                  <button
+                    type="button"
+                    onClick={() => setShow((prev) => !prev)}
+                    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {show ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </FormControl>
+
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -187,9 +200,7 @@ export default function UserForm({
             </FormItem>
           )}
         />
-
         {/* ROLES */}
-
         <FormField
           control={form.control}
           name="roleId"
@@ -217,7 +228,6 @@ export default function UserForm({
             </FormItem>
           )}
         />
-
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading
             ? "Saving..."

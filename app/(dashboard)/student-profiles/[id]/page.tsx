@@ -26,15 +26,14 @@ import { Remarks, StudentRecord } from "@/types/student";
 import { useCreateStudentApplication } from "@/hooks/student/useCreateStudentApplication";
 import { useUpdateStudentApplication } from "@/hooks/student/useUpdateStudentApplication";
 import { useDeleteStudentApplication } from "@/hooks/student/useDeleteStudentApplication";
-import { useCreateStudentRemark } from "@/hooks/student/useCreateStudentRemark";
+import {
+  useCreateStudentRemark,
+  useRemarks,
+} from "@/hooks/student/useCreateStudentRemark";
 import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { STUDENTKEY } from "@/services/student/query-key";
 import { toast } from "sonner";
-import {
-  useCourseDropdown,
-  useUniversityDropdown,
-} from "@/hooks/student/applications/useUniversityDropdown";
 import { StudentBasicInfoDialog } from "@/components/student/StudentBasicInfoDialog";
 import { StudentVisaLoanProfileSection } from "@/components/student/StudentVisaLoanProfileForm";
 import { StudentModuleProgressDialog } from "@/components/student/StudentModuleProgressDialog";
@@ -91,32 +90,19 @@ export default function Home() {
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"students">("students");
   const selectedStudentId = studentId;
-  const [appOfferStatus, setAppOfferStatus] = useState("not_received");
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [detailTab, setDetailTab] = useState<
     "info" | "documents" | "applications" | "visaLoan" | "remarks"
   >("info");
-
-  const [appLayout, setAppLayout] = useState<"cards" | "table">("cards");
-  const [showAddAppForm, setShowAddAppForm] = useState<boolean>(false);
-  const [editingAppId, setEditingAppId] = useState<string | null>(null);
-  const [appPortal, setAppPortal] = useState<string>("GVOC");
-  const [appDate, setAppDate] = useState<string>("");
-  const [appStatus, setAppStatus] = useState<string>("Pending");
   const { setTitle, clearTitle } = usePageTitle();
   const [newRemarkText, setNewRemarkText] = useState<string>("");
-  const [selectedUniversityId, setSelectedUniversityId] = useState("");
-  const [selectedCourseId, setSelectedCourseId] = useState("");
-
-  const { data: universities, isLoading: isUniversitiesLoad } =
-    useUniversityDropdown(selectedStudentId ? selectedStudentId : "");
-  const { data: courses = [] } = useCourseDropdown(selectedStudentId || "");
-
-  const universityOptions = Array.isArray(universities) ? universities : [];
-  const courseOptions = Array.isArray(courses) ? courses : [];
 
   const { data: moduleProgress = [], isLoading: isModuleProgressLoading } =
     useStudentModuleProgress(selectedStudentId || "");
+
+  const { data: remarks, isLoading: remarkLoad } = useRemarks(
+    selectedStudentId ?? "",
+  );
 
   const tabModuleMap: Partial<Record<typeof detailTab, StudentModuleKey>> = {
     info: "basic_information",
@@ -175,16 +161,6 @@ export default function Home() {
     return Number.isNaN(date.getTime())
       ? "Not provided"
       : date.toLocaleDateString("en-GB");
-  };
-
-  const formatDateForInput = (value?: string | Date | null) => {
-    if (!value) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
   };
 
   const getErrorMessage = (caughtError: unknown, fallback: string) => {
@@ -581,34 +557,30 @@ export default function Home() {
                             className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer"
                             disabled={createRemarkMutation.isPending}
                           >
-                            Save
+                            {createRemarkMutation.isPending
+                              ? "Saving..."
+                              : "Save"}
                           </button>
                         </form>
 
                         <div className="space-y-4 max-h-[300px] overflow-y-auto pr-3">
-                          {(Array.isArray(selectedStudent?.remarks)
-                            ? selectedStudent.remarks
-                            : []
-                          )
-                            .slice()
-                            .reverse()
-                            .map((rem: Remarks, i: number) => (
-                              <div
-                                key={i}
-                                className="relative pl-6 border-l-2 border-red-600/30 pb-3 last:pb-0"
-                              >
-                                <span className="absolute left-[-5px] top-1.5 h-2 w-2 rounded-full bg-red-600" />
-                                <div className="text-[10px] flex items-center justify-between text-slate-400 mb-1 font-bold">
-                                  <span className="font-mono bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded">
-                                    {formatDateForDisplay(rem?.createdAt)}
-                                  </span>
-                                  <span>Logged by Agent</span>
-                                </div>
-                                <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
-                                  {rem?.note ?? "No remark provided"}
-                                </p>
+                          {remarks.map((rem: Remarks, i: number) => (
+                            <div
+                              key={i}
+                              className="relative pl-6 border-l-2 border-red-600/30 pb-3 last:pb-0"
+                            >
+                              <span className="absolute left-[-5px] top-1.5 h-2 w-2 rounded-full bg-red-600" />
+                              <div className="text-[10px] flex items-center justify-between text-slate-400 mb-1 font-bold">
+                                <span className="font-mono bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded">
+                                  {formatDateForDisplay(rem?.createdAt)}
+                                </span>
+                                <span>{rem?.createdBy?.name ?? "User"}</span>
                               </div>
-                            ))}
+                              <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
+                                {rem?.note ?? "No remark provided"}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

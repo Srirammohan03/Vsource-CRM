@@ -26,6 +26,9 @@ import PageActions from "./pageactions";
 import { useAuth } from "@/store";
 import { MODULES } from "@/lib/module-codes";
 import LeadStatusDialog from "@/components/leads/LeadStatusDialog";
+import { LEADS, useLeads } from "@/lib/lead";
+import { useLeadSources } from "@/lib/master-settings";
+import { useQueryClient } from "@tanstack/react-query";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -71,7 +74,6 @@ const formatDate = (value?: string | Date | null) => {
 
 export default function AllLeadsPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LeadStatus | "all">("all");
   const [branch, setBranch] = useState("all");
@@ -84,24 +86,16 @@ export default function AllLeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingLeadStatus, setEditingLeadStatus] = useState<Lead | null>(null);
   const [leadIdToDelete, setLeadIdToDelete] = useState<string | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const queryClient = useQueryClient();
 
-  const uniqueSources = useMemo(() => {
-    return [
-      ...new Set(
-        leads
-          .map((lead) => lead.source)
-          .filter(
-            (item): item is string =>
-              typeof item === "string" && item.trim().length > 0,
-          ),
-      ),
-    ];
-  }, [leads]);
+  const { data: leads = [], isLoading, refetch: loadLeads } = useLeads();
+
+  const { data: uniqueSources = [], isLoading: resourceLoad } =
+    useLeadSources();
 
   const filteredLeads = useMemo(() => {
     return leads
-      .filter((item) => {
+      .filter((item: Lead) => {
         const normalizedQuery = query.trim().toLowerCase();
 
         const matchQuery =
@@ -119,40 +113,10 @@ export default function AllLeadsPage() {
         return matchQuery && matchStatus && matchBranch && matchSource;
       })
       .sort(
-        (a, b) =>
+        (a: Lead, b: Lead) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
   }, [leads, query, status, branch, source]);
-
-  const loadLeads = async () => {
-    try {
-      setIsLoading(true);
-
-      const response = await fetch(`${API_BASE_URL}/leads`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Unable to load leads");
-      }
-
-      const result = await response.json();
-      const data = result?.data ?? [];
-
-      setLeads(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error(error);
-      setLeads([]);
-      toast.error("Failed to load leads from the server");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadLeads();
-  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -182,10 +146,9 @@ export default function AllLeadsPage() {
         throw new Error("Unable to delete lead");
       }
 
-      setLeads((current) =>
-        current.filter((item) => item.id !== leadIdToDelete),
-      );
-      toast.success("Lead deleted successfully");
+      queryClient.invalidateQueries({
+        queryKey: LEADS.all,
+      });
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete lead");
@@ -327,11 +290,21 @@ export default function AllLeadsPage() {
                   <SelectGroup>
                     <SelectLabel>Source</SelectLabel>
                     <SelectItem value="all">Any</SelectItem>
-                    {uniqueSources.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
+                    {resourceLoad ? (
+                      <SelectItem value="load">Loading...</SelectItem>
+                    ) : uniqueSources.length === 0 ? (
+                      <SelectItem value="empty" disabled>
+                        No lead sources found
                       </SelectItem>
-                    ))}
+                    ) : (
+                      uniqueSources.map(
+                        (item: { id: string; name: string }) => (
+                          <SelectItem key={item.id} value={item.name}>
+                            {item.name}
+                          </SelectItem>
+                        ),
+                      )
+                    )}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -372,7 +345,7 @@ export default function AllLeadsPage() {
                     No leads match your filters.
                   </div>
                 ) : (
-                  pageLeads.map((lead) => (
+                  pageLeads.map((lead: Lead) => (
                     <div
                       key={lead.id || lead.leadNumber}
                       className="space-y-3 bg-card p-4 transition-colors hover:bg-secondary/10"
@@ -612,7 +585,7 @@ export default function AllLeadsPage() {
                         </td>
                       </tr>
                     ) : (
-                      pageLeads.map((lead) => (
+                      pageLeads.map((lead: Lead) => (
                         <tr
                           key={lead.id || lead.leadNumber}
                           className="border-b border-border transition-colors last:border-b-0 hover:bg-secondary/40"
@@ -842,7 +815,6 @@ export default function AllLeadsPage() {
         lead={editingLeadStatus}
         open={Boolean(editingLeadStatus)}
         onClose={() => setEditingLeadStatus(null)}
-        onSuccess={loadLeads}
       />
 
       <PageActions

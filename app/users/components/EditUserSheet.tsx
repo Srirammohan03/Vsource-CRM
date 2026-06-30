@@ -48,10 +48,18 @@ export default function EditUserSheet({ open, onOpenChange, user }: Props) {
               roleId: user.role.id,
             }}
             onSubmit={(values) => {
+              const payload = {
+                ...values,
+              };
+
+              if (!payload.password?.trim()) {
+                delete payload.password;
+              }
+
               updateMutation.mutate(
                 {
                   id: user.id,
-                  payload: values,
+                  payload,
                 },
                 {
                   onSuccess: () => {

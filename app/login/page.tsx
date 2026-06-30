@@ -149,7 +149,7 @@ export default function LoginPage() {
 
             <form onSubmit={onSubmit} className="mt-8 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
+                <Label htmlFor="email">Email address:</Label>
                 <Input
                   id="email"
                   type="email"
@@ -170,25 +170,32 @@ export default function LoginPage() {
                 </button>
               </div> */}
                 <div className="relative">
+                  <Label htmlFor="password">Password:</Label>
+
                   <Input
                     id="password"
                     type={show ? "text" : "password"}
                     value={password}
-                    onChange={(e: any) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="pr-10"
                   />
+
                   <button
                     type="button"
                     onClick={() => setShow((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 size-7 rounded-md hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                    className="absolute right-3 top-[70%] -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {show ? (
-                      <EyeOff className="size-4" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="size-4" />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
-                  {error && <p className="text-sm text-red-500">{error}</p>}
+
+                  {error && (
+                    <p className="mt-1 text-sm text-red-500">{error}</p>
+                  )}
                 </div>
               </div>
               {/* <div className="flex items-center gap-2">
