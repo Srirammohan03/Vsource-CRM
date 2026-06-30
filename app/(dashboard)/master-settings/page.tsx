@@ -1,3 +1,4 @@
+// app\(dashboard)\master-settings\page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -241,8 +242,8 @@ export default function MasterSettings() {
                       key={item.id}
                       className={`group flex flex-col justify-between rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${
                         item.status
-                          ? "border-green-200/60 bg-green-50/30"
-                          : "border-red-200/60 bg-red-50/30"
+                          ? "border-green-200/60 bg-green-50/40 dark:border-green-500/30 dark:bg-green-500/10"
+                          : "border-red-200/60 bg-red-50/40 dark:border-red-500/30 dark:bg-red-500/10"
                       }`}
                     >
                       {/* Card Header: Title & Switch */}
@@ -250,15 +251,19 @@ export default function MasterSettings() {
                         <div className="flex flex-col overflow-hidden">
                           <h3
                             className={`text-lg font-semibold truncate ${
-                              item.status ? "text-green-900" : "text-red-900"
+                              item.status
+                                ? "text-green-700 dark:text-green-300"
+                                : "text-red-700 dark:text-red-300"
                             }`}
                             title={item.name}
                           >
                             {item.name}
                           </h3>
                           <span
-                            className={`text-sm font-medium mt-1 ${
-                              item.status ? "text-green-600" : "text-red-600"
+                            className={`mt-1 text-sm font-medium ${
+                              item.status
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
                             }`}
                           >
                             {item.status ? "Active" : "Inactive"}
@@ -280,11 +285,11 @@ export default function MasterSettings() {
                       </div>
 
                       {/* Card Footer: Actions */}
-                      <div className="flex items-center justify-end gap-2 pt-4 mt-auto border-t border-black/5">
+                      <div className="flex items-center justify-end gap-2 pt-4 mt-auto border-t border-border">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="rounded-xl bg-background/50 hover:bg-background h-8"
+                          className="h-8 rounded-xl bg-background hover:bg-accent"
                           onClick={() => {
                             setEditingItem(item);
                             setEditValue(item.name);
