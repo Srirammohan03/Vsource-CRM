@@ -22,10 +22,13 @@ import { useCreateUser } from "../hooks/useCreateUser";
 import { UserFormValues } from "../schemas/user.schema";
 import { userKeys } from "../service/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 export default function AddUserSheet() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { canCreate } = useAuth();
 
   const { data: roles = [] } = useRoles();
 
@@ -47,10 +50,12 @@ export default function AddUserSheet() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
+        {canCreate(MODULES.USERS) && (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
+        )}
       </SheetTrigger>
 
       <SheetContent

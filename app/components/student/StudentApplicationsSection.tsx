@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 interface Props {
   student: StudentRecord;
@@ -62,7 +64,7 @@ export default function StudentApplicationsSection({
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const { data: courses = [] } = useCourseDropdown(selectedUniversityId);
   const [showForm, setShowForm] = useState(false);
-  const totalApplications = student.applications?.length || 0;
+  const { canCreate, canDelete, canUpdate } = useAuth();
   const canApply = student.applications.length < 5;
 
   const handleUniversityChange = (universityId: string) => {
@@ -176,7 +178,7 @@ export default function StudentApplicationsSection({
             {student.applications.length}/5 Applications Used
           </p>
         </div>
-        {canApply ? (
+        {canApply && canCreate(MODULES.STUDENT_PROFILES) ? (
           <Button
             onClick={() => setShowForm(true)}
             className="bg-red-600 hover:bg-red-700"
@@ -448,26 +450,30 @@ export default function StudentApplicationsSection({
                 </div>
 
                 <div className="flex items-center justify-end gap-3 mt-6 pt-5 border-t">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(app)}
-                    className="rounded-2xl h-10 px-4 border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
+                  {canUpdate(MODULES.STUDENT_PROFILES) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(app)}
+                      className="rounded-2xl h-10 px-4 border-blue-200 text-blue-600 hover:bg-blue-50"
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  )}
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="rounded-2xl h-10 px-4"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
+                      {canDelete(MODULES.STUDENT_PROFILES) && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-2xl h-10 px-4"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      )}
                     </AlertDialogTrigger>
 
                     <AlertDialogContent className="rounded-3xl">

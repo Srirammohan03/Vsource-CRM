@@ -33,6 +33,8 @@ import { Badge } from "@/components/ui/badge";
 
 import { useUniversities } from "@/hooks/use-universities";
 import { University, UniversityStatus } from "@/types/university";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 export default function UniversitiesPage() {
   const [search, setSearch] = useState("");
@@ -41,6 +43,7 @@ export default function UniversitiesPage() {
     "all",
   );
   const [countryFilter, setCountryFilter] = useState<string>("all");
+  const { canCreate, canUpdate } = useAuth();
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(16); // Set default limit to 16 as requested by the user
@@ -192,31 +195,33 @@ export default function UniversitiesPage() {
 
   return (
     <PageTransition>
-      <PageHeader
-        title="Universities"
-        description="Manage global universities, courses, scholarships and admissions."
-        actions={
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="px-3 py-1.5 font-medium rounded-lg"
-            >
-              {shortlistedIds.length} Shortlisted
-            </Badge>
+      {canCreate(MODULES.UNIVERSITIES) && (
+        <PageHeader
+          title="Universities"
+          description="Manage global universities, courses, scholarships and admissions."
+          actions={
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className="px-3 py-1.5 font-medium rounded-lg"
+              >
+                {shortlistedIds.length} Shortlisted
+              </Badge>
 
-            <Button
-              onClick={() => {
-                setEditingUniversity(null);
-                setDialogOpen(true);
-              }}
-              className="rounded-xl shadow-sm"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add University
-            </Button>
-          </div>
-        }
-      />
+              <Button
+                onClick={() => {
+                  setEditingUniversity(null);
+                  setDialogOpen(true);
+                }}
+                className="rounded-xl shadow-sm"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add University
+              </Button>
+            </div>
+          }
+        />
+      )}
 
       {/* Stats Summary Cards */}
       {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">

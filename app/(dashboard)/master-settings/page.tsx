@@ -28,6 +28,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 const categories = [
   {
@@ -66,6 +68,7 @@ export default function MasterSettings() {
   const [loading, setLoading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { canCreate, canUpdate, canDelete } = useAuth();
 
   const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<MasterItem | null>(null);
@@ -197,32 +200,34 @@ export default function MasterSettings() {
             </div>
 
             {/* ADD NEW SECTION */}
-            <div className="flex flex-col gap-3 sm:flex-row items-center bg-muted/30 p-4 rounded-2xl border border-muted">
-              <Input
-                className="flex-1 bg-background"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={`Add new ${current.label}...`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAdd();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleAdd}
-                disabled={addLoading}
-                className="w-full sm:w-auto px-8"
-              >
-                {addLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
-                {addLoading ? "Adding..." : "Add"}
-              </Button>
-            </div>
+            {canCreate(MODULES.MASTER_SETTINGS) && (
+              <div className="flex flex-col gap-3 sm:flex-row items-center bg-muted/30 p-4 rounded-2xl border border-muted">
+                <Input
+                  className="flex-1 bg-background"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={`Add new ${current.label}...`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAdd();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleAdd}
+                  disabled={addLoading}
+                  className="w-full sm:w-auto px-8"
+                >
+                  {addLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {addLoading ? "Adding..." : "Add"}
+                </Button>
+              </div>
+            )}
 
             {/* GRID LAYOUT SECTION */}
             <div className="space-y-4">
@@ -270,46 +275,52 @@ export default function MasterSettings() {
                           </span>
                         </div>
 
-                        <div className="flex-shrink-0 pt-1">
-                          {statusLoadingId === item.id ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          ) : (
-                            <Switch
-                              checked={item.status}
-                              onCheckedChange={(checked) =>
-                                handleStatusChange(item.id, checked)
-                              }
-                            />
-                          )}
-                        </div>
+                        {canUpdate(MODULES.MASTER_SETTINGS) && (
+                          <div className="shrink-0 pt-1">
+                            {statusLoadingId === item.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            ) : (
+                              <Switch
+                                checked={item.status}
+                                onCheckedChange={(checked) =>
+                                  handleStatusChange(item.id, checked)
+                                }
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Footer: Actions */}
-                      <div className="flex items-center justify-end gap-2 pt-4 mt-auto border-t border-border">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 rounded-xl bg-background hover:bg-accent"
-                          onClick={() => {
-                            setEditingItem(item);
-                            setEditValue(item.name);
-                            setEditDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                        </Button>
+                      <div className="flex items-center justify-end gap-2 pt-4 mt-auto border-t border-black/5">
+                        {canUpdate(MODULES.MASTER_SETTINGS) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl bg-background/50 hover:bg-background h-8"
+                            onClick={() => {
+                              setEditingItem(item);
+                              setEditValue(item.name);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                          </Button>
+                        )}
 
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-xl h-8"
-                          onClick={() => {
-                            setDeleteItem(item);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {canDelete(MODULES.MASTER_SETTINGS) && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="rounded-xl h-8"
+                            onClick={() => {
+                              setDeleteItem(item);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

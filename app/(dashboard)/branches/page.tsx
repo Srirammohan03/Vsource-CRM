@@ -53,10 +53,13 @@ import {
   updateBranch,
   Branch,
 } from "@/lib/branches";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canCreate, canUpdate, canDelete } = useAuth();
 
   const [search, setSearch] = useState("");
 
@@ -79,8 +82,6 @@ export default function BranchesPage() {
       setLoading(true);
 
       const data = await getBranches();
-
-      console.log("BRANCHES =>", data);
 
       setBranches(data);
     } catch (error) {
@@ -211,24 +212,26 @@ export default function BranchesPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <PageHeader
-          title="Branches"
-          description="Manage branches"
-          actions={
-            <Button
-              onClick={() => {
-                resetForm();
+        {canCreate(MODULES.BRANCHES) && (
+          <PageHeader
+            title="Branches"
+            description="Manage branches"
+            actions={
+              <Button
+                onClick={() => {
+                  resetForm();
 
-                setEditingBranch(null);
+                  setEditingBranch(null);
 
-                setOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Branch
-            </Button>
-          }
-        />
+                  setOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Branch
+              </Button>
+            }
+          />
+        )}
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-2xl">
@@ -387,7 +390,6 @@ export default function BranchesPage() {
                 </div>
 
                 <CardContent className="p-5">
-
                   <div className="mt-5 grid grid-cols-3 gap-3">
                     <div className="rounded-xl bg-muted/50 p-3 text-center">
                       <Users className="mx-auto mb-2 h-4 w-4" />
@@ -417,20 +419,24 @@ export default function BranchesPage() {
                   </div>
 
                   <div className="mt-5 flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => handleEdit(branch)}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
+                    {canUpdate(MODULES.BRANCHES) && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleEdit(branch)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+                    )}
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canDelete(MODULES.BRANCHES) && (
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </AlertDialogTrigger>
 
                       <AlertDialogContent>
