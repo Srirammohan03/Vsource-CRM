@@ -22,6 +22,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VSource CRM",
   description: "Study Abroad CRM",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
