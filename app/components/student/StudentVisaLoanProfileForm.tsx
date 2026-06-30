@@ -30,6 +30,8 @@ import { toast } from "sonner";
 import { useStudentVisaLoanProfile } from "@/hooks/student/visa-loan/useStudentVisaLoanProfile";
 import { useSaveStudentVisaLoanProfile } from "@/hooks/student/visa-loan/useSaveStudentVisaLoanProfile";
 import { useFintechUsers } from "@/hooks/student/visa-loan/useFintechUsers";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 type StudentVisaLoanProfileSectionProps = {
   studentId: string;
@@ -216,6 +218,7 @@ export function StudentVisaLoanProfileSection({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialFormState);
   const { data: fintechUsers = [] } = useFintechUsers(studentId);
+  const { canUpdate } = useAuth();
 
   const {
     data: profile,
@@ -413,14 +416,16 @@ export function StudentVisaLoanProfileSection({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openEditDialog}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-red-700"
-          >
-            <Edit3 className="h-4 w-4" />
-            {profile ? "Edit Details" : "Add Details"}
-          </button>
+          {canUpdate(MODULES.STUDENT_PROFILES) && (
+            <button
+              type="button"
+              onClick={openEditDialog}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-red-700"
+            >
+              <Edit3 className="h-4 w-4" />
+              {profile ? "Edit Details" : "Add Details"}
+            </button>
+          )}
         </div>
 
         {!profile ? (

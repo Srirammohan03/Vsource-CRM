@@ -36,6 +36,8 @@ import type {
   StudentDocumentChecklistItem,
   StudentDocumentRecord,
 } from "@/types/student";
+import { MODULES } from "@/lib/module-codes";
+import { useAuth } from "@/store";
 
 type DMSSectionProps = {
   studentId: string;
@@ -181,6 +183,7 @@ export function DMSSection({ studentId }: DMSSectionProps) {
   const updateMutation = useUpdateStudentDocument(studentId);
   const deleteMutation = useDeleteStudentDocument(studentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canUpdate } = useAuth();
 
   const [selectedItemCode, setSelectedItemCode] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -478,18 +481,20 @@ export function DMSSection({ studentId }: DMSSectionProps) {
                         <CheckCircle2 className="relative z-10 h-5 w-5 shrink-0 text-emerald-500 transition group-hover:opacity-0" />
                       </>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          selectChecklistItem(item);
-                          window.setTimeout(() => openFilePicker(null), 0);
-                        }}
-                        className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2.5 text-[11px] font-black text-white shadow-sm transition hover:bg-rose-600"
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        Upload
-                      </button>
+                      canUpdate(MODULES.STUDENT_PROFILES) && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            selectChecklistItem(item);
+                            window.setTimeout(() => openFilePicker(null), 0);
+                          }}
+                          className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2.5 text-[11px] font-black text-white shadow-sm transition hover:bg-rose-600"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          Upload
+                        </button>
+                      )
                     )}
                   </div>
                 );
@@ -630,45 +635,47 @@ export function DMSSection({ studentId }: DMSSectionProps) {
                   </div>
                 )}
 
-                <div
-                  onDragEnter={(event) => {
-                    event.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={(event) => {
-                    event.preventDefault();
-                    setIsDragging(false);
-                  }}
-                  onDrop={handleDrop}
-                  onClick={() => openFilePicker(activeDocument)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
+                {canUpdate(MODULES.STUDENT_PROFILES) && (
+                  <div
+                    onDragEnter={(event) => {
                       event.preventDefault();
-                      openFilePicker(activeDocument);
-                    }
-                  }}
-                  className={`mt-5 cursor-pointer rounded-[18px] border border-dashed px-5 py-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-red-500 ${
-                    isDragging
-                      ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                      : "border-slate-300 bg-slate-50 hover:border-red-300 hover:bg-red-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-red-900 dark:hover:bg-red-950/10"
-                  }`}
-                >
-                  <UploadCloud className="mx-auto h-6 w-6 text-slate-400" />
-                  <p className="mt-2 text-xs font-black text-slate-700 dark:text-slate-200">
-                    {activeDocument
-                      ? "Upload / Replace Device File here"
-                      : "Upload / Attach Device File here"}
-                  </p>
-                  <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    PDF, JPG, PNG format
-                  </p>
-                </div>
+                      setIsDragging(true);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={(event) => {
+                      event.preventDefault();
+                      setIsDragging(false);
+                    }}
+                    onDrop={handleDrop}
+                    onClick={() => openFilePicker(activeDocument)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openFilePicker(activeDocument);
+                      }
+                    }}
+                    className={`mt-5 cursor-pointer rounded-[18px] border border-dashed px-5 py-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-red-500 ${
+                      isDragging
+                        ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                        : "border-slate-300 bg-slate-50 hover:border-red-300 hover:bg-red-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-red-900 dark:hover:bg-red-950/10"
+                    }`}
+                  >
+                    <UploadCloud className="mx-auto h-6 w-6 text-slate-400" />
+                    <p className="mt-2 text-xs font-black text-slate-700 dark:text-slate-200">
+                      {activeDocument
+                        ? "Upload / Replace Device File here"
+                        : "Upload / Attach Device File here"}
+                    </p>
+                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      PDF, JPG, PNG format
+                    </p>
+                  </div>
+                )}
 
                 {selectedFile ? (
                   <div className="mt-4 rounded-[18px] border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
@@ -711,34 +718,36 @@ export function DMSSection({ studentId }: DMSSectionProps) {
                       className="mt-3 w-full resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-red-500 dark:border-emerald-900/60 dark:bg-slate-900 dark:text-slate-200"
                     />
 
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={clearUploadForm}
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSaving}
-                        className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Saving {progress}%
-                          </>
-                        ) : (
-                          <>
-                            <UploadCloud className="h-4 w-4" />
-                            {editingDocument
-                              ? "Replace Document"
-                              : "Upload Document"}
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    {canUpdate(MODULES.STUDENT_PROFILES) && (
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={clearUploadForm}
+                          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSaving}
+                          className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Saving {progress}%
+                            </>
+                          ) : (
+                            <>
+                              <UploadCloud className="h-4 w-4" />
+                              {editingDocument
+                                ? "Replace Document"
+                                : "Upload Document"}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
 

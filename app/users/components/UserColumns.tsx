@@ -14,17 +14,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User } from "../types/user";
 import { Badge } from "@/components/ui/badge";
+import { MODULES } from "@/lib/module-codes";
 
 interface Props {
   onView: (user: User) => void;
   onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
+  canUpdate: (moduleCode: string) => boolean;
 }
 
 export const getUserColumns = ({
   onView,
   onEdit,
-  onDelete,
+  canUpdate,
 }: Props): ColumnDef<User>[] => [
   {
     accessorKey: "name",
@@ -100,9 +101,11 @@ export const getUserColumns = ({
               View
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => onEdit(user)}>
-              Edit
-            </DropdownMenuItem>
+            {canUpdate(MODULES.USERS) && (
+              <DropdownMenuItem onClick={() => onEdit(user)}>
+                Edit
+              </DropdownMenuItem>
+            )}
 
             {/* <DropdownMenuItem
               className="text-red-500"

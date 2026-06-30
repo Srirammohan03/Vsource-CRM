@@ -17,6 +17,7 @@ import {
 
 import { getUserColumns } from "./UserColumns";
 import { User } from "../types/user";
+import { useAuth } from "@/store";
 
 interface Props {
   users: User[];
@@ -37,10 +38,12 @@ export default function UserTable({
 
   onDelete,
 }: Props) {
+  const { canUpdate, canDelete } = useAuth();
+
   const columns = getUserColumns({
     onView,
     onEdit,
-    onDelete,
+    canUpdate,
   });
 
   const table = useReactTable({

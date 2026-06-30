@@ -44,6 +44,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 interface Country {
   name?: string | null;
 }
@@ -158,6 +160,9 @@ export default function UniversityDetailsPage() {
   const params = useParams();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+
+  const { canUpdate, canDelete } = useAuth();
+
   const handleDelete = async () => {
     try {
       await axios.delete(`/api/universities/${universityId}`);
@@ -232,24 +237,28 @@ export default function UniversityDetailsPage() {
           </Button>
 
           <div className="flex w-full gap-2 sm:w-auto">
-            <Button
-              variant="outline"
-              className="flex-1 gap-2 rounded-xl bg-background sm:flex-none"
-              onClick={() => setEditOpen(true)}
-            >
-              <Pencil className="h-4 w-4" />
-              Edit University
-            </Button>
+            {canUpdate(MODULES.UNIVERSITIES) && (
+              <Button
+                variant="outline"
+                className="flex-1 gap-2 rounded-xl bg-background sm:flex-none"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit University
+              </Button>
+            )}
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  className="flex-1 gap-2 rounded-xl sm:flex-none"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
+                {canDelete(MODULES.UNIVERSITIES) && (
+                  <Button
+                    variant="destructive"
+                    className="flex-1 gap-2 rounded-xl sm:flex-none"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
               </AlertDialogTrigger>
 
               <AlertDialogContent className="rounded-2xl">

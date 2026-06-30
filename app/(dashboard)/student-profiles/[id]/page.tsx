@@ -45,6 +45,8 @@ import { Progress } from "@/components/ui/progress";
 import StudentApplicationsSection from "@/components/student/StudentApplicationsSection";
 import { useParams, useRouter } from "next/navigation";
 import { usePageTitle } from "@/store/page-title";
+import { useAuth } from "@/store";
+import { MODULES } from "@/lib/module-codes";
 
 const tabs = [
   {
@@ -81,6 +83,7 @@ const tabs = [
 
 export default function Home() {
   const queryClient = useQueryClient();
+  const { canUpdate, canCreate } = useAuth();
 
   const params = useParams();
   const router = useRouter();
@@ -373,13 +376,15 @@ export default function Home() {
                           />
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setProgressDialogOpen(true)}
-                          className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700"
-                        >
-                          Update Progress
-                        </button>
+                        {canUpdate(MODULES.STUDENT_PROFILES) && (
+                          <button
+                            type="button"
+                            onClick={() => setProgressDialogOpen(true)}
+                            className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700"
+                          >
+                            Update Progress
+                          </button>
+                        )}
                       </div>
                     )}
                     {detailTab === "info" && (
@@ -391,12 +396,14 @@ export default function Home() {
                             </h4>
                           </div>
                           <div className="flex justify-end">
-                            <button
-                              onClick={() => setBasicInfoOpen(true)}
-                              className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                            >
-                              Edit Basic Info
-                            </button>
+                            {canUpdate(MODULES.STUDENT_PROFILES) && (
+                              <button
+                                onClick={() => setBasicInfoOpen(true)}
+                                className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                              >
+                                Edit Basic Info
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -540,28 +547,30 @@ export default function Home() {
 
                     {detailTab === "remarks" && (
                       <div className="space-y-6">
-                        <form
-                          onSubmit={handleAddRemark}
-                          className="flex gap-2.5"
-                        >
-                          <input
-                            type="text"
-                            value={newRemarkText}
-                            onChange={(e) => setNewRemarkText(e.target.value)}
-                            placeholder="Type here..."
-                            className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-200" : "bg-slate-50 border-slate-202"}`}
-                            required
-                          />
-                          <button
-                            type="submit"
-                            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer"
-                            disabled={createRemarkMutation.isPending}
+                        {canCreate(MODULES.STUDENT_PROFILES) && (
+                          <form
+                            onSubmit={handleAddRemark}
+                            className="flex gap-2.5"
                           >
-                            {createRemarkMutation.isPending
-                              ? "Saving..."
-                              : "Save"}
-                          </button>
-                        </form>
+                            <input
+                              type="text"
+                              value={newRemarkText}
+                              onChange={(e) => setNewRemarkText(e.target.value)}
+                              placeholder="Type here..."
+                              className={`flex-1 px-4 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-red-600 ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-200" : "bg-slate-50 border-slate-202"}`}
+                              required
+                            />
+                            <button
+                              type="submit"
+                              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer"
+                              disabled={createRemarkMutation.isPending}
+                            >
+                              {createRemarkMutation.isPending
+                                ? "Saving..."
+                                : "Save"}
+                            </button>
+                          </form>
+                        )}
 
                         <div className="space-y-4 max-h-[300px] overflow-y-auto pr-3">
                           {remarks.map((rem: Remarks, i: number) => (

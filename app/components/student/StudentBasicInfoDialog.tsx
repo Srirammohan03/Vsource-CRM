@@ -29,8 +29,9 @@ import {
 
 import { StudentRecord } from "@/types/student";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUpdateStudentBasicInfo } from "@/hooks/student/basic-info/useUpdateStudentBasicInfo";
+import { Eye, EyeOff } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -40,7 +41,7 @@ interface Props {
 
 export function StudentBasicInfoDialog({ open, onClose, student }: Props) {
   const mutation = useUpdateStudentBasicInfo();
-
+  const [show, setShow] = useState(false);
   const form = useForm<UpdateStudentBasicInfoForm>({
     resolver: zodResolver(updateStudentBasicInfoSchema),
     defaultValues: {
@@ -156,11 +157,27 @@ export function StudentBasicInfoDialog({ open, onClose, student }: Props) {
                   <FormLabel>Password</FormLabel>
 
                   <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Leave empty to keep existing password"
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Input
+                        type={show ? "text" : "password"}
+                        placeholder="Leave empty to keep existing password"
+                        className="pr-10"
+                        {...field}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShow((prev) => !prev)}
+                        className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+                        tabIndex={-1}
+                      >
+                        {show ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                 </FormItem>
               )}
